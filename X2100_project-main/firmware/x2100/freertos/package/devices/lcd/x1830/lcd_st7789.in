@@ -1,0 +1,30 @@
+menuconfig CONFIG_X1830_SLCD_ST7789
+    bool "SLCD ST7789 (240x320) (X1830)"
+    select CONFIG_X1830_LCD
+    depends on CONFIG_SOC_X1830
+
+config CONFIG_X1830_ST7789_USE_TE
+    bool "开启图像防裂屏功能 使用GPIO_PD(19)"
+    default y
+
+config CONFIG_X1830_ST7789_CS
+    string "gpio chip select(lcd 片选引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1830_ST7789_RD
+    string "gpio lcd read signal(lcd 读引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1830_ST7789_RST
+    string "gpio reset(lcd 复位引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1830_ST7789_POWER_EN
+    string "gpio power enable(lcd power使能引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_X1830_SLCD_ST7789

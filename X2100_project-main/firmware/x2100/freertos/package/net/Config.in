@@ -1,0 +1,18 @@
+menuconfig CONFIG_NET
+    bool "Network"
+
+menuconfig CONFIG_NET_LWIP
+    bool "Enable lwIP stack"
+    default n
+
+config CONFIG_NET_LWIP_IPV6
+    bool "Enable lwIP stack support IPV6"
+    default n
+
+config CONFIG_NET_LWIP_APPS
+    bool "Enable lwIP stack apps"
+    default n
+
+endmenu
+
+endmenu

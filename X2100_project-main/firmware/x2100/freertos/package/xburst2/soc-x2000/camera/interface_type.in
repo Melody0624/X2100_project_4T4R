@@ -1,0 +1,5 @@
+array CAMERA_INTERFACE_TYPE_SELECT
+    string "camera interface type"
+    item "vic0" 0
+    item "vic1" 1
+    item "cim"  2

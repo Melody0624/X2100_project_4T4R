@@ -1,0 +1,4 @@
+config CONFIG_X1600_AIC
+    bool "aic(i2s 接口)"
+    select CONFIG_PCM
+    select CONFIG_DMA

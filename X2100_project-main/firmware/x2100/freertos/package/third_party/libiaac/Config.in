@@ -1,0 +1,13 @@
+menuconfig CONFIG_LIBIAAC
+    bool "libiaac(君正提供的算法授权验证库)"
+    select CONFIG_OS_POSIX
+
+config CONFIG_LIBIAAC_LICENSE_PATH
+    string "授权文件路径"
+    default "/data/license.txt"
+
+config CONFIG_LIBIAAC_LICENSE_SN
+    string "SN号(需要自己申请，默认号为测试用)"
+    default "ae7117082a18d846e4ea433bcf7e3d2b"
+
+endmenu

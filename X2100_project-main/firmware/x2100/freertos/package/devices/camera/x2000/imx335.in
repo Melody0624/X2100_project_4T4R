@@ -1,0 +1,46 @@
+menuconfig CONFIG_X2000_SENSOR_IMX335_MIPI
+    bool "sensor imx335 (mipi, raw10)"
+    select CONFIG_I2C
+    select CONFIG_X2000_CAMERA
+    depends on CONFIG_SOC_X2000
+
+source package/xburst2/soc-x2000/camera/interface_type.in
+
+config CONFIG_X2000_SENSOR_IMX335_MIPI_INDEX
+    string "选择索引号(sensor 连接soc控制器接口)"
+    choice from CAMERA_INTERFACE_TYPE_SELECT
+    default -1
+
+config CONFIG_X2000_IMX335_GPIO_POWER
+    string "gpio power(sensor 模块电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+
+config CONFIG_X2000_IMX335_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 sensor module 电源管理器)"
+    default "-1"
+
+config CONFIG_X2000_IMX335_GPIO_PWDN
+    string "gpio pwdn(sensor 电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_IMX335_GPIO_RESET
+    string "gpio reset(sensor 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_IMX335_I2C_BUSNUM
+    int "i2c bus num (sensor 挂接的i2c总线号)"
+    default -1
+
+config CONFIG_X2000_SENSOR_IMX335_ISP_BIN_SELECT
+    bool "sensor isp bin select"
+    default n
+config CONFIG_X2000_SENSOR_IMX335_ISP_BIN_PATH
+    string "sensor isp bin path"
+    default "devices/camera/x2000/imx335/imx335-vis-x2000.bin"
+    depends on CONFIG_X2000_SENSOR_IMX335_ISP_BIN_SELECT
+
+endmenu # CONFIG_X2000_SENSOR_IMX335

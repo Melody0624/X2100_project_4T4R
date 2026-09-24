@@ -1,0 +1,230 @@
+menuconfig CONFIG_X2000_LCD
+    bool "LCD 驱动"
+    select CONFIG_FB
+    select CONFIG_X2000_DPU_HAL
+
+config CONFIG_X2000_LCD_PAN_DISPLAY_SYNC
+    bool "pan display 时等待帧同步完成(帧缓冲数为一帧时推荐开启)"
+    default y
+
+config CONFIG_X2000_LCD_USE_DEFAULT_ORDER
+    bool "强制使用默认的层级配置（fb0为最底层，fb3为最顶层,应用配置无效）"
+
+config CONFIG_X2000_LCD_DESC_ADDR
+    int "frame desc 地址(用于保持开机logo,0表示不强行指定)"
+    default 0
+    help
+        有时候这个地址随缘,但一般来说放到ddr的末尾总是没有错的
+        比如128Mddr,指定到0x87f00000(127M)
+
+config CONFIG_X2000_LCD_FB0_ENABLE
+    bool "使能fb0"
+
+config CONFIG_X2000_LCD_FB0_FRM_CNT
+    int "fb0帧缓冲数量"
+    default 2
+    depends on CONFIG_X2000_LCD_FB0_ENABLE
+
+config CONFIG_X2000_LCD_FB0_NAME
+    string "设备节点名字"
+    default "fb0"
+    depends on CONFIG_X2000_LCD_FB0_ENABLE
+
+config CONFIG_X2000_LCD_FB1_ENABLE
+    bool "使能fb1"
+
+config CONFIG_X2000_LCD_FB1_FRM_CNT
+    int "fb1帧缓冲数量"
+    default 2
+    depends on CONFIG_X2000_LCD_FB1_ENABLE
+
+config CONFIG_X2000_LCD_FB1_NAME
+    string "设备节点名字"
+    default "fb1"
+    depends on CONFIG_X2000_LCD_FB1_ENABLE
+
+config CONFIG_X2000_LCD_FB2_ENABLE
+    bool "使能fb2"
+
+config CONFIG_X2000_LCD_FB2_FRM_CNT
+    int "fb2帧缓冲数量"
+    default 2
+    depends on CONFIG_X2000_LCD_FB2_ENABLE
+
+config CONFIG_X2000_LCD_FB2_NAME
+    string "设备节点名字"
+    default "fb2"
+    depends on CONFIG_X2000_LCD_FB2_ENABLE
+
+config CONFIG_X2000_LCD_FB3_ENABLE
+    bool "使能fb3"
+
+config CONFIG_X2000_LCD_FB3_FRM_CNT
+    int "fb3帧缓冲数量"
+    default 2
+    depends on CONFIG_X2000_LCD_FB3_ENABLE
+
+config CONFIG_X2000_LCD_FB3_NAME
+    string "设备节点名字"
+    default "fb3"
+    depends on CONFIG_X2000_LCD_FB3_ENABLE
+
+config CONFIG_X2000_LCD_FB_MIXER_ENABLE
+    bool "使能叠加功能并输出到lcd"
+    select CONFIG_X2000_FB_LAYER_MIXER
+    select CONFIG_X2000_LCD_FB_SRDMA_ENABLE
+    help
+        叠加fb0～fb3的图像数据并通过fb_srdma输出到lcd上
+
+config CONFIG_X2000_LCD_FB_SRDMA_ENABLE
+    bool
+    depends on CONFIG_X2000_LCD_FB_MIXER_ENABLE
+
+config CONFIG_X2000_LCD_FB_SRDMA_FRM_CNT
+    int "fb_srdma 帧缓冲数量"
+    default 2
+    depends on CONFIG_X2000_LCD_FB_MIXER_ENABLE
+
+config CONFIG_X2000_LCD_FB_SRDMA_NAME
+    string "设备节点名字"
+    default "fb_srdma"
+    depends on CONFIG_X2000_LCD_FB_MIXER_ENABLE
+
+
+
+config CONFIG_X2000_LCD_FB_ENABLE_USER_CONFIG
+    bool "自定义fb的尺寸"
+
+menuconfig CONFIG_X2000_LCD_FB0_USER_ENABLE
+    bool "  使能fb0自定义"
+    depends on CONFIG_X2000_LCD_FB_ENABLE_USER_CONFIG
+
+config CONFIG_X2000_LCD_FB0_USER_WIDTH
+    int "fb0的宽"
+    default -1
+
+config CONFIG_X2000_LCD_FB0_USER_HEIGHT
+    int "fb0的高"
+    default -1
+
+config CONFIG_X2000_LCD_FB0_USER_XPOS
+    int "fb0在lcd上水平方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB0_USER_YPOS
+    int "fb0在lcd上垂直方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB0_USER_SCALING_ENABLE
+    bool "使能缩放"
+
+config CONFIG_X2000_LCD_FB0_USER_SCALING_WIDTH
+    int "缩放后在lcd上显示的宽度"
+    depends on CONFIG_X2000_LCD_FB0_USER_SCALING_ENABLE
+
+config CONFIG_X2000_LCD_FB0_USER_SCALING_HEIGHT
+    int "缩放后再lcd上显示的长度"
+    depends on CONFIG_X2000_LCD_FB0_USER_SCALING_ENABLE
+
+endmenu
+
+menuconfig CONFIG_X2000_LCD_FB1_USER_ENABLE
+    bool "  使能fb1自定义"
+    depends on CONFIG_X2000_LCD_FB_ENABLE_USER_CONFIG
+
+config CONFIG_X2000_LCD_FB1_USER_WIDTH
+    int "fb1的宽"
+    default -1
+
+config CONFIG_X2000_LCD_FB1_USER_HEIGHT
+    int "fb1的高"
+    default -1
+
+config CONFIG_X2000_LCD_FB1_USER_XPOS
+    int "fb1在lcd上水平方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB1_USER_YPOS
+    int "fb1在lcd上垂直方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB1_USER_SCALING_ENABLE
+    bool "使能缩放"
+
+config CONFIG_X2000_LCD_FB1_USER_SCALING_WIDTH
+    int "缩放后在lcd上显示的宽度"
+    depends on CONFIG_X2000_LCD_FB1_USER_SCALING_ENABLE
+
+config CONFIG_X2000_LCD_FB1_USER_SCALING_HEIGHT
+    int "缩放后再lcd上显示的长度"
+    depends on CONFIG_X2000_LCD_FB1_USER_SCALING_ENABLE
+
+endmenu
+
+menuconfig CONFIG_X2000_LCD_FB2_USER_ENABLE
+    bool "  使能fb2自定义"
+    depends on CONFIG_X2000_LCD_FB_ENABLE_USER_CONFIG
+
+config CONFIG_X2000_LCD_FB2_USER_WIDTH
+    int "fb2的宽"
+    default -1
+
+config CONFIG_X2000_LCD_FB2_USER_HEIGHT
+    int "fb2的高"
+    default -1
+
+config CONFIG_X2000_LCD_FB2_USER_XPOS
+    int "fb2在lcd上水平方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB2_USER_YPOS
+    int "fb2在lcd上垂直方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB2_USER_SCALING_ENABLE
+    bool "使能缩放"
+
+config CONFIG_X2000_LCD_FB2_USER_SCALING_WIDTH
+    int "缩放后在lcd上显示的宽度"
+    depends on CONFIG_X2000_LCD_FB2_USER_SCALING_ENABLE
+
+config CONFIG_X2000_LCD_FB2_USER_SCALING_HEIGHT
+    int "缩放后再lcd上显示的长度"
+    depends on CONFIG_X2000_LCD_FB2_USER_SCALING_ENABLE
+
+endmenu
+
+menuconfig CONFIG_X2000_LCD_FB3_USER_ENABLE
+    bool "  使能fb3自定义"
+    depends on CONFIG_X2000_LCD_FB_ENABLE_USER_CONFIG
+
+config CONFIG_X2000_LCD_FB3_USER_WIDTH
+    int "fb3的宽"
+    default -1
+
+config CONFIG_X2000_LCD_FB3_USER_HEIGHT
+    int "fb3的高"
+    default -1
+
+config CONFIG_X2000_LCD_FB3_USER_XPOS
+    int "fb3在lcd上水平方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB3_USER_YPOS
+    int "fb3在lcd上垂直方向的偏移"
+    default 0
+
+config CONFIG_X2000_LCD_FB3_USER_SCALING_ENABLE
+    bool "使能缩放"
+
+config CONFIG_X2000_LCD_FB3_USER_SCALING_WIDTH
+    int "缩放后在lcd上显示的宽度"
+    depends on CONFIG_X2000_LCD_FB3_USER_SCALING_ENABLE
+
+config CONFIG_X2000_LCD_FB3_USER_SCALING_HEIGHT
+    int "缩放后再lcd上显示的长度"
+    depends on CONFIG_X2000_LCD_FB3_USER_SCALING_ENABLE
+
+endmenu
+
+endmenu

@@ -1,0 +1,5 @@
+config CONFIG_X2000_FB_LAYER_MIXER
+    bool "lcd layer mixer(图像叠加)"
+    select CONFIG_X2000_DPU_HAL
+    help
+        获取x2000 lcd 4个层叠加后的像素数据

@@ -1,0 +1,47 @@
+array MMC_SDIO_DEVICE_REMOVAL_TYPE
+    int "eMMC/SD Device removal type"
+    item "non-removable" 0
+    item "removable" 1
+
+array MMC_SDIO_DEVICE_BUS_WIDTH
+    int "eMMC/SD Device bus width"
+    item "8 bits" 8
+    item "4 bits" 4
+    item "1 bits" 1
+
+menuconfig CONFIG_EMMC_DEVICE
+    bool "eMMC Device"
+    depends on CONFIG_MMC
+
+config CONFIG_EMMC_DEVICE_BUSNUM
+    int "mmc bus num(eMMC设备挂载mmc总线号)"
+    default 0
+
+config CONFIG_EMMC_DEVICE_BUSWIDTH
+    int "mmc bus width(eMMC设备挂载mmc总线位宽)"
+    default 4
+    choice from MMC_SDIO_DEVICE_BUS_WIDTH
+
+config CONFIG_EMMC_DEVICE_GPIO_RESET
+    string "gpio reset(eMMC Device 复位管脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_EMMC_DEVICE_GPIO_POWER
+    string "gpio power(eMMC Device 供电管脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_EMMC_DEVICE_GPIO_DETECT
+    string "gpio detect(eMMC Device 插入状态管脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_EMMC_DEVICE_REMOVABLE_TYPE
+    int "mmc 设备是否可移除"
+    default 0
+    choice from MMC_SDIO_DEVICE_REMOVAL_TYPE
+    help
+        "0: 表示build-in设备 不可移除, =1: 表示可动态插入/移除"
+
+endmenu

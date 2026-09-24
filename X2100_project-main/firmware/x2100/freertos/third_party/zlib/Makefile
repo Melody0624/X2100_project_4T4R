@@ -1,0 +1,12 @@
+src-y += src/adler32.c
+src-y += src/compress.c
+src-y += src/crc32.c
+src-y += src/deflate.c
+src-y += src/infback.c
+src-y += src/inffast.c
+src-y += src/inflate.c
+src-y += src/inftrees.c
+src-y += src/trees.c
+src-y += src/uncompr.c
+src-y += src/zutil.c
+src-y += src/gunzip.c

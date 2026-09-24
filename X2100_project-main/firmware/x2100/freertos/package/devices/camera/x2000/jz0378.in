@@ -1,0 +1,47 @@
+menuconfig CONFIG_X2000_SENSOR_JZ0378
+    bool "sensor jz0378_dvp (dvp,grey)"
+    select CONFIG_I2C
+    select CONFIG_X2000_CAMERA
+    depends on CONFIG_SOC_X2000
+
+source package/xburst2/soc-x2000/camera/interface_type.in
+
+config CONFIG_X2000_SENSOR_JZ0378_INDEX
+    string "选择索引号(sensor 连接soc控制器接口)"
+    choice from CAMERA_INTERFACE_TYPE_SELECT
+    default -1
+
+array SENSOR_RESOLUTION
+    string "sensor resolution"
+    item "640*480 100fps" JZ0378_640_480_100FPS
+    item "400*336 100fps" JZ0378_400_336_100FPS
+
+config CONFIG_X2000_SENSOR_JZ0378_RESOLUTION
+    string "resolution_array(sensor 选择分辨率)"
+    choice from SENSOR_RESOLUTION
+    default -1
+
+config CONFIG_X2000_SENSOR_JZ0378_GPIO_POWER
+    string "gpio power(sensor 模块电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_SENSOR_JZ0378_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 sensor module 电源管理器)"
+    default "-1"
+
+config CONFIG_X2000_SENSOR_JZ0378_GPIO_PWDN
+    string "gpio pwdn(sensor 电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_SENSOR_JZ0378_GPIO_RESET
+    string "gpio reset(sensor 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_SENSOR_JZ0378_I2C_BUSNUM
+    int "i2c bus num (sensor 挂接的i2c总线号)"
+    default -1
+
+endmenu # CONFIG_X2000_SENSOR_JZ0378

@@ -1,0 +1,35 @@
+# Local build products, captures, and temporary output.
+/X2100_project-latest/
+/artifacts/
+/tmp/
+/output/
+/_review/radar_doc_render/
+/_review/radar_protocol/
+/matlab_4tx4rx/outputs/
+/tools/flash_backup/output/
+/Record_*.dat
+**/matlab/Record_*.dat
+**/host-tools/**/log/
+
+# Installed compiler toolchains; keep vendor libraries elsewhere.
+**/firmware/x2100/tools/toolchains/
+
+# Compiler and interpreter caches.
+*.o
+*.obj
+*.elf
+*.map
+*.log
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Machine-local secrets and editor files.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+Thumbs.db
+~$*

@@ -1,0 +1,33 @@
+menu "can 设备列表"
+
+config CONFIG_SOC_AD100_CAN0
+    bool "can 0"
+    select CONFIG_CAN
+    select CONFIG_DMA
+
+config CONFIG_SOC_AD100_CAN0_RX
+    string "    rx gpio"
+    default -1
+    choice from CAN0_RX_PINS
+    depends on CONFIG_SOC_AD100_CAN0
+
+config CONFIG_SOC_AD100_CAN0_TX
+    string "    tx gpio"
+    default -1
+    choice from CAN0_TX_PINS
+    depends on CONFIG_SOC_AD100_CAN0
+
+
+endmenu
+
+
+array CAN0_RX_PINS
+    string "can0 rx 引脚"
+    item "GPIO_PC(8) func2" GPIO_PC(8),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array CAN0_TX_PINS
+    string "can0 tx 引脚"
+    item "GPIO_PC(7) func2" GPIO_PC(7),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+

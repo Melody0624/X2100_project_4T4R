@@ -1,0 +1,27 @@
+menuconfig CONFIG_APPLICATION_FACE
+    bool "人脸识别"
+    select CONFIG_APPLICATION
+    select CONFIG_LIBCXX
+    select CONFIG_LIBIAAC
+    select CONFIG_LIBFACEDET
+    default n
+
+config CONFIG_APPLICATION_X2000_ILOCK
+    bool "x2000_ilock"
+    default n
+    help
+        "x2000 ilock face"
+
+config CONFIG_APPLICATION_X2000_IR_SC2355
+    bool "x2000_ir_sc2355"
+    default n
+    help
+        "x2000 ir sc2355 face"
+
+config CONFIG_APPLICATION_X2000_TOF
+    bool "x2000_tof"
+    default n
+    help
+        "x2000 tof face"
+
+endmenu # CONFIG_APPLICATION_FACE

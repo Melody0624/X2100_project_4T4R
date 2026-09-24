@@ -1,0 +1,108 @@
+menuconfig CONFIG_LIB
+    bool "通用库函数"
+
+config CONFIG_LIB_ASSERT
+    bool "断言函数(assert)"
+    default y
+
+config CONFIG_ASSERT_WITH_NO_FILENAME
+    bool "    断言信息中不使用文件名"
+    depends on CONFIG_LIB_ASSERT
+
+config CONFIG_LIB_DEALY
+    bool "延时函数(udelay/mdelay)"
+    default y
+
+config CONFIG_LIB_RTC
+    bool "时间转换函数(time_to_tm,tm_to_time...)"
+    default y
+
+config CONFIG_LIB_STRING
+    bool "字符串操作函数(strcpy,strcmp...)"
+    default y
+
+config CONFIG_LIB_DUMP_MEM
+    bool "打印内存函数(dump_mem)"
+    default y
+
+config CONFIG_LIB_XFORMAT
+    bool "格式化字符串(xfromat)"
+
+config CONFIG_LIB_XFORMAT_PRINTF
+    bool "打印函数,基于xformat(printf,sprintf)"
+    select CONFIG_LIB_XFORMAT
+
+config CONFIG_LIB_RING_BUFFER
+    bool "ring buffer(环形缓冲区)"
+
+config CONFIG_DUMP_STACK
+    bool "打印函数调用栈（异常时会自动打印）"
+    default y
+    select CONFIG_SYMBOLS
+    select CONFIG_FUNC_SYMBOLS
+
+source package/lib/sort.in
+
+source package/lib/img_convert.in
+
+config CONFIG_RING_MEM
+    bool "ring mem(环形缓冲区)"
+
+config CONFIG_LIB_NALU
+    bool "nalu buf(h264 帧字节流解析)"
+
+config CONFIG_UBOOT_LIB
+    bool "rtos 跳转到 linux"
+
+config CONFIG_LIB_CRC32
+    bool "crc32函数"
+
+config CONFIG_LIB_NV12_ROTATE
+    bool "软件90°旋转 (仅nv12)"
+
+config CONFIG_LIB_IMAGE_SCALER
+    bool "图像缩放处理"
+
+config CONFIG_LIB_IMAGE_MIRROR_C
+    bool "图像镜像处理（C 版本）"
+    help
+        提供图像镜像处理功能（C 标准实现），支持：
+        - 水平镜像（左右翻转）
+        - 垂直镜像（上下翻转）
+        - 旋转180度（水平+垂直镜像）
+        支持 NV12/RGB 等多种格式（1/2/4/8 字节像素）
+        兼容所有平台，性能适中，代码体积小
+
+config CONFIG_LIB_IMAGE_MIRROR_MSA
+    bool "图像镜像处理（MSA SIMD 加速版本）"
+    depends on CONFIG_XBURST2_MSA
+    help
+        提供图像镜像处理功能（MSA SIMD 加速实现），支持：
+        - 水平镜像（左右翻转）
+        - 垂直镜像（上下翻转）
+        使用 MSA SIMD 指令加速，性能提升 2-4 倍
+        仅支持 XBurst2 架构且启用了 MSA 的平台
+        可与 C 版本同时启用，用于性能对比
+
+config CONFIG_LIB_IMAGE_ROTATE_MSA
+    bool "图像旋转处理（MSA SIMD 加速版本）"
+    depends on CONFIG_XBURST2_MSA
+    help
+        提供图像旋转处理功能（MSA SIMD 加速实现），支持：
+        - 旋转90度
+        - 旋转270度
+        - 旋转180度（水平+垂直镜像）
+        使用 MSA SIMD 指令加速，NV12图像性能提升60 - 70%
+        仅支持 XBurst2 架构且启用了 MSA 的平台
+        可与 C NV12 ROTATE同时启用，用于性能对比
+
+config CONFIG_LIB_IMAGE_ROTATE_MIRROR_MSA
+    bool "图像旋转镜像处理（MSA SIMD 加速版本）"
+    depends on CONFIG_XBURST2_MSA
+    select CONFIG_LIB_IMAGE_MIRROR_MSA
+    select CONFIG_LIB_IMAGE_ROTATE_MSA
+    help
+        提供图像旋转+镜像处理功能（MSA SIMD 加速实现）
+        相比分别调用旋转和镜像MSA接口，性能提升35 - 40%
+        仅支持 XBurst2 架构且启用了 MSA 的平台
+endmenu

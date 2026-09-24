@@ -1,0 +1,3 @@
+config CONFIG_APPLICATION_INFRARED_FACE
+    bool "双红外人脸识别"
+    default n

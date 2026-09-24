@@ -1,0 +1,73 @@
+config CONFIG_SOC_X1021S
+    bool
+    select CONFIG_SOC_X1021
+
+menuconfig CONFIG_SOC_X1021
+    bool "x1021系列 cpu 设置"
+    depends on CONFIG_SOC_X1021S
+
+menuconfig CONFIG_SOC_X1021_X1021
+    bool
+    depends on CONFIG_XBURST_X1021
+
+source package/xburst/soc-x1021/x1021-spl.in
+
+endmenu
+
+menuconfig CONFIG_SOC_X1021_X1521
+    bool
+    depends on CONFIG_XBURST_X1521
+
+source package/xburst/soc-x1021/x1521-spl.in
+
+endmenu
+
+source package/xburst/soc-x1021/uart.in
+
+source package/xburst/soc-x1021/gpio.in
+
+source package/xburst/soc-x1021/spi.in
+
+source package/xburst/soc-x1021/i2c.in
+
+source package/xburst/soc-x1021/pcm.in
+
+source package/xburst/soc-x1021/vic.in
+
+config CONFIG_X1021_ADC
+    bool "adc (电压采样)"
+    select CONFIG_ADC
+
+config CONFIG_X1021_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_X1021_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X1021_RTC
+    bool "rtc (墙上时间)"
+    select CONFIG_RTC
+
+config CONFIG_X1021_DTRNG
+    bool "dtrng (硬件随机数产生)"
+    select CONFIG_DTRNG
+
+menuconfig CONFIG_X1021_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+
+config CONFIG_X1021_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    default -1
+    choice from SOC_GPIO_PINS
+
+endmenu # CONFIG_X1021_EFUSE
+
+config CONFIG_X1021_TCU
+    bool "TCU(Timer/Counter Unit)"
+
+source package/xburst/soc-x1021/lcd.in
+
+endmenu # CONFIG_SOC_X1021

@@ -1,0 +1,50 @@
+array SOC_X2600_SSLV0_DR_IO
+    string "SSLV DR(DR) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SSLV_DR" GPIO_PB(30)
+
+array SOC_X2600_SSLV0_DT_IO
+    string "SSLV DT(DT) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SSLV_DT" GPIO_PB(29)
+
+array SOC_X2600_SSLV0_CLK_IO
+    string "SSLV CLK 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SSLV_CLK" GPIO_PB(28)
+
+array SOC_X2600_SSLV0_CS_IO
+    string "SSLV CS 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SSLV_CS" GPIO_PB(31)
+
+menuconfig CONFIG_X2600_SSLV0
+    bool "SSLV0"
+    select CONFIG_SSLV
+    select CONFIG_DMA
+
+config CONFIG_X2600_SSLV0_DR
+    string "DR"
+    default GPIO_PB(30)
+    choice from SOC_X2600_SSLV0_DR_IO
+    help
+        "DR= -1,表示不使用DR引脚"
+
+config CONFIG_X2600_SSLV0_DT
+    string "DT"
+    default GPIO_PB(29)
+    choice from SOC_X2600_SSLV0_DT_IO
+    help
+        "DT= -1,表示不使用DT引脚"
+
+config CONFIG_X2600_SSLV0_CLK
+    string "CLK"
+    default GPIO_PB(28)
+    choice from SOC_X2600_SSLV0_CLK_IO
+
+config CONFIG_X2600_SSLV0_CS
+    string "CS"
+    default GPIO_PB(31)
+    choice from SOC_X2600_SSLV0_CS_IO
+
+endmenu # SSLV 总线

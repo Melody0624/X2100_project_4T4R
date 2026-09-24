@@ -1,0 +1,6 @@
+menu "外部音频编解码设备列表"
+
+source "package/devices/codec/ak4951.in"
+source "package/devices/codec/es8389.in"
+
+endmenu

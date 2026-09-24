@@ -1,0 +1,44 @@
+menu "I2C 总线"
+    help
+        "依赖于 I2C 驱动"
+
+config CONFIG_X1021_I2C0_BUS
+    bool "选择 I2C0"
+    select CONFIG_I2C
+
+choice "              选择I2C0 GPIO"
+    default CONFIG_X1021_I2C0_PA
+    depends on CONFIG_X1021_I2C0_BUS
+
+config CONFIG_X1021_I2C0_PA
+    bool "SDA: GPIO_PA(12)、SCL: GPIO_PA(13)"
+
+endchoice
+
+config CONFIG_X1021_I2C0_RATE
+    int "       I2C0 速率"
+    default 400000
+    depends on CONFIG_X1021_I2C0_BUS
+
+config CONFIG_X1021_I2C1_BUS
+    bool "选择 I2C1"
+    select CONFIG_I2C
+
+choice "              选择I2C1 GPIO"
+    default CONFIG_X1021_I2C1_PB
+    depends on CONFIG_X1021_I2C1_BUS
+
+config CONFIG_X1021_I2C1_PB
+    bool "SDA: GPIO_PB(25)、SCL: GPIO_PB(26)"
+
+config CONFIG_X1021_I2C1_PC
+    bool "SDA: GPIO_PC(8)、SCL: GPIO_PC(9)"
+
+endchoice
+
+config CONFIG_X1021_I2C1_RATE
+    int "       I2C1 速率"
+    default 400000
+    depends on CONFIG_X1021_I2C1_BUS
+
+endmenu # I2C 总线

@@ -1,0 +1,9 @@
+menuconfig CONFIG_LIBSAMPLERATE
+    bool "libsamplerate(音频重采样)"
+    default n
+
+config CONFIG_LIBSAMPLERATE_HIGH_QUALITY
+    bool "高阶算法(SINC 系列)"
+    default n
+
+endmenu

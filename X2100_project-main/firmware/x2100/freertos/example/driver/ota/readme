@@ -1,0 +1,29 @@
+这个目录是OTA的上位机源码
+
+编译脚本
+	gcc crc32.c pkt_api.c pkt.c tty_send_main.c usb_pkt.c -lpthread -o cmd_ota
+
+./cmd_ota usage
+    -h/--help  : show help info
+    dev=       : device node
+    file=      : ota upgrade file name
+    partition= : ota upgrade partition name
+    Example1: ./cmd_ota dev=/dev/ttyACM0 update=1 file=zero.bin partition=rtos
+    Example2: ./cmd_ota dev=/dev/ttyACM0 update=0 file=test.bin partition=rtos
+    Example3: ./cmd_ota dev=/dev/ttyACM0 reset
+    Example4: ./cmd_ota dev=/dev/ttyACM0 exit
+
+./cmd_ota dev=/dev/ttyACM0 update=1 file=zero.bin partition=rtos
+    dev=/dev/ttyACM0 ota通讯的串口
+    update=1 进入升级模式
+    file=zero.bin 升级的固件文件
+    partition=rtos 升级的固件分区
+
+./cmd_ota dev=/dev/ttyACM0 update=0 file=zero.bin partition=rtos
+    dev=/dev/ttyACM0 ota通讯的串口
+    update=0 进入回读模式
+    file=test.bin 回读的分区内容存储的文件路径
+    partition=rtos 回读的固件分区
+
+    reset 复位芯片
+    exit 退出ota流程(执行后面的代码)

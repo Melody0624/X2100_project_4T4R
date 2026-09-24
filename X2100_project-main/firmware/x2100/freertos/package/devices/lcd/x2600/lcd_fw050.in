@@ -1,0 +1,29 @@
+menuconfig CONFIG_X2600_MIPI_FW050
+    bool "TFT FW050 (720*1280) (X2600) (mipi接口)"
+    select CONFIG_X2600_LCD
+    depends on CONFIG_SOC_X2600
+
+config CONFIG_X2600_FW050_POWER_EN
+    string "gpio power level (lcd power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PB(20),0: 表示power使能脚为PB20,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_X2600_FW050_TE
+    string "gpio te(lcd TE引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2600_FW050_RST
+    string "gpio reset level (lcd 复位引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PB(17),0: 表示reset脚为PB17,且为低电平有效 (具体reset有效电平请查看屏IC手册)"
+
+config CONFIG_LCD_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 LCD module 电源管理器)"
+    default "-1"
+
+endmenu # MD_X2600_LCD_FW050

@@ -1,0 +1,57 @@
+menuconfig CONFIG_SOC_X1520
+    bool "x1520 cpu 设置"
+    depends on CONFIG_XBURST_X1520
+
+source package/xburst/soc-x1520/spl.in
+
+source package/xburst/soc-x1520/gpio.in
+
+source package/xburst/soc-x1520/uart.in
+
+source package/xburst/soc-x1520/spi.in
+
+source package/xburst/soc-x1520/i2c.in
+
+source package/xburst/soc-x1520/vic.in
+
+source package/xburst/soc-x1520/pcm.in
+
+config CONFIG_X1520_ADC
+    bool "adc (电压采样)"
+    select CONFIG_ADC
+
+config CONFIG_X1520_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_X1520_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X1520_RTC
+    bool "rtc (墙上时间)"
+    select CONFIG_RTC
+
+config CONFIG_X1520_DTRNG
+    bool "dtrng (硬件随机数产生)"
+    select CONFIG_DTRNG
+
+menuconfig CONFIG_X1520_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+
+config CONFIG_X1520_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    default -1
+    choice from SOC_GPIO_PINS
+
+endmenu # CONFIG_X1520_EFUSE
+
+config CONFIG_X1520_PM
+    bool "休眠功能"
+    select CONFIG_PM
+
+config CONFIG_X1520_TCU
+    bool "TCU(Timer/Counter Unit)"
+
+endmenu # CONFIG_SOC_X1520

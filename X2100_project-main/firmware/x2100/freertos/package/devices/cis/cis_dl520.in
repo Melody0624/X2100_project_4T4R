@@ -1,0 +1,79 @@
+menuconfig CONFIG_CIS_DL520
+    bool "cis_dl520"
+    depends on CONFIG_SOC_X2600
+
+config CONFIG_CIS_DL520_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 cis module 电源管理器)"
+    default "-1"
+
+config CONFIG_CIS_DL520_POWER_EN
+    string "cis 供电引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_CIS_DL520_MCLK_GPIO
+    string "cis 时钟引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_CIS_DL520_MCLK_FREQ
+    int "cis 时钟频率设置"
+    default 0
+
+config CONFIG_CIS_DL520_TR_GPIO
+    string "cis tr引脚（vsync）"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_CIS_DL520_LED_R_GPIO
+    string "cis led red 引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_CIS_DL520_LED_G_GPIO
+    string "cis led green引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_CIS_DL520_LED_B_GPIO
+    string "cis led blue 引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_CIS_DL520_LED_R_BLNESS
+    int "led red 可是亮度值"
+    default 100
+    help
+        "默认值与最大相同，设置时必须小于等于最大值"
+
+config CONFIG_CIS_DL520_LED_R_MAX_BLNESS
+    int "led red 最大亮度"
+    default 100
+    help
+        "默认值为100 可调节"
+
+config CONFIG_CIS_DL520_LED_G_BLNESS
+    int "led green 可是亮度值"
+    default 100
+    help
+        "默认值与最大相同，设置时必须小于等于最大值"
+
+config CONFIG_CIS_DL520_LED_G_MAX_BLNESS
+    int "led green 最大亮度"
+    default 100
+    help
+        "默认值为100 可调节"
+
+config CONFIG_CIS_DL520_LED_B_BLNESS
+    int "led blue 可是亮度值"
+    default 100
+    help
+        "默认值与最大相同，设置时必须小于等于最大值"
+
+config CONFIG_CIS_DL520_LED_B_MAX_BLNESS
+    int "led blue 最大亮度"
+    default 100
+    help
+        "默认值为100 可调节"
+
+endmenu

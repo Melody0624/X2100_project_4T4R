@@ -1,0 +1,131 @@
+menu "通用选项"
+
+config CONFIG_SPL_BIN_FILE
+    string "spl bin文件"
+    choice from SOC_SPL_BIN_FILES
+    help
+        spl bin文件被安放在rtos bin文件头部,用于被cpu识别,并引导rtos
+
+menuconfig CONFIG_COMPRESS_RTOS_BIN
+    bool "生成压缩格式的 rtos"
+
+config CONFIG_SPLIT_GZIP_HEADER_NUM
+    int "分包最大值"
+    default 16
+
+config CONFIG_SPLIT_GZIP_BLOCK_SIZE
+    string "包大小"
+    default "2M"
+
+config CONFIG_GZIP_SPLIT_RTOS
+    bool "gzip 分包压缩"
+    default n
+
+config CONFIG_LZMA_SPLIT_RTOS
+    bool "lzma 分包压缩"
+    default n
+
+endmenu
+
+config RTOS_TOOLCHAIN_PATH
+    string "工具链路径"
+    default "../tools/toolchains/mips-xburst1-newlib430/bin"
+    help
+        工具链bin目录路径，多个路径用冒号分隔
+        编译时会自动添加到PATH环境变量
+        XBurst1架构默认使用: ../tools/toolchains/mips-xburst1-newlib430/bin
+        XBurst2架构默认使用: ../tools/toolchains/mips-xburst2-newlib430/bin
+        注意：使用RTOS_前缀避免与系统环境变量冲突
+
+config CROSS
+    string "gcc 工具链的前缀"
+    default mips-sde-elf-
+    help
+        交叉编译工具链前缀
+        XBurst1和XBurst2的newlib工具链使用: mips-sde-elf-
+        旧的glibc工具链使用: mips-linux-gnu-
+
+config CONFIG_OS_MEM_ADDR
+    int "固件加载的地址"
+    default 0x80100000
+
+config CONFIG_OS_MEM_SIZE
+    int "固件使用的内存大小"
+    default 0
+
+config CONFIG_OS_EXCEPTION_SECTION_SIZE
+    int "异常向量表大小"
+    default 1024
+
+config CONFIG_OS_MAIN_STACK_SIZE
+    int "初始化栈大小"
+    default 16384
+
+config CONFIG_OS_EXCEPTION_STACK_SIZE
+    int "异常栈大小"
+    default 2048
+
+config CONFIG_JTAG_DEBUG
+    bool "使用JTAG 调试程序(x1600)"
+    default n
+
+config CONFIG_SHOW_COMPILE_TIME
+    bool "开机时显示编译的时间"
+    default y
+
+config CONFIG_KERNEL_WAIT_RTOS_STOP
+    bool "bootloader 等待 rtos 运行结束,然后执行 linux"
+    default n
+
+config CONFIG_OS_HAS_CPP_SUPPORT
+    bool
+
+array CONFIG_OS_GCC_OPTIMIZATIONS
+    string "gcc 优化选项"
+    item "-O0" "-O0"
+    item "-O1" "-O1"
+    item "-O2" "-O2"
+    item "-O3" "-O3"
+    item "-Os" "-Os"
+    item "-Ofast" "-Ofast"
+
+config CONFIG_OS_GCC_OPTIMIZATION
+    string "gcc 优化选项"
+    choice from CONFIG_OS_GCC_OPTIMIZATIONS
+    default -Os
+
+config CONFIG_FPU_ALWAYS_ON
+    bool "fpu 一直使能 (且中断中也可使用)"
+    default n
+
+config CONFIG_ENABLE_NESTED_IRQ
+    bool "使能中断嵌套(支持ost中断高优先级)"
+    default n
+
+menuconfig CONFIG_TCSM_SECTION
+    bool "使用tcsm功能"
+    default n
+
+config CONFIG_TCSM_SECTION_ADDR
+    int "tcsm 起始地址"
+    default 0xb3422000
+
+config CONFIG_TCSM_SECTION_SIZE
+    int "tcsm 大小"
+    default 32768
+
+config CONFIG_TCSM_SECTION_IRQ
+    bool "中断处理函数入口放到tcsm中"
+    default y
+
+config CONFIG_TCSM_SECTION_HRTIMER
+    bool "hrtimer 的中断处理函数放入tcsm中"
+    default y
+
+config CONFIG_TCSM_SECTION_OST
+    bool "OST 的中断处理函数放入tcsm中"
+    default y
+
+endmenu
+
+endmenu

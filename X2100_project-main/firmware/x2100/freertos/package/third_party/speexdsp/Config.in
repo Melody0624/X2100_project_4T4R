@@ -1,0 +1,2 @@
+config CONFIG_SPEEXDSP
+    bool "speexdsp(音频处理库)"

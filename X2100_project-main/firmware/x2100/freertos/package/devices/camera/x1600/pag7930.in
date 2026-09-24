@@ -1,0 +1,21 @@
+menuconfig CONFIG_X1600_SENSOR_PAG7930
+    bool "sensor pag7930 (mipi,raw10)"
+    select CONFIG_I2C
+    select CONFIG_X1600_CAMERA
+    depends on CONFIG_SOC_X1600
+
+config CONFIG_X1600_PAG7930_GPIO_RESET
+    string "gpio reset(sensor 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1600_PAG7930_GPIO_POWER
+    string "gpio power(sensor 电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1600_PAG7930_I2C_BUSNUM
+    int "i2c bus num (sensor 挂接的i2c总线号)"
+    default -1
+
+endmenu # CONFIG_X1600_SENSOR_PAG7930

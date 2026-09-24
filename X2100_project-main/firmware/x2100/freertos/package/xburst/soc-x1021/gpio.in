@@ -1,0 +1,268 @@
+array SOC_GPIO_PINS
+    string "soc gpio 引脚"
+    item "GPIO_NULL  " -1
+    item "PA(00)" GPIO_PA(0)
+    item "PA(01)" GPIO_PA(1)
+    item "PA(02)" GPIO_PA(2)
+    item "PA(03)" GPIO_PA(3)
+    item "PA(04)" GPIO_PA(4)
+    item "PA(05)" GPIO_PA(5)
+    item "PA(06)" GPIO_PA(6)
+    item "PA(07)" GPIO_PA(7)
+    item "PA(08)" GPIO_PA(8)
+    item "PA(09)" GPIO_PA(9)
+    item "PA(10)" GPIO_PA(10)
+    item "PA(11)" GPIO_PA(11)
+    item "PA(12)" GPIO_PA(12)
+    item "PA(13)" GPIO_PA(13)
+    item "PA(14)" GPIO_PA(14)
+    item "PA(15)" GPIO_PA(15)
+    item "PA(16)" GPIO_PA(16)
+    item "PA(17)" GPIO_PA(17)
+    item "PA(18)" GPIO_PA(18)
+    item "PA(22)" GPIO_PA(22)
+    item "PA(23)" GPIO_PA(23)
+    item "PA(24)" GPIO_PA(24)
+    item "PA(25)" GPIO_PA(25)
+    item "PA(26)" GPIO_PA(26)
+    item "PA(27)" GPIO_PA(27)
+    item "PA(28)" GPIO_PA(28)
+    item "PA(30)" GPIO_PA(30)
+    item "PB(00)" GPIO_PB(0)
+    item "PB(01)" GPIO_PB(1)
+    item "PB(02)" GPIO_PB(2)
+    item "PB(03)" GPIO_PB(3)
+    item "PB(04)" GPIO_PB(4)
+    item "PB(05)" GPIO_PB(5)
+    item "PB(06)" GPIO_PB(6)
+    item "PB(07)" GPIO_PB(7)
+    item "PB(08)" GPIO_PB(8)
+    item "PB(09)" GPIO_PB(9)
+    item "PB(10)" GPIO_PB(10)
+    item "PB(11)" GPIO_PB(11)
+    item "PB(13)" GPIO_PB(13)
+    item "PB(14)" GPIO_PB(14)
+    item "PB(15)" GPIO_PB(15)
+    item "PB(16)" GPIO_PB(16)
+    item "PB(17)" GPIO_PB(17)
+    item "PB(18)" GPIO_PB(18)
+    item "PB(19)" GPIO_PB(19)
+    item "PB(20)" GPIO_PB(20)
+    item "PB(21)" GPIO_PB(21)
+    item "PB(22)" GPIO_PB(22)
+    item "PB(23)" GPIO_PB(23)
+    item "PB(24)" GPIO_PB(24)
+    item "PB(25)" GPIO_PB(25)
+    item "PB(26)" GPIO_PB(26)
+    item "PB(27)" GPIO_PB(27)
+    item "PB(28)" GPIO_PB(28)
+    item "PB(31)" GPIO_PB(31)
+    item "PC(00)" GPIO_PC(0)
+    item "PC(01)" GPIO_PC(1)
+    item "PC(02)" GPIO_PC(2)
+    item "PC(03)" GPIO_PC(3)
+    item "PC(04)" GPIO_PC(4)
+    item "PC(05)" GPIO_PC(5)
+    item "PC(06)" GPIO_PC(6)
+    item "PC(07)" GPIO_PC(7)
+    item "PC(08)" GPIO_PC(8)
+    item "PC(09)" GPIO_PC(9)
+    item "PC(11)" GPIO_PC(11)
+    item "PC(12)" GPIO_PC(12)
+    item "PC(13)" GPIO_PC(13)
+    item "PC(14)" GPIO_PC(14)
+    item "PC(15)" GPIO_PC(15)
+    item "PC(16)" GPIO_PC(16)
+    item "PC(17)" GPIO_PC(17)
+    item "PC(18)" GPIO_PC(18)
+
+array SOC_GPIO_PIN_LEVELS
+    string "soc gpio 引脚"
+    item "GPIO_NULL" -1,0
+    item "PA(00)-低电平有效" GPIO_PA(0),0
+    item "PA(00)-高电平有效" GPIO_PA(0),1
+    item "PA(01)-低电平有效" GPIO_PA(1),0
+    item "PA(01)-高电平有效" GPIO_PA(1),1
+    item "PA(02)-低电平有效" GPIO_PA(2),0
+    item "PA(02)-高电平有效" GPIO_PA(2),1
+    item "PA(03)-低电平有效" GPIO_PA(3),0
+    item "PA(03)-高电平有效" GPIO_PA(3),1
+    item "PA(04)-低电平有效" GPIO_PA(4),0
+    item "PA(04)-高电平有效" GPIO_PA(4),1
+    item "PA(05)-低电平有效" GPIO_PA(5),0
+    item "PA(05)-高电平有效" GPIO_PA(5),1
+    item "PA(06)-低电平有效" GPIO_PA(6),0
+    item "PA(06)-高电平有效" GPIO_PA(6),1
+    item "PA(07)-低电平有效" GPIO_PA(7),0
+    item "PA(07)-高电平有效" GPIO_PA(7),1
+    item "PA(08)-低电平有效" GPIO_PA(8),0
+    item "PA(08)-高电平有效" GPIO_PA(8),1
+    item "PA(09)-低电平有效" GPIO_PA(9),0
+    item "PA(09)-高电平有效" GPIO_PA(9),1
+    item "PA(10)-低电平有效" GPIO_PA(10),0
+    item "PA(10)-高电平有效" GPIO_PA(10),1
+    item "PA(11)-低电平有效" GPIO_PA(11),0
+    item "PA(11)-高电平有效" GPIO_PA(11),1
+    item "PA(12)-低电平有效" GPIO_PA(12),0
+    item "PA(12)-高电平有效" GPIO_PA(12),1
+    item "PA(13)-低电平有效" GPIO_PA(13),0
+    item "PA(13)-高电平有效" GPIO_PA(13),1
+    item "PA(14)-低电平有效" GPIO_PA(14),0
+    item "PA(14)-高电平有效" GPIO_PA(14),1
+    item "PA(15)-低电平有效" GPIO_PA(15),0
+    item "PA(15)-高电平有效" GPIO_PA(15),1
+    item "PA(16)-低电平有效" GPIO_PA(16),0
+    item "PA(16)-高电平有效" GPIO_PA(16),1
+    item "PA(17)-低电平有效" GPIO_PA(17),0
+    item "PA(17)-高电平有效" GPIO_PA(17),1
+    item "PA(18)-低电平有效" GPIO_PA(18),0
+    item "PA(18)-高电平有效" GPIO_PA(18),1
+    item "PA(22)-低电平有效" GPIO_PA(22),0
+    item "PA(22)-高电平有效" GPIO_PA(22),1
+    item "PA(23)-低电平有效" GPIO_PA(23),0
+    item "PA(23)-高电平有效" GPIO_PA(23),1
+    item "PA(24)-低电平有效" GPIO_PA(24),0
+    item "PA(24)-高电平有效" GPIO_PA(24),1
+    item "PA(25)-低电平有效" GPIO_PA(25),0
+    item "PA(25)-高电平有效" GPIO_PA(25),1
+    item "PA(26)-低电平有效" GPIO_PA(26),0
+    item "PA(26)-高电平有效" GPIO_PA(26),1
+    item "PA(27)-低电平有效" GPIO_PA(27),0
+    item "PA(27)-高电平有效" GPIO_PA(27),1
+    item "PA(28)-低电平有效" GPIO_PA(28),0
+    item "PA(28)-高电平有效" GPIO_PA(28),1
+    item "PA(30)-低电平有效" GPIO_PA(30),0
+    item "PA(30)-高电平有效" GPIO_PA(30),1
+    item "PB(00)-低电平有效" GPIO_PB(0),0
+    item "PB(00)-高电平有效" GPIO_PB(0),1
+    item "PB(01)-低电平有效" GPIO_PB(1),0
+    item "PB(01)-高电平有效" GPIO_PB(1),1
+    item "PB(02)-低电平有效" GPIO_PB(2),0
+    item "PB(02)-高电平有效" GPIO_PB(2),1
+    item "PB(03)-低电平有效" GPIO_PB(3),0
+    item "PB(03)-高电平有效" GPIO_PB(3),1
+    item "PB(04)-低电平有效" GPIO_PB(4),0
+    item "PB(04)-高电平有效" GPIO_PB(4),1
+    item "PB(05)-低电平有效" GPIO_PB(5),0
+    item "PB(05)-高电平有效" GPIO_PB(5),1
+    item "PB(06)-低电平有效" GPIO_PB(6),0
+    item "PB(06)-高电平有效" GPIO_PB(6),1
+    item "PB(07)-低电平有效" GPIO_PB(7),0
+    item "PB(07)-高电平有效" GPIO_PB(7),1
+    item "PB(08)-低电平有效" GPIO_PB(8),0
+    item "PB(08)-高电平有效" GPIO_PB(8),1
+    item "PB(09)-低电平有效" GPIO_PB(9),0
+    item "PB(09)-高电平有效" GPIO_PB(9),1
+    item "PB(10)-低电平有效" GPIO_PB(10),0
+    item "PB(10)-高电平有效" GPIO_PB(10),1
+    item "PB(11)-低电平有效" GPIO_PB(11),0
+    item "PB(11)-高电平有效" GPIO_PB(11),1
+    item "PB(13)-低电平有效" GPIO_PB(13),0
+    item "PB(13)-高电平有效" GPIO_PB(13),1
+    item "PB(14)-低电平有效" GPIO_PB(14),0
+    item "PB(14)-高电平有效" GPIO_PB(14),1
+    item "PB(15)-低电平有效" GPIO_PB(15),0
+    item "PB(15)-高电平有效" GPIO_PB(15),1
+    item "PB(16)-低电平有效" GPIO_PB(16),0
+    item "PB(16)-高电平有效" GPIO_PB(16),1
+    item "PB(17)-低电平有效" GPIO_PB(17),0
+    item "PB(17)-高电平有效" GPIO_PB(17),1
+    item "PB(18)-低电平有效" GPIO_PB(18),0
+    item "PB(18)-高电平有效" GPIO_PB(18),1
+    item "PB(19)-低电平有效" GPIO_PB(19),0
+    item "PB(19)-高电平有效" GPIO_PB(19),1
+    item "PB(20)-低电平有效" GPIO_PB(20),0
+    item "PB(20)-高电平有效" GPIO_PB(20),1
+    item "PB(21)-低电平有效" GPIO_PB(21),0
+    item "PB(21)-高电平有效" GPIO_PB(21),1
+    item "PB(22)-低电平有效" GPIO_PB(22),0
+    item "PB(22)-高电平有效" GPIO_PB(22),1
+    item "PB(23)-低电平有效" GPIO_PB(23),0
+    item "PB(23)-高电平有效" GPIO_PB(23),1
+    item "PB(24)-低电平有效" GPIO_PB(24),0
+    item "PB(24)-高电平有效" GPIO_PB(24),1
+    item "PB(25)-低电平有效" GPIO_PB(25),0
+    item "PB(25)-高电平有效" GPIO_PB(25),1
+    item "PB(26)-低电平有效" GPIO_PB(26),0
+    item "PB(26)-高电平有效" GPIO_PB(26),1
+    item "PB(27)-低电平有效" GPIO_PB(27),0
+    item "PB(27)-高电平有效" GPIO_PB(27),1
+    item "PB(28)-低电平有效" GPIO_PB(28),0
+    item "PB(28)-高电平有效" GPIO_PB(28),1
+    item "PB(31)-低电平有效" GPIO_PB(31),0
+    item "PB(31)-高电平有效" GPIO_PB(31),1
+    item "PC(00)-低电平有效" GPIO_PC(0),0
+    item "PC(00)-高电平有效" GPIO_PC(0),1
+    item "PC(01)-低电平有效" GPIO_PC(1),0
+    item "PC(01)-高电平有效" GPIO_PC(1),1
+    item "PC(02)-低电平有效" GPIO_PC(2),0
+    item "PC(02)-高电平有效" GPIO_PC(2),1
+    item "PC(03)-低电平有效" GPIO_PC(3),0
+    item "PC(03)-高电平有效" GPIO_PC(3),1
+    item "PC(04)-低电平有效" GPIO_PC(4),0
+    item "PC(04)-高电平有效" GPIO_PC(4),1
+    item "PC(05)-低电平有效" GPIO_PC(5),0
+    item "PC(05)-高电平有效" GPIO_PC(5),1
+    item "PC(06)-低电平有效" GPIO_PC(6),0
+    item "PC(06)-高电平有效" GPIO_PC(6),1
+    item "PC(07)-低电平有效" GPIO_PC(7),0
+    item "PC(07)-高电平有效" GPIO_PC(7),1
+    item "PC(08)-低电平有效" GPIO_PC(8),0
+    item "PC(08)-高电平有效" GPIO_PC(8),1
+    item "PC(09)-低电平有效" GPIO_PC(9),0
+    item "PC(09)-高电平有效" GPIO_PC(9),1
+    item "PC(11)-低电平有效" GPIO_PC(11),0
+    item "PC(11)-高电平有效" GPIO_PC(11),1
+    item "PC(12)-低电平有效" GPIO_PC(12),0
+    item "PC(12)-高电平有效" GPIO_PC(12),1
+    item "PC(13)-低电平有效" GPIO_PC(13),0
+    item "PC(13)-高电平有效" GPIO_PC(13),1
+    item "PC(14)-低电平有效" GPIO_PC(14),0
+    item "PC(14)-高电平有效" GPIO_PC(14),1
+    item "PC(15)-低电平有效" GPIO_PC(15),0
+    item "PC(15)-高电平有效" GPIO_PC(15),1
+    item "PC(16)-低电平有效" GPIO_PC(16),0
+    item "PC(16)-高电平有效" GPIO_PC(16),1
+    item "PC(17)-低电平有效" GPIO_PC(17),0
+    item "PC(17)-高电平有效" GPIO_PC(17),1
+    item "PC(18)-低电平有效" GPIO_PC(18),0
+    item "PC(18)-高电平有效" GPIO_PC(18),1
+
+menu "GPIO 电源"
+    help
+        "配置GPIO电源"
+
+choice "选择VDDIO_0 (PA00~PA22) "
+    default CONFIG_X1021_VDDIO_0_1V8
+
+config CONFIG_X1021_VDDIO_0_1V8
+    bool "VDDIO_0 = 1.8V"
+
+config CONFIG_X1021_VDDIO_0_3V3
+    bool "VDDIO_0 = 3.3V"
+
+endchoice
+
+choice "选择VDDIO_1 (PA23~31/PB/PC00~01) "
+    default CONFIG_X1021_VDDIO_1_3V3
+
+config CONFIG_X1021_VDDIO_1_1V8
+    bool "VDDIO_1 = 1.8V"
+
+config CONFIG_X1021_VDDIO_1_3V3
+    bool "VDDIO_1 = 3.3V (数据手册只推荐VDDIO_1 = 3.3V)"
+
+endchoice
+
+choice "选择VDDIO_2 (PC02~PC18) "
+    default CONFIG_X1021_VDDIO_2_3V3
+
+config CONFIG_X1021_VDDIO_2_1V8
+    bool "VDDIO_2 = 1.8V"
+
+config CONFIG_X1021_VDDIO_2_3V3
+    bool "VDDIO_2 = 3.3V"
+
+endchoice
+
+endmenu

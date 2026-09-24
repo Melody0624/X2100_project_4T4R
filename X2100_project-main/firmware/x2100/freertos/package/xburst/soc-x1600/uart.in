@@ -1,0 +1,356 @@
+menu "uart 设备列表"
+
+config CONFIG_SOC_X1600_UART0
+    bool "uart 0"
+    depends on CONFIG_XBURST_X1600
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X1600_UART0_RX
+    string "    rx gpio"
+    default -1
+    choice from UART0_RX_PINS
+    depends on CONFIG_SOC_X1600_UART0
+
+config CONFIG_SOC_X1600_UART0_TX
+    string "    tx gpio"
+    default -1
+    choice from UART0_TX_PINS
+    depends on CONFIG_SOC_X1600_UART0
+
+config CONFIG_SOC_X1600_UART0_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART0_CTS_PINS
+    depends on CONFIG_SOC_X1600_UART0
+
+config CONFIG_SOC_X1600_UART0_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART0_RTS_PINS
+    depends on CONFIG_SOC_X1600_UART0
+
+config CONFIG_SOC_X1600_UART0_SW_CTS
+    string "    sw cts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART0
+
+config CONFIG_SOC_X1600_UART0_SW_RTS
+    string "    sw rts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART0
+
+config CONFIG_SOC_X1600_UART1
+    bool "uart 1"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X1600_UART1_RX
+    string "    rx gpio"
+    default -1
+    choice from UART1_RX_PINS
+    depends on CONFIG_SOC_X1600_UART1
+
+config CONFIG_SOC_X1600_UART1_TX
+    string "    tx gpio"
+    default -1
+    choice from UART1_TX_PINS
+    depends on CONFIG_SOC_X1600_UART1
+
+config CONFIG_SOC_X1600_UART1_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART1_CTS_PINS
+    depends on CONFIG_SOC_X1600_UART1
+
+config CONFIG_SOC_X1600_UART1_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART1_RTS_PINS
+    depends on CONFIG_SOC_X1600_UART1
+
+config CONFIG_SOC_X1600_UART1_SW_CTS
+    string "    sw cts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART1
+
+config CONFIG_SOC_X1600_UART1_SW_RTS
+    string "    sw rts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART1
+
+config CONFIG_SOC_X1600_UART2
+    bool "uart 2"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X1600_UART2_RX
+    string "    rx gpio"
+    default -1
+    choice from UART2_RX_PINS
+    depends on CONFIG_SOC_X1600_UART2
+
+config CONFIG_SOC_X1600_UART2_TX
+    string "    tx gpio"
+    default -1
+    choice from UART2_TX_PINS
+    depends on CONFIG_SOC_X1600_UART2
+
+config CONFIG_SOC_X1600_UART2_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART2_CTS_PINS
+    depends on CONFIG_SOC_X1600_UART2
+
+config CONFIG_SOC_X1600_UART2_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART2_RTS_PINS
+    depends on CONFIG_SOC_X1600_UART2
+
+config CONFIG_SOC_X1600_UART2_SW_CTS
+    string "    sw cts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART2
+
+config CONFIG_SOC_X1600_UART2_SW_RTS
+    string "    sw rts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART2
+
+config CONFIG_SOC_X1600_UART3
+    bool "uart 3"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X1600_UART3_RX
+    string "    rx gpio"
+    default -1
+    choice from UART3_RX_PINS
+    depends on CONFIG_SOC_X1600_UART3
+
+config CONFIG_SOC_X1600_UART3_TX
+    string "    tx gpio"
+    default -1
+    choice from UART3_TX_PINS
+    depends on CONFIG_SOC_X1600_UART3
+
+config CONFIG_SOC_X1600_UART3_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART3_CTS_PINS
+    depends on CONFIG_SOC_X1600_UART3
+
+config CONFIG_SOC_X1600_UART3_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART3_RTS_PINS
+    depends on CONFIG_SOC_X1600_UART3
+
+config CONFIG_SOC_X1600_UART3_SW_CTS
+    string "    sw cts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART3
+
+config CONFIG_SOC_X1600_UART3_SW_RTS
+    string "    sw rts gpio"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_SOC_X1600_UART3
+
+endmenu
+
+menuconfig CONFIG_SOC_X1600_UART
+    bool
+    depends on CONFIG_XBURST_X1600
+
+array UART0_RX_PINS
+    string "uart0 rx 引脚"
+    item "GPIO_PB(7) func0" GPIO_PB(7),GPIO_FUNC_0
+    item "GPIO_NULL  " -1
+
+array UART0_TX_PINS
+    string "uart0 tx 引脚"
+    item "GPIO_PB(8) func0" GPIO_PB(8),GPIO_FUNC_0
+    item "GPIO_NULL  " -1
+
+array UART0_CTS_PINS
+    string "uart0 cts 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_PB(9) func0" GPIO_PB(9),GPIO_FUNC_0
+
+array UART0_RTS_PINS
+    string "uart0 rts 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_PB(10) func0" GPIO_PB(10),GPIO_FUNC_0
+
+array UART1_RX_PINS
+    string "uart1 rx 引脚"
+    item "GPIO_PB(3) func1" GPIO_PB(3),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART1_TX_PINS
+    string "uart1 tx 引脚"
+    item "GPIO_PB(2) func1" GPIO_PB(2),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART1_CTS_PINS
+    string "uart1 cts 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_PB(5) func1" GPIO_PB(5),GPIO_FUNC_1
+
+array UART1_RTS_PINS
+    string "uart1 rts 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_PB(4) func1" GPIO_PB(4),GPIO_FUNC_1
+
+array UART2_RX_PINS
+    string "uart2 rx 引脚"
+    item "GPIO_PA(31) func2" GPIO_PA(31),GPIO_FUNC_2
+    item "GPIO_PB(1) func1" GPIO_PB(1),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART2_TX_PINS
+    string "uart2 tx 引脚"
+    item "GPIO_PA(30) func2" GPIO_PA(30),GPIO_FUNC_2
+    item "GPIO_PB(0) func1" GPIO_PB(0),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART2_CTS_PINS
+    string "uart2 cts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART2_RTS_PINS
+    string "uart2 rts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART3_RX_PINS
+    string "uart3 rx 引脚"
+    item "GPIO_PB(5) func0" GPIO_PB(5),GPIO_FUNC_0
+    item "GPIO_PD(5) func2" GPIO_PD(5),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART3_TX_PINS
+    string "uart3 tx 引脚"
+    item "GPIO_PB(4) func0" GPIO_PB(4),GPIO_FUNC_0
+    item "GPIO_PD(4) func2" GPIO_PD(4),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART3_CTS_PINS
+    string "uart3 cts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART3_RTS_PINS
+    string "uart3 rts 引脚"
+    item "GPIO_NULL  " -1
+endmenu
+
+menuconfig CONFIG_SOC_X1660_UART
+    bool
+    depends on CONFIG_XBURST_X1660
+
+array UART1_RX_PINS
+    string "uart1 rx 引脚"
+    item "GPIO_PB(3) func1" GPIO_PB(3),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART1_TX_PINS
+    string "uart1 tx 引脚"
+    item "GPIO_PB(2) func1" GPIO_PB(2),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART1_CTS_PINS
+    string "uart1 cts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART1_RTS_PINS
+    string "uart1 rts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART2_RX_PINS
+    string "uart2 rx 引脚"
+    item "GPIO_PA(31) func2" GPIO_PA(31),GPIO_FUNC_2
+    item "GPIO_PB(1) func1" GPIO_PB(1),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART2_TX_PINS
+    string "uart2 tx 引脚"
+    item "GPIO_PA(30) func2" GPIO_PA(30),GPIO_FUNC_2
+    item "GPIO_PB(0) func1" GPIO_PB(0),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART2_CTS_PINS
+    string "uart2 cts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART2_RTS_PINS
+    string "uart2 rts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART3_RX_PINS
+    string "uart3 rx 引脚"
+    item "GPIO_PD(5) func2" GPIO_PD(5),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART3_TX_PINS
+    string "uart3 tx 引脚"
+    item "GPIO_PD(4) func2" GPIO_PD(4),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART3_CTS_PINS
+    string "uart3 cts 引脚"
+    item "GPIO_NULL  " -1
+
+array UART3_RTS_PINS
+    string "uart3 rts 引脚"
+    item "GPIO_NULL  " -1
+
+endmenu
+
+array SOC_UART_DEVICES
+    int "soc uart 设备"
+    item "uart 0" 0
+    item "uart 1" 1
+    item "uart 2" 2
+    item "uart 3" 3
+
+
+array SOC_UART_BAUD_RATES
+    int "soc uart 波特率"
+    item      "50" 50
+    item      "75" 75
+    item     "110" 110
+    item     "134" 134
+    item     "150" 150
+    item     "200" 200
+    item     "300" 300
+    item     "600" 600
+    item    "1200" 1200
+    item    "1800" 1800
+    item    "2400" 2400
+    item    "4800" 4800
+    item    "9600" 9600
+    item   "19200" 19200
+    item   "38400" 38400
+    item   "57600" 57600
+    item  "115200" 115200
+    item  "230400" 230400
+    item  "460800" 460800
+    item  "500000" 500000
+    item  "576000" 576000
+    item  "921600" 921600
+    item "1000000" 1000000
+    item "1152000" 1152000
+    item "1500000" 1500000
+    item "2000000" 2000000
+    item "2500000" 2500000
+    item "3000000" 3000000
+    item "3500000" 3500000
+    item "4000000" 4000000

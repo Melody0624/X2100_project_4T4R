@@ -1,0 +1,131 @@
+menu "I2C 总线"
+    help
+        "依赖于 I2C 驱动"
+
+config CONFIG_X2000_I2C0_BUS
+    bool "选择 I2C0"
+    select CONFIG_I2C
+
+choice "              选择I2C0 GPIO"
+    default CONFIG_X2000_I2C0_PC
+    depends on CONFIG_X2000_I2C0_BUS
+
+config CONFIG_X2000_I2C0_PC
+    bool "SDA: GPIO_PC(14)、SCL: GPIO_PC(13)"
+
+endchoice
+
+config CONFIG_X2000_I2C0_RATE
+    int "       I2C0 速率"
+    default 400000
+    depends on CONFIG_X2000_I2C0_BUS
+
+config CONFIG_X2000_I2C1_BUS
+    bool "选择 I2C1"
+    select CONFIG_I2C
+
+choice "              选择I2C1 GPIO"
+    default CONFIG_X2000_I2C1_PC
+    depends on CONFIG_X2000_I2C1_BUS
+
+config CONFIG_X2000_I2C1_PC
+    bool "SDA: GPIO_PC(24)、SCL: GPIO_PC(23)"
+
+config CONFIG_X2000_I2C1_PD
+    bool "SDA: GPIO_PD(12)、SCL: GPIO_PD(11)"
+
+endchoice
+
+config CONFIG_X2000_I2C1_RATE
+    int "       I2C1 速率"
+    default 400000
+    depends on CONFIG_X2000_I2C1_BUS
+
+config CONFIG_X2000_I2C2_BUS
+    bool "选择 I2C2"
+    select CONFIG_I2C
+
+choice "              选择I2C2 GPIO"
+    default CONFIG_X2000_I2C2_PB
+    depends on CONFIG_X2000_I2C2_BUS
+
+config CONFIG_X2000_I2C2_PB
+    bool "SDA: GPIO_PB(23)、SCL: GPIO_PB(22)"
+
+config CONFIG_X2000_I2C2_PD
+    bool "SDA: GPIO_PD(21)、SCL: GPIO_PD(20)"
+
+config CONFIG_X2000_I2C2_PE
+    bool "SDA: GPIO_PE(20)、SCL: GPIO_PE(19)"
+
+endchoice
+
+config CONFIG_X2000_I2C2_RATE
+    int "       I2C2 速率"
+    default 400000
+    depends on CONFIG_X2000_I2C2_BUS
+
+config CONFIG_X2000_I2C3_BUS
+    bool "选择 I2C3"
+    select CONFIG_I2C
+
+choice "              选择I2C3 GPIO"
+    default CONFIG_X2000_I2C3_PA
+    depends on CONFIG_X2000_I2C3_BUS
+
+config CONFIG_X2000_I2C3_PA
+    bool "SDA: GPIO_PA(17)、SCL: GPIO_PA(16)"
+
+config CONFIG_X2000_I2C3_PD
+    bool "SDA: GPIO_PD(31)、SCL: GPIO_PD(30)"
+
+endchoice
+
+config CONFIG_X2000_I2C3_RATE
+    int "       I2C3 速率"
+    default 400000
+    depends on CONFIG_X2000_I2C3_BUS
+
+config CONFIG_X2000_I2C4_BUS
+    bool "选择 I2C4"
+    select CONFIG_I2C
+
+choice "              选择I2C4 GPIO"
+    default CONFIG_X2000_I2C4_PC
+    depends on CONFIG_X2000_I2C4_BUS
+
+config CONFIG_X2000_I2C4_PC
+    bool "SDA: GPIO_PC(26)、SCL: GPIO_PC(25)"
+
+config CONFIG_X2000_I2C4_PD
+    bool "SDA: GPIO_PD(1)、SCL: GPIO_PD(0)"
+
+endchoice
+
+config CONFIG_X2000_I2C4_RATE
+    int "       I2C4 速率"
+    default 400000
+    depends on CONFIG_X2000_I2C4_BUS
+
+config CONFIG_X2000_I2C5_BUS
+    bool "选择 I2C5"
+    select CONFIG_I2C
+
+choice "              选择I2C5 GPIO"
+    default CONFIG_X2000_I2C5_PC
+    depends on CONFIG_X2000_I2C5_BUS
+
+config CONFIG_X2000_I2C5_PC
+    bool "SDA: GPIO_PC(28)、SCL: GPIO_PC(27)"
+
+config CONFIG_X2000_I2C5_PD
+    bool "SDA: GPIO_PD(5)、SCL: GPIO_PD(4)"
+
+endchoice
+
+config CONFIG_X2000_I2C5_RATE
+    int "       I2C5 速率"
+    default 400000
+    depends on CONFIG_X2000_I2C5_BUS
+
+endmenu # I2C 总线

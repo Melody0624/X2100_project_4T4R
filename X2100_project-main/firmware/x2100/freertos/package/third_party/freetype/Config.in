@@ -1,0 +1,55 @@
+menuconfig CONFIG_FREETYPE
+    bool "freetype"
+    default n
+    help
+      启用 FreeType 字体渲染库。
+
+config CONFIG_FREETYPE_SMOOTH
+    bool
+
+config CONFIG_FREETYPE_RASTER
+    bool
+
+choice "选择 FreeType 默认启用的渲染器"
+    default CONFIG_FREETYPE_RENDERER_SMOOTH
+
+config CONFIG_FREETYPE_RENDERER_SMOOTH
+    bool "Smooth (anti-aliased)"
+    select CONFIG_FREETYPE_SMOOTH
+    help
+      启用灰度抗锯齿渲染，显示质量更高。
+
+config CONFIG_FREETYPE_RENDERER_RASTER
+    bool "Raster (monochrome)"
+    select CONFIG_FREETYPE_RASTER
+    help
+      启用单色渲染，占用更小但有锯齿。
+
+config CONFIG_FREETYPE_RENDERER_BOTH
+    bool "Smooth + Raster"
+    select CONFIG_FREETYPE_SMOOTH
+    select CONFIG_FREETYPE_RASTER
+    help
+      同时启用两种渲染器。
+
+endchoice
+
+config CONFIG_FREETYPE_POSTSCRIPT_NAMES
+    bool "PostScript glyph names"
+    default n
+    help
+      支持 PS glyph name 与基于 PS 名称的 Unicode 合成。
+
+config CONFIG_FREETYPE_GX_VAR
+    bool "GX/variable font support"
+    default n
+    help
+      启用可变字体（GX/Variable Fonts）支持。
+
+config CONFIG_FREETYPE_SVG
+    bool "SVG glyph support"
+    default n
+    help
+      启用 OpenType SVG 字形支持（需外部 SVG 渲染回调）。
+
+endmenu

@@ -1,0 +1,9 @@
+menuconfig CONFIG_X1830_MSCALER
+    bool "mscaler (图像缩放功能)"
+    select CONFIG_MSCALER
+
+config CONFIG_X1830_MSCALER_DETAIL
+    int "mscaler 清晰度调节(0-100)"
+    default 50
+
+endmenu

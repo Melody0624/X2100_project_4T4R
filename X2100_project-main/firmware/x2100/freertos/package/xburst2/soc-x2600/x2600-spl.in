@@ -1,0 +1,17 @@
+array SOC_SPL_BIN_FILES
+    string "soc spl bin 文件列表"
+    item "没有 spl"
+    item "spl sfc nand cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600e-spl-sfc-nand-1152M-900M-uart2.bin
+    item "spl sfc nand ota cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600e-spl-sfc-nand-ota-1152M-900M-uart2.bin
+    item "spl sfc nand cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600-spl-sfc-nand-1152M-900M-uart2.bin
+    item "spl sfc nand sfc:SFC_PD0 cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600-spl-sfc-pd0-nand-1152M-900M-uart2.bin
+    item "spl sfc nand ota cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600-spl-sfc-nand-ota-1152M-900M-uart2.bin
+    item "spl sfc nand cpu:1152M ddr:900M uart0" xburst2/soc-x2600/spl/x2600e-spl-sfc-nand-1152M-900M-uart0.bin
+    item "spl sfc nand cpu:1152M ddr:600M" xburst2/soc-x2600/spl/x2600m-spl-sfc-nand-1152M-600M-uart2.bin
+    item "spl sfc bpp_4k nand cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600e-spl-bpp_4k-sfc-nand-1152M-900M-uart2.bin
+    item "spl sfc bpp_4k nand ota cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600e-spl-bpp_4k-sfc-nand-ota-1152M-900M-uart2.bin
+    item "spl sfc nor cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600e-spl-sfc-nor-1152M-900M-uart2.bin
+    item "spl sfc nor ota cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600e-spl-sfc-nor-ota-1152M-900M-uart2.bin
+    item "spl sfc nor cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600-spl-sfc-nor-1152M-900M-uart2.bin
+    item "spl sfc nor ota cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2600-spl-sfc-nor-ota-1152M-900M-uart2.bin
+    item "spl sfc nor cpu:1152M ddr:600M" xburst2/soc-x2600/spl/x2600m-spl-sfc-nor-1152M-600M-uart2.bin

@@ -1,0 +1,10 @@
+menu "应用程序"
+
+config CONFIG_APPLICATION
+    bool
+
+source package/application/face/Config.in
+
+source package/application/load_kernel/Config.in
+
+endmenu

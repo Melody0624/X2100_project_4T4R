@@ -1,0 +1,4 @@
+config CONFIG_DFS_HOTPLUG
+    bool "支持设备热拔插操作"
+    depends on CONFIG_DFS_ELMFAT
+    default n

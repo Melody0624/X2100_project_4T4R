@@ -1,0 +1,101 @@
+
+config CONFIG_SOC_X1000S
+    bool
+    select CONFIG_SOC_X1000
+
+menuconfig CONFIG_SOC_X1000
+    bool "x1000系列 cpu 设置"
+    depends on CONFIG_SOC_X1000S
+
+menuconfig CONFIG_SOC_X1000_X1000
+    bool
+    depends on CONFIG_XBURST_X1000
+    select CONFIG_SOC_X1000_HAS_LCD
+
+source package/xburst/soc-x1000/x1000-spl.in
+source package/xburst/soc-x1000/x1000-gpio.in
+
+
+endmenu
+
+
+menuconfig CONFIG_SOC_X1000_X1500L
+    bool
+    depends on CONFIG_XBURST_X1500L
+
+source package/xburst/soc-x1000/x1500l-spl.in
+source package/xburst/soc-x1000/x1500l-gpio.in
+
+endmenu
+
+menuconfig CONFIG_SOC_X1000_X1500
+    bool
+    depends on CONFIG_XBURST_X1500
+
+source package/xburst/soc-x1000/x1500-spl.in
+source package/xburst/soc-x1000/x1500-gpio.in
+
+endmenu
+
+source package/xburst/soc-x1000/uart.in
+
+source package/xburst/soc-x1000/spi.in
+
+source package/xburst/soc-x1000/i2c.in
+
+source package/xburst/soc-x1000/mmc/mmc.in
+
+source package/xburst/soc-x1000/cim.in
+
+source package/xburst/soc-x1000/pcm.in
+
+source package/xburst/soc-x1000/utils.in
+
+config CONFIG_X1000_DMIC
+    bool "dmic(外接数字mic)"
+    select CONFIG_PCM
+
+config CONFIG_X1000_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_X1000_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X1000_RTC
+    bool "rtc (墙上时间)"
+    select CONFIG_RTC
+
+config CONFIG_X1000_AES
+    bool "aes（加解密）"
+    select CONFIG_AES
+
+config CONFIG_X1000_SECURITY_AES
+    bool "security aes (加解密)"
+    select CONFIG_SECURITY_AES
+
+menuconfig CONFIG_X1000_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+    select CONFIG_GPIO_PIN
+
+config CONFIG_X1000_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_X1000_EFUSE
+
+config CONFIG_X1000_PM
+    bool "休眠功能"
+    select CONFIG_PM
+
+config CONFIG_X1000_TCU
+    bool "TCU(Timer/Counter Unit)"
+
+source package/xburst/soc-x1000/lcd.in
+
+source package/xburst/soc-x1000/mac/mac.in
+
+endmenu

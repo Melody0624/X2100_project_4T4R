@@ -1,0 +1,17 @@
+source package/build/Config.in
+source package/mips/Config.in
+source package/xburst/Config.in
+source package/xburst2/Config.in
+source package/lib/Config.in
+source package/drivers/Config.in
+source package/devices/Config.in
+source package/os/Config.in
+source package/newlib/Config.in
+source package/symbols/Config.in
+source package/filesystem/Config.in
+source package/shell/Config.in
+source package/net/Config.in
+source package/secureboot/Config.in
+source package/application/Config.in
+source package/third_party/Config.in
+source package/vendor/Config.in

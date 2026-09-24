@@ -1,0 +1,4 @@
+config CONFIG_MUPDF
+    bool "MUPDF (pdf 编解码/解析)"
+    default n
+    select CONFIG_MIPS_SETJMP

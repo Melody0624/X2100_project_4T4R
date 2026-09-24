@@ -1,0 +1,12 @@
+1. MTD
+an MTD is "Memory Technology Device", these device is direct access by the host. e.g. NAND, NOR, ECC'd NOR, etc.
+
+2. ramdisk
+the flash device is simulated by memory
+
+
+3. block device
+The block device like MMC, eMMC, SD, CompactFlash, etc.
+these device are not raw flashes, but they have a Flash Translation Layer inside. the host communication with the Flash controller, not care the flash issue,
+the flash controller running FTL algorithms deal with wear-leveling, bad blocks handing, read-disturb and so on.
+

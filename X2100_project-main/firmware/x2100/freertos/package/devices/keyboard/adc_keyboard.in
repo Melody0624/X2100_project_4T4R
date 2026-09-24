@@ -1,0 +1,157 @@
+menuconfig CONFIG_ADC_KEYBOARD
+    bool "ADC按键驱动"
+    select CONFIG_INPUT
+    select CONFIG_ADC
+
+config CONFIG_ADC_DEVIATION
+    int "ADC允许误差范围"
+    default 10
+    help
+        "例如：误差范围为正负10,这里就填10"
+
+config CONFIG_ADC_KEY_CHANNEL
+    int "ADC输入通道"
+    default 0
+    help
+        "填写adc按键使用的adc通道，如使用的是adc通道0这里就填0"
+
+config CONFIG_ADC_KEY_DEV_NAME
+    string "ADC按键设备名称"
+    default "adc_keyboard"
+
+config CONFIG_ADC_KEY_MAX_EVENT_COUNT
+    int "ADC键盘事件缓冲区大小"
+    default 64
+
+config CONFIG_ADC_KEY_IRQ_GPIO
+    string "中断GPIO口"
+    default -1
+    choice from SOC_GPIO_PINS
+    help
+        "选择adc按键中断触发的GPIO口：
+         将ADC通道接一比较器的输入端，通过比较器的输出端来实现外部中断
+         无按键按下时，输出为高电平，有任一按键按下，输出为低电平"
+
+config CONFIG_DEBOUNCE_TIME
+    int "按键消抖时间(ms)"
+    default 10
+
+
+
+config CONFIG_ADC_KEY1
+    bool "添加第一个按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADC_KEY1_VALUE
+    string "        按键值"
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADC_KEY1
+
+config CONFIG_ADC_KEY1_RES_VALUE
+    int "       按键ADC值"
+    default 0
+    depends on CONFIG_ADC_KEY1
+
+
+
+config CONFIG_ADC_KEY2
+    bool "添加第二个按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADC_KEY2_VALUE
+    string "        按键值"
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADC_KEY2
+
+config CONFIG_ADC_KEY2_RES_VALUE
+    int "       按键ADC值"
+    default 170
+    depends on CONFIG_ADC_KEY2
+
+
+
+config CONFIG_ADC_KEY3
+    bool "添加第三个按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADC_KEY3_VALUE
+    string "        按键值"
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADC_KEY3
+
+config CONFIG_ADC_KEY3_RES_VALUE
+    int "       按键ADC值"
+    default 341
+    depends on CONFIG_ADC_KEY3
+
+
+
+config CONFIG_ADC_KEY4
+    bool "添加第四个按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADC_KEY4_VALUE
+    string "        按键值"
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADC_KEY4
+
+config CONFIG_ADC_KEY4_RES_VALUE
+    int "       按键ADC值"
+    default 514
+    depends on CONFIG_ADC_KEY4
+
+
+
+config CONFIG_ADC_KEY5
+    bool "添加第五个按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADC_KEY5_VALUE
+    string "        按键值"
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADC_KEY5
+
+config CONFIG_ADC_KEY5_RES_VALUE
+    int "       按键ADC值"
+    default 683
+    depends on CONFIG_ADC_KEY5
+
+
+
+config CONFIG_ADC_KEY6
+    bool "添加第六个按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADC_KEY6_VALUE
+    string "        按键值"
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADC_KEY6
+
+config CONFIG_ADC_KEY6_RES_VALUE
+    int "       按键ADC值"
+    default 853
+    depends on CONFIG_ADC_KEY6
+
+
+
+config CONFIG_ADD_ADC_KEY
+    bool "添加超出按键,按ADC电路原理图的电阻排列顺序添加"
+    default n
+
+config CONFIG_ADD_ADC_KEY_VALUE
+    string "        按键值"
+    default -1
+    depends on CONFIG_ADD_ADC_KEY
+    help
+        "如果超过6个按键，多余按键值需自己参照 input_event.h 填写。例如：KEY_7, KEY_8  等等 "
+
+config CONFIG_ADD_ADC_KEY_RES_VALUE
+    string "        按键ADC值"
+    default -1
+    depends on CONFIG_ADD_ADC_KEY
+    help
+        "如果超过6个按键，多余电阻需自己按顺序填写。例如：920, 980  等等"
+
+endmenu # CONFIG_ADC_KEYBOARD
+
+

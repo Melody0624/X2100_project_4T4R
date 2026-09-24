@@ -1,0 +1,61 @@
+menuconfig CONFIG_AD100_MIPI_RM692E5
+    bool "TFT RM692E5 (1080*2400) (AD100) (mipi接口)"
+    select CONFIG_AD100_LCD
+    depends on CONFIG_SOC_AD100
+
+array AD100_FB_FMT
+    string "fb 格式"
+    item "fb_fmt_RGB555" fb_fmt_RGB555
+    item "fb_fmt_RGB565" fb_fmt_RGB565
+    item "fb_fmt_RGB888" fb_fmt_RGB888
+    item "fb_fmt_ARGB8888" fb_fmt_ARGB8888
+    item "fb_fmt_NV12" fb_fmt_NV12
+    item "fb_fmt_NV21" fb_fmt_NV21
+    item "fb_fmt_yuv422" fb_fmt_yuv422
+
+config CONFIG_AD100_RM692E5_VDDIO_POWER_EN
+    string "gpio vddio power level (lcd vddio power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PC(20),0: 表示vddio power使能脚为PC20,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_AD100_RM692E5_DVDD_POWER_EN
+    string "gpio dvdd power level (lcd dvdd power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PC(21),0: 表示dvdd power使能脚为PC21,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_AD100_RM692E5_VCI_POWER_EN
+    string "gpio vci power level (lcd vci power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PC(22),0: 表示vci power使能脚为PC22,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_AD100_RM692E5_RESET_EN
+    string "gpio reset level (lcd 复位引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PE(10),0: 表示reset脚为PE10,且为低电平有效 (具体reset有效电平请查看屏IC手册)"
+
+config CONFIG_AD100_RM692E5_POWER_IC_POWER_EN
+    string "gpio power ic power level (lcd 电源IC使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PC(23),1: 表示lcd 电源ic使能脚为PC23,且为高电平有效 (具体有效电平请查看硬件原理图)"
+
+config CONFIG_LCD_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 LCD module 电源管理器)"
+    default "-1"
+
+
+config CONFIG_AD100_RM692E5_FB_FMT
+    string "fb 格式选择"
+    default fb_fmt_RGB888
+    choice from AD100_FB_FMT
+
+endmenu # MD_AD100_LCD_RM692E5

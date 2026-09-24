@@ -1,0 +1,125 @@
+array PWM_IDLE_LEVELS
+    string "pwm 空闲电平"
+    item "PWM_idle_low" PWM_idle_low
+    item "PWM_idle_high" PWM_idle_high
+
+menuconfig CONFIG_PWM_BACKLIGHT
+    bool "pwm背光"
+    select CONFIG_BACKLIGHT
+    select CONFIG_PWM
+
+config CONFIG_PWM_BACKLIGHT_CONFIG_BY_RTOS
+    bool "linux 启动后接管 rtos 内的pwm背光配置"
+    select CONFIG_MEMORY_INHERIT
+    default n
+
+config CONFIG_PWM_BACKLIGHT0
+    bool "pwm_backlight0"
+
+config CONFIG_PWM_BACKLIGHT0_GPIO
+    string "pwm 引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+    depends on CONFIG_PWM_BACKLIGHT0
+
+config CONFIG_PWM_BACKLIGHT0_ENABLE_GPIO
+    string "pwm 使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_PWM_BACKLIGHT0
+
+config CONFIG_PWM_BACKLIGHT0_IDLE_LEVEL
+    string "pwm空闲电平"
+    choice from PWM_IDLE_LEVELS
+    default PWM_idle_low
+    depends on CONFIG_PWM_BACKLIGHT0
+
+config CONFIG_PWM_BACKLIGHT0_FREQ
+    int "pwm频率(单位hz)"
+    default 50000
+    depends on CONFIG_PWM_BACKLIGHT0
+
+config CONFIG_PWM_BACKLIGHT0_MAX_LEVEL
+    int "最大亮度"
+    default 100
+    depends on CONFIG_PWM_BACKLIGHT0
+
+config CONFIG_PWM_BACKLIGHT0_NAME
+    string "背光名字"
+    default "backlight_pwm0"
+    depends on CONFIG_PWM_BACKLIGHT0
+
+config CONFIG_PWM_BACKLIGHT1
+    bool "pwm_backlight1"
+
+config CONFIG_PWM_BACKLIGHT1_GPIO
+    string "pwm 引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+    depends on CONFIG_PWM_BACKLIGHT1
+
+config CONFIG_PWM_BACKLIGHT1_ENABLE_GPIO
+    string "pwm 使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_PWM_BACKLIGHT1
+
+config CONFIG_PWM_BACKLIGHT1_IDLE_LEVEL
+    string "pwm空闲电平"
+    choice from PWM_IDLE_LEVELS
+    default PWM_idle_low
+    depends on CONFIG_PWM_BACKLIGHT1
+
+config CONFIG_PWM_BACKLIGHT1_FREQ
+    int "pwm频率(单位hz)"
+    default 50000
+    depends on CONFIG_PWM_BACKLIGHT1
+
+config CONFIG_PWM_BACKLIGHT1_MAX_LEVEL
+    int "最大亮度"
+    default 100
+    depends on CONFIG_PWM_BACKLIGHT1
+
+config CONFIG_PWM_BACKLIGHT1_NAME
+    string "背光名字"
+    default "backlight_pwm1"
+    depends on CONFIG_PWM_BACKLIGHT1
+
+config CONFIG_PWM_BACKLIGHT2
+    bool "pwm_backlight2"
+
+config CONFIG_PWM_BACKLIGHT2_GPIO
+    string "pwm 引脚"
+    choice from SOC_GPIO_PINS
+    default -1
+    depends on CONFIG_PWM_BACKLIGHT2
+
+config CONFIG_PWM_BACKLIGHT2_ENABLE_GPIO
+    string "pwm 使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_PWM_BACKLIGHT2
+
+config CONFIG_PWM_BACKLIGHT2_IDLE_LEVEL
+    string "pwm空闲电平"
+    choice from PWM_IDLE_LEVELS
+    default PWM_idle_low
+    depends on CONFIG_PWM_BACKLIGHT2
+
+config CONFIG_PWM_BACKLIGHT2_FREQ
+    int "pwm频率(单位hz)"
+    default 50000
+    depends on CONFIG_PWM_BACKLIGHT2
+
+config CONFIG_PWM_BACKLIGHT2_MAX_LEVEL
+    int "最大亮度"
+    default 100
+    depends on CONFIG_PWM_BACKLIGHT2
+
+config CONFIG_PWM_BACKLIGHT2_NAME
+    string "背光名字"
+    default "backlight_pwm2"
+    depends on CONFIG_PWM_BACKLIGHT2
+
+endmenu # CONFIG_PWM_BACKLIGHT
+

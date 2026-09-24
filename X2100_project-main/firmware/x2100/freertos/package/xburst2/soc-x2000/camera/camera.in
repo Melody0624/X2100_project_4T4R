@@ -1,0 +1,81 @@
+array SOC_X2000_CAMERA_MCLK_IO
+    string "X2000 MCLK 引脚"
+    item "PC15" GPIO_PC(15)
+    item "PE24" GPIO_PE(24)
+
+menuconfig CONFIG_X2000_CAMERA
+    bool "camera 驱动 (vic/cim控制器)"
+    select CONFIG_CAMERA
+
+config CONFIG_SOC_X2000_CAMERA_VIC0
+    bool "选择VIC0控制器"
+
+choice "        选择VIC0 数据通路(ISP/DDR)"
+    default CONFIG_SOC_X2000_CAMERA_VIC0_ROUTINE_DDR
+    depends on CONFIG_SOC_X2000_CAMERA_VIC0
+
+config CONFIG_SOC_X2000_CAMERA_VIC0_ROUTINE_DDR
+    bool " VIC0数据不通过ISP模块"
+
+config CONFIG_SOC_X2000_CAMERA_VIC0_ROUTINE_ISP
+    bool " VIC0数据通过ISP模块"
+    select CONFIG_ISP
+
+endchoice
+
+config CONFIG_SOC_X2000_CAMERA_VIC0_MCLK
+    string "VIC0 MCLK管脚选择"
+    default GPIO_PE(24)
+    choice from SOC_X2000_CAMERA_MCLK_IO
+    depends on CONFIG_SOC_X2000_CAMERA_VIC0
+
+config CONFIG_SOC_X2000_CAMERA_VIC0_FRAME_NUMS
+    int "VIC0 帧缓冲数量"
+    default 2
+    depends on CONFIG_SOC_X2000_CAMERA_VIC0
+
+
+
+config CONFIG_SOC_X2000_CAMERA_VIC1
+    bool "选择VIC1控制器"
+
+choice "        选择VIC1 数据通路(ISP/DDR)"
+    default CONFIG_SOC_X2000_CAMERA_VIC1_ROUTINE_DDR
+    depends on CONFIG_SOC_X2000_CAMERA_VIC1
+
+config CONFIG_SOC_X2000_CAMERA_VIC1_ROUTINE_DDR
+    bool " VIC1数据不通过ISP模块"
+
+config CONFIG_SOC_X2000_CAMERA_VIC1_ROUTINE_ISP
+    bool " VIC1数据通过ISP模块"
+    select CONFIG_ISP
+
+endchoice
+
+config CONFIG_SOC_X2000_CAMERA_VIC1_MCLK
+    string "VIC1 MCLK管脚选择"
+    default GPIO_PE(24)
+    choice from SOC_X2000_CAMERA_MCLK_IO
+    depends on CONFIG_SOC_X2000_CAMERA_VIC1
+
+config CONFIG_SOC_X2000_CAMERA_VIC1_FRAME_NUMS
+    int "VIC1 帧缓冲数量"
+    default 2
+    depends on CONFIG_SOC_X2000_CAMERA_VIC1
+
+
+config CONFIG_SOC_X2000_CAMERA_CIM
+    bool "选择CIM控制器"
+
+config CONFIG_SOC_X2000_CAMERA_CIM_MCLK
+    string "CIM MCLK管脚选择"
+    default GPIO_PE(24)
+    choice from SOC_X2000_CAMERA_MCLK_IO
+    depends on CONFIG_SOC_X2000_CAMERA_CIM
+
+config CONFIG_SOC_X2000_CAMERA_CIM_FRAME_NUMS
+    int "CIM 帧缓冲数量"
+    default 2
+    depends on CONFIG_SOC_X2000_CAMERA_CIM
+
+endmenu # CONFIG_X2000_CAMERA

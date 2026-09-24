@@ -1,0 +1,139 @@
+menuconfig CONFIG_GPIO_I2C
+    bool "GPIO_I2C驱动"
+    select CONFIG_I2C
+
+
+
+config CONFIG_GPIO_I2C0
+    bool "选择 GPIO_I2C0"
+
+config CONFIG_GPIO_I2C0_ID
+    int "       bus_id(总线号)"
+    default 0
+    depends on CONFIG_GPIO_I2C0
+
+config CONFIG_GPIO_I2C0_SCL
+    string "        scl管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C0
+    help
+        "sc10 = -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C0_SDA
+    string "        sda管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C0
+    help
+        "sda0 = -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C0_CLK_RATE
+    int "       时钟"
+    default 100000
+    depends on CONFIG_GPIO_I2C0
+    help
+        "输入时钟,单位Hz"
+
+
+
+config CONFIG_GPIO_I2C1
+    bool "选择 GPIO_I2C1"
+
+config CONFIG_GPIO_I2C1_ID
+    int "       bus_id(总线号)"
+    default 1
+    depends on CONFIG_GPIO_I2C1
+
+config CONFIG_GPIO_I2C1_SCL
+    string "        scl管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C1
+    help
+        "sc11 = -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C1_SDA
+    string "        sda管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C1
+    help
+        "sda1= -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C1_CLK_RATE
+    int "       时钟"
+    default 100000
+    depends on CONFIG_GPIO_I2C1
+    help
+        "输入时钟,单位Hz"
+
+
+
+config CONFIG_GPIO_I2C2
+    bool "选择 GPIO_I2C2"
+
+config CONFIG_GPIO_I2C2_ID
+    int "       bus_id(总线号)"
+    default 2
+    depends on CONFIG_GPIO_I2C2
+
+config CONFIG_GPIO_I2C2_SCL
+    string "        scl管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C2
+    help
+        "sc12 = -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C2_SDA
+    string "        sda管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C2
+    help
+        "sda2= -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C2_CLK_RATE
+    int "       时钟"
+    default 100000
+    depends on CONFIG_GPIO_I2C2
+    help
+        "输入时钟,单位Hz"
+
+
+
+config CONFIG_GPIO_I2C3
+    bool "选择 GPIO_I2C3"
+
+config CONFIG_GPIO_I2C3_ID
+    int "       bus_id(总线号)"
+    default 3
+    depends on CONFIG_GPIO_I2C3
+
+config CONFIG_GPIO_I2C3_SCL
+    string "        scl管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C3
+    help
+        "sc13 = -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C3_SDA
+    string "        sda管脚"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_I2C3
+    help
+        "sda3= -1，表示不使用该引脚"
+
+config CONFIG_GPIO_I2C3_CLK_RATE
+    int "       时钟"
+    default 100000
+    depends on CONFIG_GPIO_I2C3
+    help
+        "输入时钟,单位Hz"
+
+
+
+endmenu

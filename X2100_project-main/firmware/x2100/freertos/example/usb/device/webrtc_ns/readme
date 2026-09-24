@@ -1,0 +1,19 @@
+uvc + uac + 降噪
+
+编译配置流程：
+    Iconigtool 必选配置
+        USB 摄像头和声卡1.0复合设备驱动(CONFIG_USB_GADGET_UVC_N_UAC1)
+
+    拷贝文件到vendor目录
+
+    修改 vendor/Makefile, 添加编译文件
+        src-y += vendor.c fft4g.c ns_core.c gadget_usb_uvc_uac1.c
+
+    修改 vendor/vendor.c 添加函数调用
+        int gadget_usb_uvc_uac1_test(void);
+        void vendor_init(void)
+        {
+            printf("vendor init...\n");
+            gadget_usb_uvc_uac1_test();
+        }
+

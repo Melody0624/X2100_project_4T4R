@@ -1,0 +1,29 @@
+menuconfig CONFIG_PWM_SCANNER
+    bool "pwm scanner 驱动"
+
+array PWM_SCANNER_FORMAT_ORDER
+    int "输入cim数据格式"
+    item "FMT_Y8_1X8" 0x2001
+    item "BGR888_1X24" 0x1013
+    item "GBR888_1X24" 0x1014
+    item "GRB888_1X24" 0x1018
+    item "RGB888_1X24" 0x100a
+    item "RBG888_1X24" 0x100e
+    item "BGR565_2X8_BE" 0x1005
+    item "BGR565_2X8_LE" 0x1006
+    item "RGB565_2X8_BE" 0x1007
+    item "RGB565_2X8_LE" 0x1008
+
+config CONFIG_HSYNC_GPIO
+    string "hsync 引脚"
+    default -1
+    choice from SOC_GPIO_PINS
+
+config CONFIG_PWM_SCANNER_INPUT_FMT
+    int "输入数据格式"
+    choice from PWM_SCANNER_FORMAT_ORDER
+    default 0x100e
+    help
+        "配置传感器输入数据格式 [注]：24bit与1X24顺序对应 16bit与2X8对应"
+
+endmenu

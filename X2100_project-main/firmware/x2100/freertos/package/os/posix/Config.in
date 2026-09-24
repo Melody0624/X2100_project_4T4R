@@ -1,0 +1,58 @@
+menuconfig CONFIG_OS_POSIX
+    bool "使能 posix 定义的一系列接口 （使用os接口封装）"
+    default y
+
+config CONFIG_OS_POSIX_PTHREAD
+    bool "pthread 相关接口"
+    select CONFIG_OS_POSIX_CLOCK
+    default y
+
+config CONFIG_OS_POSIX_PTHREAD_MUTEX
+    bool "pthread mutex 相关接口"
+    select CONFIG_OS_POSIX_CLOCK
+    default y
+
+config CONFIG_OS_POSIX_PTHREAD_COND
+    bool "pthread cond 相关接口"
+    select CONFIG_OS_POSIX_PTHREAD_MUTEX
+    default y
+
+config CONFIG_OS_POSIX_PTHREAD_BARRIER
+    bool "pthread barrier 相关接口"
+    default y
+
+config CONFIG_OS_POSIX_SEM
+    bool "sem (信号量) 相关接口"
+    select CONFIG_OS_POSIX_TIMER
+    default y
+
+config CONFIG_OS_POSIX_MQEUEUE
+    bool "mqueue (消息队列) 相关接口"
+    select CONFIG_OS_POSIX_TIMER
+    default y
+
+config CONFIG_OS_POSIX_TIMER
+    bool "timer 相关接口"
+    select CONFIG_OS_POSIX_CLOCK
+    default y
+
+config CONFIG_OS_POSIX_CLOCK
+    bool "clock 相关接口"
+    default y
+    help
+        clock_getcpuclockid
+        clock_getres
+        clock_gettime
+        clock_nanosleep
+        clock_settime
+        nanosleep
+
+config CONFIG_OS_POSIX_SCHED
+    bool "sched 相关接口"
+    default y
+    help
+        sched_get_priority_max
+        sched_get_priority_min
+        sched_yield
+
+endmenu

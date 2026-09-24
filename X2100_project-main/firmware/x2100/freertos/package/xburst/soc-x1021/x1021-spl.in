@@ -1,0 +1,5 @@
+array SOC_SPL_BIN_FILES
+    string "soc spl bin 文件列表"
+    item "没有 spl"
+    item "spl sfc nand cpu:864M ddr:450M" xburst/soc-x1021/spl/x1021-spl-sfc-nand-864M-450M.bin
+    item "spl sfc nor cpu:864M ddr:450M" xburst/soc-x1021/spl/x1021-spl-sfc-nor-864M-450M.bin

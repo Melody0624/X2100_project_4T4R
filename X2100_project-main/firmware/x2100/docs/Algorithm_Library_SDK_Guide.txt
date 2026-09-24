@@ -1,0 +1,69 @@
+=========================================================
+      Ingenic X2100/ Cheetah 毫米波雷达算法库
+                    使用说明文档
+=========================================================
+
+为了保护核心算法源码，并加快系统外围逻辑的联调速度，本工程支持将
+【点云检测算法(Detection)】、【目标跟踪算法(Tracking)】与【雷达预警算法(Warning)】
+解耦并编译为三个独立的静态库（.a文件）。
+
+---------------------------------------------------------
+一、 内网日常开发与编译指南
+---------------------------------------------------------
+构建系统已深度集成了算法库的自动化管理。您只需在根目录 `freertos/` 下通过 `BUILD_MODE` 变量即可一键控制：
+
+【1. DEBUG 模式（默认）- 源码级调试】
+命令： make clean && make all BUILD_MODE=DEBUG  (或直接 make all)
+作用： 系统会忽略静态库，直接编译 `src/detection`、`src/Tracking` 和 `src/warningFunc` 下的所有 .c 源码。
+适用： 日常开发、单步调试跟踪、修改算法内部逻辑。
+
+【2. RELEASE 模式 - 一键重编静态库并打包】
+命令： make clean && make all BUILD_MODE=RELEASE
+作用： 系统会自动进入三个算法目录，先重新生成最新的 `.a` 静态库，然后将这些库静态链接进最终的固件镜像。
+适用： 算法调优结束，准备发布固件，或准备更新库文件时。
+
+【3. 混合编译模式（高级）- 命令行变量强行覆盖法（免删代码）】
+命令： make all CONFIG_USE_DETECTION_LIB=n CONFIG_USE_TRACKING_LIB=y CONFIG_USE_WARNING_LIB=y
+作用： 在 GNU Make 中，命令行传入的变量优先级最高。您可以跳过 `BUILD_MODE` 全局开关，直接用底层变量进行模块级精细控制。上述命令将强制系统：Detection 使用源码编译（n），而 Tracking 和 Warning 链接现成的静态库（y），实现源码与静态库的自由混编。
+适用： 多人协作中，只需单步调试某个特定模块的源码，而其他模块希望直接链接静态库加快编译时。
+
+---------------------------------------------------------
+二、 客户 SDK 交付指南 (SDK Mode 自适应降级)
+---------------------------------------------------------
+当需要将代码作为 SDK 提供给外部客户（无源码权限）时，构建系统具备强大的探针自适应能力，能够完美应对源码缺失场景。
+
+【如何制作并发送客户 SDK 包？】
+1. 正常执行 `make all BUILD_MODE=RELEASE` 确保生成了最新的 `.a` 静态库。
+2. 直接物理删除 `motor_cycle_demo/src/detection/`、`motor_cycle_demo/src/Tracking/` 和 `motor_cycle_demo/src/warningFunc/` 三个文件夹中的源码及 Makefile。
+3. 将剩余代码打包发送给客户。
+
+【客户如何编译？】
+客户拿到代码后，只需按常规执行 `make all` 即可。
+底层 Makefile 会自动侦测到算法源码（Makefile）缺失，**智能拦截报错并强制降级为库链接模式**（终端会提示 [SDK Mode]）。无论客户是否指定 BUILD_MODE，系统都会安稳地链接现成的 `.a` 库，绝不会因为找不到源码而报错崩溃！
+
+---------------------------------------------------------
+三、 SDK 交付需要同步提供哪些头文件？
+---------------------------------------------------------
+交付 SDK 静态库给客户时，请确保提供以下“公共头文件”，并严格隐藏内部私有头文件：
+
+【共享的公共依赖】（不管交付哪个库，都必须提供）
+1. inc/radar_functions.h (包含入口函数声明)
+2. inc/radar_types.h (包含核心上下文结构体 GlbCtx)
+3. ne10_fft_lib/inc/fft.h (因为 GlbCtx 内部引用了 FFT 相关的数据结构)
+4. inc/mmw_msg_pkt.h (CAN报文/输出结构体定义)
+
+【场景 1：交付点云检测库 (libmmw_detection.a)】
+- 必须提供的头文件：上述 4 个共享依赖，加上系统强依赖的外围辅助函数头文件：
+  - inc/general_functions.h (包含 `get_time_ns`、`update_mmw_pkt_info_from_ctx` 等被 vendor.c 调用的接口)
+  - inc/algorithm_functions.h (包含 `getEgoVehInfo` 等自车信息接口)
+- 必须隐藏的私有文件：inc/complex_abs_f32.h, detection/ 目录下的所有内部私有头文件（cfar_func_v2.h 等）。
+
+【场景 2：交付目标跟踪库 (libmmw_tracking.a)】
+- 必须提供的头文件：上述 4 个共享依赖，加上以下外围功能接口：
+  - inc/ego_vlc_estimation.h (如果对方需要调用自我速度估计)
+- 必须隐藏的私有文件：Tracking/ 目录下的所有跟踪内部算法细节头文件，以及 inc/vlc_core.h, inc/ransac.h, inc/track_association.h 等。
+
+【场景 3：交付雷达预警库 (libmmw_warning.a)】
+- 必须提供的头文件：上述 4 个共享依赖，加上预警接口：
+  - inc/warning_detection.h (包含预警逻辑的数据结构与接口声明)
+- 必须隐藏的私有文件：warningFunc/ 目录下的任何内部预警逻辑头文件（如有）。

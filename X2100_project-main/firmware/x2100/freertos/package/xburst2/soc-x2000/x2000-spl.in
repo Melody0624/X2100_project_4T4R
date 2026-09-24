@@ -1,0 +1,10 @@
+array SOC_SPL_BIN_FILES
+    string "soc spl bin 文件列表"
+    item "没有 spl"
+    item "spl sfc nand cpu:1200M ddr:750M" xburst2/soc-x2000/spl/x2000-spl-sfc-nand-1200M-750M.bin
+    item "spl sfc nand cpu:1200M ddr:750M uart3" xburst2/soc-x2000/spl/x2000-spl-sfc-nand-1200M-750M-uart3-3000000.bin
+    item "spl sfc nor cpu:1200M ddr:750M" xburst2/soc-x2000/spl/x2000-spl-sfc-nor-1200M-750M.bin
+    item "spl mmc cpu:1200M ddr:750M" xburst2/soc-x2000/spl/x2000-spl-mmc-1200M-750M.bin
+    item "spl mmc0 sdma cpu:1200M ddr:750M" xburst2/soc-x2000/spl/x2000-spl-mmc0-sdma-1200M-750M-uart2-3000000.bin
+    item "spl mmc2 cpu:1200M ddr:750M" xburst2/soc-x2000/spl/x2000-spl-mmc2-1200M-750M-uart3.bin
+    item "spl mmc2 sdma cpu:1200M ddr:750M" xburst2/soc-x2000/spl/x2000-spl-mmc2-sdma-1200M-750M-uart2-3000000.bin

@@ -1,0 +1,87 @@
+
+config CONFIG_SOC_X1830S
+    bool
+    select CONFIG_SOC_X1830
+
+menuconfig CONFIG_SOC_X1830
+    bool "x1830系列 cpu 设置"
+    depends on CONFIG_SOC_X1830S
+
+menuconfig CONFIG_SOC_X1830_X1830
+    bool
+    depends on CONFIG_XBURST_X1830
+
+source package/xburst/soc-x1830/x1830-spl.in
+source package/xburst/soc-x1830/x1830-gpio.in
+
+endmenu
+
+menuconfig CONFIG_SOC_X1830_X1630
+    bool
+    depends on CONFIG_XBURST_X1630
+
+source package/xburst/soc-x1830/x1630-spl.in
+source package/xburst/soc-x1830/x1630-gpio.in
+
+endmenu
+
+
+source package/xburst/soc-x1830/uart.in
+
+source package/xburst/soc-x1830/gpio.in
+
+source package/xburst/soc-x1830/spi.in
+
+source package/xburst/soc-x1830/i2c.in
+
+source package/xburst/soc-x1830/pcm.in
+
+source package/xburst/soc-x1830/mscaler.in
+
+config CONFIG_X1830_DMIC
+    bool "dmic(外接数字mic)"
+    select CONFIG_PCM
+
+source package/xburst/soc-x1830/vic.in
+
+source package/xburst/soc-x1830/lcd.in
+
+config CONFIG_X1830_ADC
+    bool "adc (电压采样)"
+    select CONFIG_ADC
+
+config CONFIG_X1830_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_X1830_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X1830_RTC
+    bool "rtc (墙上时间)"
+    select CONFIG_RTC
+
+config CONFIG_X1830_DTRNG
+    bool "dtrng (硬件随机数产生)"
+    select CONFIG_DTRNG
+
+config CONFIG_X1830_DES
+    bool "des (数据加密器)"
+    select CONFIG_DES
+
+menuconfig CONFIG_X1830_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+
+config CONFIG_X1830_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    default -1
+    choice from SOC_GPIO_PINS
+
+endmenu # CONFIG_X1830_EFUSE
+
+config CONFIG_X1830_TCU
+    bool "TCU(Timer/Counter Unit)"
+
+endmenu # CONFIG_SOC_X1830

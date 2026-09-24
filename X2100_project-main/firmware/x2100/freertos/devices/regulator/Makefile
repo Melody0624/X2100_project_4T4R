@@ -1,0 +1,1 @@
+src-$(CONFIG_GPIO_REGULATOR) += regulator/gpio_regulator.c

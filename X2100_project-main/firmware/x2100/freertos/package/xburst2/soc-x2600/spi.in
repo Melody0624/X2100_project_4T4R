@@ -1,0 +1,103 @@
+array SOC_X2600_SPI0_MISO_IO
+    string "SPI MISO(DR) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MISO" GPIO_PB(1)
+    item "GPIO_SPI_MISO" GPIO_PD(2)
+
+array SOC_X2600_SPI0_MOSI_IO
+    string "SPI MOSI(DT) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MOSI" GPIO_PB(2)
+    item "GPIO_SPI_MOSI" GPIO_PD(1)
+
+array SOC_X2600_SPI1_MISO_IO
+    string "SPI MISO(DR) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MISO" GPIO_PC(17)
+    item "GPIO_SPI_MISO" GPIO_PC(27)
+
+array SOC_X2600_SPI1_MOSI_IO
+    string "SPI MOSI(DT) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MOSI" GPIO_PC(16)
+    item "GPIO_SPI_MOSI" GPIO_PC(26)
+
+array SOC_X2600_SPI0_CLK_IO
+    string "SPI CLK 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_CLK" GPIO_PB(3)
+    item "GPIO_SPI_CLK" GPIO_PD(0)
+
+array SOC_X2600_SPI1_CLK_IO
+    string "SPI CLK 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_CLK" GPIO_PC(15)
+    item "GPIO_SPI_CLK" GPIO_PC(25)
+
+menu "SPI 总线"
+    help
+        "依赖于 SPI 驱动"
+
+config CONFIG_X2600_SPI_CLK_RATE
+    int "SPI内部时钟源频率(单位Hz)"
+    default 100000000
+    help
+            SPI频率 = SPI内部时钟源频率 / (2 * (CGV + 1))
+            CGV范围: 0 ~ 255
+            当前SPI频率范围: 195312.5 ~ 50000000
+
+config CONFIG_X2600_SPI0
+    bool "选择 SPI0"
+    select CONFIG_SPI
+    select CONFIG_DMA
+
+config CONFIG_X2600_SPI0_MISO
+    string "        MISO"
+    default -1
+    choice from SOC_X2600_SPI0_MISO_IO
+    depends on CONFIG_X2600_SPI0
+    help
+        "MISO= -1,表示不使用MISO引脚"
+
+config CONFIG_X2600_SPI0_MOSI
+    string "        MOSI"
+    default -1
+    choice from SOC_X2600_SPI0_MOSI_IO
+    depends on CONFIG_X2600_SPI0
+    help
+        "MOSI= -1,表示不使用MOSI引脚"
+
+config CONFIG_X2600_SPI0_CLK
+    string "        CLK"
+    default -1
+    choice from SOC_X2600_SPI0_CLK_IO
+    depends on CONFIG_X2600_SPI0
+
+config CONFIG_X2600_SPI1
+    bool "选择 SPI1"
+    select CONFIG_SPI
+    select CONFIG_DMA
+
+config CONFIG_X2600_SPI1_MISO
+    string "        MISO"
+    default -1
+    choice from SOC_X2600_SPI1_MISO_IO
+    depends on CONFIG_X2600_SPI1
+    help
+        "MISO= -1,表示不使用MISO引脚,即只接收不发送"
+
+config CONFIG_X2600_SPI1_MOSI
+    string "        MOSI"
+    default -1
+    choice from SOC_X2600_SPI1_MOSI_IO
+    depends on CONFIG_X2600_SPI1
+    help
+        "MOSI= -1,表示不使用MOSI引脚,即只发送不接收"
+
+config CONFIG_X2600_SPI1_CLK
+    string "        CLK"
+    default -1
+    choice from SOC_X2600_SPI1_CLK_IO
+    depends on CONFIG_X2600_SPI1
+
+endmenu # SPI 总线

@@ -1,0 +1,39 @@
+menuconfig CONFIG_AD100_MIPI_ST7701S_FRD450
+    bool "TFT ST7701S_FRD450 (480x854) (AD100) (mipi接口)"
+    select CONFIG_AD100_LCD
+    depends on CONFIG_SOC_AD100
+
+array AD100_FB_FMT
+    string "fb 格式"
+    item "fb_fmt_RGB555" fb_fmt_RGB555
+    item "fb_fmt_RGB565" fb_fmt_RGB565
+    item "fb_fmt_RGB888" fb_fmt_RGB888
+    item "fb_fmt_ARGB8888" fb_fmt_ARGB8888
+    item "fb_fmt_NV12" fb_fmt_NV12
+    item "fb_fmt_NV21" fb_fmt_NV21
+    item "fb_fmt_yuv422" fb_fmt_yuv422
+
+config CONFIG_AD100_ST7701S_FRD450_POWER_EN
+    string "gpio power level (lcd power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PB(20),0: 表示power使能脚为PB20,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_AD100_ST7701S_FRD450_RST
+    string "gpio reset level (lcd 复位引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PB(17),0: 表示reset脚为PB17,且为低电平有效 (具体reset有效电平请查看屏IC手册)
+
+config CONFIG_LCD_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 LCD module 电源管理器)"
+    default "-1"
+
+config CONFIG_AD100_ST7701S_FRD450_FB_FMT
+    string "fb 格式选择"
+    default fb_fmt_ARGB8888
+    choice from AD100_FB_FMT
+
+endmenu # MD_AD100_LCD_ST7701S_FRD450

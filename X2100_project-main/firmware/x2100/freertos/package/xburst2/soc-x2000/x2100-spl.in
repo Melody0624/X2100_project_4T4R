@@ -1,0 +1,6 @@
+array SOC_SPL_BIN_FILES
+    string "soc spl bin 文件列表"
+    item "没有 spl"
+    item "spl sfc nand cpu:1200M ddr:500M" xburst2/soc-x2000/spl/x2100-spl-sfc-nand-1200M-500M.bin
+    item "spl sfc nor cpu:1200M ddr:500M" xburst2/soc-x2000/spl/x2100-spl-sfc-nor-1200M-500M.bin
+    item "x2100l spl sfc nor cpu:1200M ddr:500M" xburst2/soc-x2000/spl/x2100l-spl-sfc-nor-1200M-500M.bin

@@ -1,0 +1,7 @@
+array SOC_SPL_BIN_FILES
+    string "soc spl bin 文件列表"
+    item "没有 spl"
+    item "spl sfc nand cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2670-spl-sfc-nand-1152M-900M-uart2.bin
+    item "spl sfc nand ota cpu:1152M ddr:900M" xburst2/soc-x2600/spl/x2670-spl-sfc-nand-ota-1152M-900M-uart2.bin
+    item "spl sfc nand cpu:1152M ddr:900M uart0" xburst2/soc-x2600/spl/x2670-spl-sfc-nand-1152M-900M-uart0.bin
+    item "spl sfc nand ota cpu:1152M ddr:900M uart0" xburst2/soc-x2600/spl/x2670-spl-sfc-nand-ota-1152M-900M-uart0.bin

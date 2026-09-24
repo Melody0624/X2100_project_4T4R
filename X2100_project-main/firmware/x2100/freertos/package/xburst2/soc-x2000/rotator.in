@@ -1,0 +1,3 @@
+config CONFIG_X2000_ROTATOR
+    bool "rotator(图像旋转)"
+    select CONFIG_ROTATOR

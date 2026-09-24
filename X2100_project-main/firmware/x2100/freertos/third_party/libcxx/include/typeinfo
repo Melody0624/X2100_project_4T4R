@@ -1,0 +1,643 @@
+// -*- C++ -*-
+//===-------------------------- typeinfo ----------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef __LIBCPP_TYPEINFO
+#define __LIBCPP_TYPEINFO
+
+/*
+
+    typeinfo synopsis
+
+namespace std {
+
+class type_info
+{
+public:
+    virtual ~type_info();
+
+    bool operator==(const type_info& rhs) const noexcept;
+    bool operator!=(const type_info& rhs) const noexcept;
+
+    bool before(const type_info& rhs) const noexcept;
+    size_t hash_code() const noexcept;
+    const char* name() const noexcept;
+
+    type_info(const type_info& rhs) = delete;
+    type_info& operator=(const type_info& rhs) = delete;
+};
+
+class bad_cast
+    : public exception
+{
+public:
+    bad_cast() noexcept;
+    bad_cast(const bad_cast&) noexcept;
+    bad_cast& operator=(const bad_cast&) noexcept;
+    virtual const char* what() const noexcept;
+};
+
+class bad_typeid
+    : public exception
+{
+public:
+    bad_typeid() noexcept;
+    bad_typeid(const bad_typeid&) noexcept;
+    bad_typeid& operator=(const bad_typeid&) noexcept;
+    virtual const char* what() const noexcept;
+};
+
+}  // std
+
+*/
+
+#include <__config>
+#include <exception>
+#include <cstddef>
+#include <cstdint>
+#ifdef _LIBCPP_NO_EXCEPTIONS
+#include <cstdlib>
+#endif
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#pragma GCC system_header
+#endif
+
+#define ABI_NAMESPACE __cxxabiv1
+
+namespace ABI_NAMESPACE
+{
+	struct __class_type_info;
+}
+
+#if defined(_LIBCPP_ABI_VCRUNTIME)
+#include <vcruntime_typeinfo.h>
+#else
+
+namespace std  // purposefully not using versioning namespace
+{
+
+
+#if defined(_LIBCPP_ABI_MICROSOFT)
+
+class _LIBCPP_EXCEPTION_ABI type_info
+{
+    type_info& operator=(const type_info&);
+    type_info(const type_info&);
+
+    mutable struct {
+      const char *__undecorated_name;
+      const char __decorated_name[1];
+    } __data;
+
+    int __compare(const type_info &__rhs) const _NOEXCEPT;
+
+public:
+    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
+    virtual ~type_info();
+
+    const char *name() const _NOEXCEPT;
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool before(const type_info& __arg) const _NOEXCEPT {
+      return __compare(__arg) < 0;
+    }
+
+    size_t hash_code() const _NOEXCEPT;
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator==(const type_info& __arg) const _NOEXCEPT {
+      return __compare(__arg) == 0;
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator!=(const type_info& __arg) const _NOEXCEPT
+    { return !operator==(__arg); }
+};
+
+#else // !defined(_LIBCPP_ABI_MICROSOFT)
+
+// ========================================================================== //
+//                           Implementations
+// ========================================================================== //
+// ------------------------------------------------------------------------- //
+//                               Unique
+// ------------------------------------------------------------------------- //
+// This implementation of type_info assumes a unique copy of the RTTI for a
+// given type inside a program. This is a valid assumption when abiding to
+// Itanium ABI (http://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-components).
+// Under this assumption, we can always compare the addresses of the type names
+// to implement equality-comparison of type_infos instead of having to perform
+// a deep string comparison.
+// -------------------------------------------------------------------------- //
+//                             NonUnique
+// -------------------------------------------------------------------------- //
+// This implementation of type_info does not assume there is always a unique
+// copy of the RTTI for a given type inside a program. For various reasons
+// the linker may have failed to merge every copy of a types RTTI
+// (For example: -Bsymbolic or llvm.org/PR37398). Under this assumption, two
+// type_infos are equal if their addresses are equal or if a deep string
+// comparison is equal.
+// -------------------------------------------------------------------------- //
+//                          NonUniqueARMRTTIBit
+// -------------------------------------------------------------------------- //
+// This implementation of type_info does not assume always a unique copy of
+// the RTTI for a given type inside a program. It packs the pointer to the
+// type name into a uintptr_t and reserves the high bit of that pointer (which
+// is assumed to be free for use under the ABI in use) to represent whether
+// that specific copy of the RTTI can be assumed unique inside the program.
+// To implement equality-comparison of type_infos, we check whether BOTH
+// type_infos are guaranteed unique, and if so, we simply compare the addresses
+// of their type names instead of doing a deep string comparison, which is
+// faster. If at least one of the type_infos can't guarantee uniqueness, we
+// have no choice but to fall back to a deep string comparison.
+//
+// This implementation is specific to ARM64 on Apple platforms.
+//
+// Note that the compiler is the one setting (or unsetting) the high bit of
+// the pointer when it constructs the type_info, depending on whether it can
+// guarantee uniqueness for that specific type_info.
+
+struct __type_info_implementations {
+  struct __string_impl_base {
+    typedef const char* __type_name_t;
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_CONSTEXPR static const char* __type_name_to_string(__type_name_t __v) _NOEXCEPT {
+      return __v;
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    _LIBCPP_CONSTEXPR static __type_name_t __string_to_type_name(const char* __v) _NOEXCEPT {
+      return __v;
+    }
+  };
+
+  struct __unique_impl : __string_impl_base {
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static size_t __hash(__type_name_t __v) _NOEXCEPT {
+      return reinterpret_cast<size_t>(__v);
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      return __lhs == __rhs;
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      return __lhs < __rhs;
+    }
+  };
+
+  struct __non_unique_impl : __string_impl_base {
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static size_t __hash(__type_name_t __ptr) _NOEXCEPT {
+      size_t __hash = 5381;
+      while (unsigned char __c = static_cast<unsigned char>(*__ptr++))
+        __hash = (__hash * 33) ^ __c;
+      return __hash;
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      return __lhs == __rhs || __builtin_strcmp(__lhs, __rhs) == 0;
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      return __builtin_strcmp(__lhs, __rhs) < 0;
+    }
+  };
+
+  struct __non_unique_arm_rtti_bit_impl {
+    typedef uintptr_t __type_name_t;
+
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static const char* __type_name_to_string(__type_name_t __v) _NOEXCEPT {
+      return reinterpret_cast<const char*>(__v &
+          ~__non_unique_rtti_bit::value);
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static __type_name_t __string_to_type_name(const char* __v) _NOEXCEPT {
+      return reinterpret_cast<__type_name_t>(__v);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static size_t __hash(__type_name_t __v) _NOEXCEPT {
+      if (__is_type_name_unique(__v))
+        return reinterpret_cast<size_t>(__v);
+      return __non_unique_impl::__hash(__type_name_to_string(__v));
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static bool __eq(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      if (__lhs == __rhs)
+        return true;
+      if (__is_type_name_unique(__lhs, __rhs))
+        return false;
+      return __builtin_strcmp(__type_name_to_string(__lhs), __type_name_to_string(__rhs)) == 0;
+    }
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_ALWAYS_INLINE
+    static bool __lt(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      if (__is_type_name_unique(__lhs, __rhs))
+        return __lhs < __rhs;
+      return __builtin_strcmp(__type_name_to_string(__lhs), __type_name_to_string(__rhs)) < 0;
+    }
+
+   private:
+    // The unique bit is the top bit. It is expected that __type_name_t is 64 bits when
+    // this implementation is actually used.
+    typedef std::integral_constant<__type_name_t,
+      (1ULL << ((__CHAR_BIT__ * sizeof(__type_name_t)) - 1))> __non_unique_rtti_bit;
+
+    _LIBCPP_INLINE_VISIBILITY
+    static bool __is_type_name_unique(__type_name_t __lhs) _NOEXCEPT {
+      return !(__lhs & __non_unique_rtti_bit::value);
+    }
+    _LIBCPP_INLINE_VISIBILITY
+    static bool __is_type_name_unique(__type_name_t __lhs, __type_name_t __rhs) _NOEXCEPT {
+      return !((__lhs & __rhs) & __non_unique_rtti_bit::value);
+    }
+  };
+
+  typedef
+#if defined(__APPLE__) && defined(__LP64__) && !defined(__x86_64__)
+    __non_unique_arm_rtti_bit_impl
+#elif _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT == 0
+    __non_unique_impl
+#elif _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT == 1
+    __unique_impl
+#else
+#   error invalid configuration for _LIBCPP_HAS_MERGED_TYPEINFO_NAMES_DEFAULT
+#endif
+     __impl;
+};
+
+/* 这里是libcxx的原生实现,我们用下面的libcxxrt的实现
+ */
+#if 0
+class _LIBCPP_EXCEPTION_ABI type_info
+{
+  type_info& operator=(const type_info&);
+  type_info(const type_info&);
+
+ protected:
+    typedef __type_info_implementations::__impl __impl;
+
+    __impl::__type_name_t __type_name;
+
+    _LIBCPP_INLINE_VISIBILITY
+    explicit type_info(const char* __n)
+      : __type_name(__impl::__string_to_type_name(__n)) {}
+
+public:
+    _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
+    virtual ~type_info();
+
+    _LIBCPP_INLINE_VISIBILITY
+    const char* name() const _NOEXCEPT
+    {
+      return __impl::__type_name_to_string(__type_name);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool before(const type_info& __arg) const _NOEXCEPT
+    {
+      return __impl::__lt(__type_name, __arg.__type_name);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    size_t hash_code() const _NOEXCEPT
+    {
+      return __impl::__hash(__type_name);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator==(const type_info& __arg) const _NOEXCEPT
+    {
+      return __impl::__eq(__type_name, __arg.__type_name);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    bool operator!=(const type_info& __arg) const _NOEXCEPT
+    { return !operator==(__arg); }
+};
+#endif
+
+	/**
+    * 这是 libcxxrt 的实现
+	  * Standard type info class.  The layout of this class is specified by the
+	  * ABI.  The layout of the vtable is not, but is intended to be
+	  * compatible with the GNU ABI.
+	  *
+	  * Unlike the GNU version, the vtable layout is considered semi-private.
+	  */
+class type_info
+{
+	public:
+		/**
+		 * Virtual destructor.  This class must have one virtual function to
+		 * ensure that it has a vtable.
+		 */
+		virtual ~type_info();
+		bool operator==(const type_info &) const;
+		bool operator!=(const type_info &) const;
+		bool before(const type_info &) const;
+		const char* name() const;
+    size_t hash_code() const;
+		type_info();
+		private:
+		type_info(const type_info& rhs);
+		type_info& operator= (const type_info& rhs);
+		const char *__type_name;
+		/*
+		 * The following functions are in this order to match the
+		 * vtable layout of libsupc++.  This allows libcxxrt to be used
+		 * with libraries that depend on this.
+		 *
+		 * These functions are in the public headers for libstdc++, so
+		 * we have to assume that someone will probably call them and
+		 * expect them to work.  Their names must also match the names used in
+		 * libsupc++, so that code linking against this library can subclass
+		 * type_info and correctly fill in the values in the vtables.
+		 */
+	public:
+		/**
+		 * Returns true if this is some pointer type, false otherwise.
+		 */
+		virtual bool __is_pointer_p() const { return false; }
+		/**
+		 * Returns true if this is some function type, false otherwise.
+		 */
+		virtual bool __is_function_p() const { return false; }
+		/**
+		 * Catch function.  Allows external libraries to implement
+		 * their own basic types.  This is used, for example, in the
+		 * GNUstep Objective-C runtime to allow Objective-C types to be
+		 * caught in G++ catch blocks.
+		 *
+		 * The outer parameter indicates the number of outer pointers
+		 * in the high bits.  The low bit indicates whether the
+		 * pointers are const qualified.
+		 */
+		virtual bool __do_catch(const type_info *thrown_type,
+		                        void **thrown_object,
+		                        unsigned outer) const;
+		/**
+		 * Performs an upcast.  This is used in exception handling to
+		 * cast from subclasses to superclasses.  If the upcast is
+		 * possible, it returns true and adjusts the pointer.  If the
+		 * upcast is not possible, it returns false and does not adjust
+		 * the pointer.
+		 */
+		virtual bool __do_upcast(
+		                const ABI_NAMESPACE::__class_type_info *target,
+		                void **thrown_object) const
+		{
+			return false;
+		}
+};
+
+#endif // defined(_LIBCPP_ABI_MICROSOFT)
+
+class _LIBCPP_EXCEPTION_ABI bad_cast
+    : public exception
+{
+ public:
+  bad_cast() _NOEXCEPT;
+  virtual ~bad_cast() _NOEXCEPT;
+  virtual const char* what() const _NOEXCEPT;
+};
+
+class _LIBCPP_EXCEPTION_ABI bad_typeid
+    : public exception
+{
+ public:
+  bad_typeid() _NOEXCEPT;
+  virtual ~bad_typeid() _NOEXCEPT;
+  virtual const char* what() const _NOEXCEPT;
+};
+
+}  // std
+
+#endif // defined(_LIBCPP_ABI_VCRUNTIME)
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+void __throw_bad_cast()
+{
+#ifndef _LIBCPP_NO_EXCEPTIONS
+    throw bad_cast();
+#else
+    _VSTD::abort();
+#endif
+}
+_LIBCPP_END_NAMESPACE_STD
+
+
+
+namespace ABI_NAMESPACE
+{
+	/**
+	 * Primitive type info, for intrinsic types.
+	 */
+	struct __fundamental_type_info : public std::type_info
+	{
+		virtual ~__fundamental_type_info();
+	};
+	/**
+	 * Type info for arrays.  
+	 */
+	struct __array_type_info : public std::type_info
+	{
+		virtual ~__array_type_info();
+	};
+	/**
+	 * Type info for functions.
+	 */
+	struct __function_type_info : public std::type_info
+	{
+		virtual ~__function_type_info();
+		virtual bool __is_function_p() const { return true; }
+	};
+	/**
+	 * Type info for enums.
+	 */
+	struct __enum_type_info : public std::type_info
+	{
+		virtual ~__enum_type_info();
+	};
+
+	/**
+	 * Base class for class type info.  Used only for tentative definitions.
+	 */
+	struct __class_type_info : public std::type_info
+	{
+		virtual ~__class_type_info();
+		/**
+		 * Function implementing dynamic casts.
+		 */
+		virtual void *cast_to(void *obj, const struct __class_type_info *other) const;
+		virtual bool __do_upcast(const __class_type_info *target,
+		                       void **thrown_object) const
+		{
+			return this == target;
+		}
+	};
+
+	/**
+	 * Single-inheritance class type info.  This is used for classes containing
+	 * a single non-virtual base class at offset 0.
+	 */
+	struct __si_class_type_info : public __class_type_info
+	{
+		virtual ~__si_class_type_info();
+		const __class_type_info *__base_type;
+		virtual bool __do_upcast(
+		                const ABI_NAMESPACE::__class_type_info *target,
+		                void **thrown_object) const;
+		virtual void *cast_to(void *obj, const struct __class_type_info *other) const;
+	};
+
+	/**
+	 * Type info for base classes.  Classes with multiple bases store an array
+	 * of these, one for each superclass.
+	 */
+	struct __base_class_type_info
+	{
+		const __class_type_info *__base_type;
+		private:
+			/**
+			 * The high __offset_shift bits of this store the (signed) offset
+			 * of the base class.  The low bits store flags from
+			 * __offset_flags_masks.
+			 */
+			long __offset_flags;
+			/**
+			 * Flags used in the low bits of __offset_flags.
+			 */
+			enum __offset_flags_masks
+			{
+				/** This base class is virtual. */
+				__virtual_mask = 0x1,
+				/** This base class is public. */
+				__public_mask = 0x2,
+				/** The number of bits reserved for flags. */
+				__offset_shift = 8
+			};
+		public:
+			/**
+			 * Returns the offset of the base class.
+			 */
+			long offset() const
+			{
+				return __offset_flags >> __offset_shift;
+			}
+			/**
+			 * Returns the flags.
+			 */
+			long flags() const
+			{
+				return __offset_flags & ((1 << __offset_shift) - 1);
+			}
+			/**
+			 * Returns whether this is a public base class.
+			 */
+			bool isPublic() const { return flags() & __public_mask; }
+			/**
+			 * Returns whether this is a virtual base class.
+			 */
+			bool isVirtual() const { return flags() & __virtual_mask; }
+	};
+
+	/**
+	 * Type info for classes with virtual bases or multiple superclasses.
+	 */
+	struct __vmi_class_type_info : public __class_type_info
+	{
+		virtual ~__vmi_class_type_info();
+		/** Flags describing this class.  Contains values from __flags_masks. */
+		unsigned int __flags;
+		/** The number of base classes. */
+		unsigned int __base_count;
+		/** 
+		 * Array of base classes - this actually has __base_count elements, not
+		 * 1.
+		 */
+		__base_class_type_info __base_info[1];
+
+		/**
+		 * Flags used in the __flags field.
+		 */
+		enum __flags_masks
+		{
+			/** The class has non-diamond repeated inheritance. */
+			__non_diamond_repeat_mask = 0x1,
+			/** The class is diamond shaped. */
+			__diamond_shaped_mask = 0x2
+		};
+		virtual bool __do_upcast(
+		                const ABI_NAMESPACE::__class_type_info *target,
+		                void **thrown_object) const;
+		virtual void *cast_to(void *obj, const struct __class_type_info *other) const;
+	};
+
+	/**
+	 * Base class used for both pointer and pointer-to-member type info.
+	 */
+	struct __pbase_type_info : public std::type_info
+	{
+		virtual ~__pbase_type_info();
+		/**
+		 * Flags.  Values from __masks.
+		 */
+		unsigned int __flags;
+		/**
+		 * The type info for the pointee.
+		 */
+		const std::type_info *__pointee;
+
+		/**
+		 * Masks used for qualifiers on the pointer.
+		 */
+		enum __masks
+		{
+			/** Pointer has const qualifier. */
+			__const_mask = 0x1,
+			/** Pointer has volatile qualifier. */
+			__volatile_mask = 0x2,
+			/** Pointer has restrict qualifier. */
+			__restrict_mask = 0x4,
+			/** Pointer points to an incomplete type. */
+			__incomplete_mask = 0x8,
+			/** Pointer is a pointer to a member of an incomplete class. */
+			__incomplete_class_mask = 0x10
+		};
+		virtual bool __do_catch(const type_info *thrown_type,
+		                        void **thrown_object,
+		                        unsigned outer) const;
+	};
+
+	/**
+	 * Pointer type info.
+	 */
+	struct __pointer_type_info : public __pbase_type_info
+	{
+		virtual ~__pointer_type_info();
+		virtual bool __is_pointer_p() const { return true; }
+	};
+
+	/**
+	 * Pointer to member type info.
+	 */
+	struct __pointer_to_member_type_info : public __pbase_type_info
+	{
+		virtual ~__pointer_to_member_type_info();
+		/**
+		 * Pointer to the class containing this member.
+		 */
+		const __class_type_info *__context;
+	};
+
+}
+
+#endif  // __LIBCPP_TYPEINFO

@@ -1,0 +1,36 @@
+menuconfig CONFIG_WIRELESS_INFINEON_CYWWHD
+    bool "Infineon WiFi Host Driver"
+    depends on CONFIG_MMC
+    select CONFIG_DEVICES_WIRELESS
+
+config CONFIG_WIRELESS_INFINEON_CYWWHD_BUSNUM
+    int "wifi mmc num(mmc/sdio 总线号)"
+    default -1
+    help
+        WiFi外设挂接在哪个mmc总线,
+
+
+config CONFIG_WIRELESS_INFINEON_CYWWHD_BT_WIFI_POWER
+    string "gpio bt wifi power on(控制整个bt,wifi模块的供电)"
+    default -1,0
+    choice from SOC_GPIO_PIN_LEVELS
+
+config CONFIG_WIRELESS_INFINEON_CYWWHD_WLAN_REG_ON
+    string "gpio wlan reg on(wifi使能引脚)"
+    default -1,0
+    choice from SOC_GPIO_PIN_LEVELS
+
+config CONFIG_WIRELESS_INFINEON_CYWWHD_WLAN_WAKE_HOST
+    string "gpio wlan wake host (wifi 唤醒/中断 主控的引导)"
+    default -1
+    choice from SOC_GPIO_PIN_LEVELS
+
+config CONFIG_WIRELESS_INFINEON_CYWWHD_FW_PATH
+    string "wifi 固件路径"
+    default "devices/wireless/infineonwhd/firmware/cyw43438.bin"
+
+config CONFIG_WIRELESS_INFINEON_CYWWHD_NVRAM_PATH
+    string "wifi NVRAM路径"
+    default "devices/wireless/infineonwhd/firmware/nvraw.txt"
+
+endmenu

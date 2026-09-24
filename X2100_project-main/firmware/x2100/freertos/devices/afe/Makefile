@@ -1,0 +1,1 @@
+src-$(CONFIG_AFE_HT82V38) += afe/afe_ht82v38/afe_ht82v38.c

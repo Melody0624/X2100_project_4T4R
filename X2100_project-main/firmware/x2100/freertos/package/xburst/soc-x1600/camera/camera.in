@@ -1,0 +1,19 @@
+array SOC_X1600_CAMERA_MCLK_IO
+    string "X1600 MCLK 引脚"
+    item "PA(24)" GPIO_PA(24)
+    item "PC(25)    24M晶振旁路,输出频率不可调整" GPIO_PC(25)
+
+menuconfig CONFIG_X1600_CAMERA
+    bool "camera 驱动 (cim控制器)"
+    select CONFIG_CAMERA
+
+config CONFIG_SOC_X1600_CAMERA_MCLK
+    string "CIM MCLK管脚选择"
+    default GPIO_PA(24)
+    choice from SOC_X1600_CAMERA_MCLK_IO
+
+config CONFIG_SOC_X1600_CAMERA_FRAME_NUMS
+    int "CIM 帧缓冲数量"
+    default 2
+
+endmenu # CONFIG_X1600_CAMERA

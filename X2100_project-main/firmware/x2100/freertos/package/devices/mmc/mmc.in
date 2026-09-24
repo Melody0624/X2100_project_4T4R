@@ -1,0 +1,5 @@
+menu "多媒体(SDIO/MMC)接口设备列表"
+
+source "package/devices/mmc/eMMC.in"
+
+endmenu

@@ -1,0 +1,4 @@
+config CONFIG_DFS_DEBUGFS
+    bool "支持debugfs文件系统"
+    depends on CONFIG_DFS_ELMFAT
+    default n

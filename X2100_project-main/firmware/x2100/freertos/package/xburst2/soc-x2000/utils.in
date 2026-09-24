@@ -1,0 +1,12 @@
+menuconfig CONFIG_X2000_UTILS
+    bool "utils 驱动(芯片的一些小功能)"
+
+config CONFIG_X2000_UTILS_RTC32K
+    bool "rtc32k 时钟bypass输出(PE23)"
+    default y
+
+config CONFIG_X2000_UTILS_RTC32K_INIT_ON
+    bool "        rtc32k 时钟初始化即使能rtc32k输出"
+    depends on CONFIG_X2000_UTILS_RTC32K
+
+endmenu

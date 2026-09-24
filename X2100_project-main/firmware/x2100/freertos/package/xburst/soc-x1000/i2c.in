@@ -1,0 +1,68 @@
+menu "I2C 总线"
+    help
+        "依赖于 I2C 驱动"
+
+config CONFIG_X1000_I2C0_BUS
+    bool "选择 I2C0"
+    select CONFIG_I2C
+
+choice "              选择I2C0 GPIO"
+    default CONFIG_X1000_I2C0_PB
+    depends on CONFIG_X1000_I2C0_BUS
+
+config CONFIG_X1000_I2C0_PB
+    bool "SDA: GPIO_PB(24)、SCL: GPIO_PB(23)"
+
+endchoice
+
+config CONFIG_X1000_I2C0_RATE
+    int "       I2C0 速率"
+    default 400000
+    depends on CONFIG_X1000_I2C0_BUS
+
+config CONFIG_X1000_I2C1_BUS
+    bool "选择 I2C1"
+    select CONFIG_I2C
+
+choice "              选择I2C1 GPIO"
+    default CONFIG_X1000_I2C1_PC
+    depends on CONFIG_X1000_I2C1_BUS
+
+config CONFIG_X1000_I2C1_PA
+    bool "SDA: GPIO_PA(1)、SCL: GPIO_PA(0)"
+
+config CONFIG_X1000_I2C1_PC
+    bool "SDA: GPIO_PC(27)、SCL: GPIO_PC(26)"
+
+endchoice
+
+config CONFIG_X1000_I2C1_RATE
+    int "       I2C1 速率"
+    default 400000
+    depends on CONFIG_X1000_I2C1_BUS
+
+config CONFIG_X1000_I2C2_BUS
+    bool "选择 I2C2"
+    select CONFIG_I2C
+
+choice "              选择I2C2 GPIO"
+    default CONFIG_X1000_I2C2_PD
+    depends on CONFIG_X1000_I2C2_BUS
+
+config CONFIG_X1000_I2C2_PD
+    bool "SDA: GPIO_PD(1)、SCL: GPIO_PD(0)"
+
+endchoice
+
+config CONFIG_X1000_I2C2_RATE
+    int "       I2C2 速率"
+    default 400000
+    depends on CONFIG_X1000_I2C2_BUS
+
+endmenu # I2C 总线
+
+array SOC_X1000_I2C1_IO
+    string "I2C1 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MISO" GPIO_PC(11)
+    item "GPIO_SPI_MISO" GPIO_PC(11)

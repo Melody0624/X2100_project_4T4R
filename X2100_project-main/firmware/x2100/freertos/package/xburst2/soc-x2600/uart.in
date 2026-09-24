@@ -1,0 +1,403 @@
+menu "uart 设备列表"
+
+config CONFIG_SOC_X2600_UART0
+    bool "uart 0"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART0_RX
+    string "    rx gpio"
+    default -1
+    choice from UART0_RX_PINS
+    depends on CONFIG_SOC_X2600_UART0
+
+config CONFIG_SOC_X2600_UART0_TX
+    string "    tx gpio"
+    default -1
+    choice from UART0_TX_PINS
+    depends on CONFIG_SOC_X2600_UART0
+
+config CONFIG_SOC_X2600_UART0_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART0_CTS_PINS
+    depends on CONFIG_SOC_X2600_UART0
+
+config CONFIG_SOC_X2600_UART0_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART0_RTS_PINS
+    depends on CONFIG_SOC_X2600_UART0
+
+
+config CONFIG_SOC_X2600_UART1
+    bool "uart 1"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART1_RX
+    string "    rx gpio"
+    default -1
+    choice from UART1_RX_PINS
+    depends on CONFIG_SOC_X2600_UART1
+
+config CONFIG_SOC_X2600_UART1_TX
+    string "    tx gpio"
+    default -1
+    choice from UART1_TX_PINS
+    depends on CONFIG_SOC_X2600_UART1
+
+config CONFIG_SOC_X2600_UART1_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART1_CTS_PINS
+    depends on CONFIG_SOC_X2600_UART1
+
+config CONFIG_SOC_X2600_UART1_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART1_RTS_PINS
+    depends on CONFIG_SOC_X2600_UART1
+
+
+config CONFIG_SOC_X2600_UART2
+    bool "uart 2"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART2_RX
+    string "    rx gpio"
+    default -1
+    choice from UART2_RX_PINS
+    depends on CONFIG_SOC_X2600_UART2
+
+config CONFIG_SOC_X2600_UART2_TX
+    string "    tx gpio"
+    default -1
+    choice from UART2_TX_PINS
+    depends on CONFIG_SOC_X2600_UART2
+
+config CONFIG_SOC_X2600_UART2_CTS
+    string "    cts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART2
+
+config CONFIG_SOC_X2600_UART2_RTS
+    string "    rts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART2
+
+
+config CONFIG_SOC_X2600_UART3
+    bool "uart 3"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART3_RX
+    string "    rx gpio"
+    default -1
+    choice from UART3_RX_PINS
+    depends on CONFIG_SOC_X2600_UART3
+
+config CONFIG_SOC_X2600_UART3_TX
+    string "    tx gpio"
+    default -1
+    choice from UART3_TX_PINS
+    depends on CONFIG_SOC_X2600_UART3
+
+config CONFIG_SOC_X2600_UART3_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART3_CTS_PINS
+    depends on CONFIG_SOC_X2600_UART3
+
+config CONFIG_SOC_X2600_UART3_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART3_RTS_PINS
+    depends on CONFIG_SOC_X2600_UART3
+
+
+config CONFIG_SOC_X2600_UART4
+    bool "uart 4"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART4_RX
+    string "    rx gpio"
+    default -1
+    choice from UART4_RX_PINS
+    depends on CONFIG_SOC_X2600_UART4
+
+config CONFIG_SOC_X2600_UART4_TX
+    string "    tx gpio"
+    default -1
+    choice from UART4_TX_PINS
+    depends on CONFIG_SOC_X2600_UART4
+
+config CONFIG_SOC_X2600_UART4_CTS
+    string "    cts gpio"
+    default -1
+    choice from UART4_CTS_PINS
+    depends on CONFIG_SOC_X2600_UART4
+
+config CONFIG_SOC_X2600_UART4_RTS
+    string "    rts gpio"
+    default -1
+    choice from UART4_RTS_PINS
+    depends on CONFIG_SOC_X2600_UART4
+
+
+config CONFIG_SOC_X2600_UART5
+    bool "uart 5"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART5_RX
+    string "    rx gpio"
+    default -1
+    choice from UART5_RX_PINS
+    depends on CONFIG_SOC_X2600_UART5
+
+config CONFIG_SOC_X2600_UART5_TX
+    string "    tx gpio"
+    default -1
+    choice from UART5_TX_PINS
+    depends on CONFIG_SOC_X2600_UART5
+
+config CONFIG_SOC_X2600_UART5_CTS
+    string "    cts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART5
+
+config CONFIG_SOC_X2600_UART5_RTS
+    string "    rts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART5
+
+
+config CONFIG_SOC_X2600_UART6
+    bool "uart 6"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART6_RX
+    string "    rx gpio"
+    default -1
+    choice from UART6_RX_PINS
+    depends on CONFIG_SOC_X2600_UART6
+
+config CONFIG_SOC_X2600_UART6_TX
+    string "    tx gpio"
+    default -1
+    choice from UART6_TX_PINS
+    depends on CONFIG_SOC_X2600_UART6
+
+config CONFIG_SOC_X2600_UART6_CTS
+    string "    cts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART6
+
+config CONFIG_SOC_X2600_UART6_RTS
+    string "    rts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART6
+
+
+config CONFIG_SOC_X2600_UART7
+    bool "uart 7"
+    select CONFIG_UART
+    select CONFIG_DMA
+
+config CONFIG_SOC_X2600_UART7_RX
+    string "    rx gpio"
+    default -1
+    choice from UART7_RX_PINS
+    depends on CONFIG_SOC_X2600_UART7
+
+config CONFIG_SOC_X2600_UART7_TX
+    string "    tx gpio"
+    default -1
+    choice from UART7_TX_PINS
+    depends on CONFIG_SOC_X2600_UART7
+
+config CONFIG_SOC_X2600_UART7_CTS
+    string "    cts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART7
+
+config CONFIG_SOC_X2600_UART7_RTS
+    string "    rts gpio"
+    default -1
+    depends on CONFIG_SOC_X2600_UART7
+
+endmenu
+
+
+
+array UART0_RX_PINS
+    string "uart0 rx 引脚"
+    item "GPIO_PC(23) func1" GPIO_PC(23),GPIO_FUNC_1
+    item "GPIO_PE(10) func1" GPIO_PE(10),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART0_TX_PINS
+    string "uart0 tx 引脚"
+    item "GPIO_PC(24) func1" GPIO_PC(24),GPIO_FUNC_1
+    item "GPIO_PE(9) func1" GPIO_PE(9),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART0_CTS_PINS
+    string "uart0 cts 引脚"
+    item "GPIO_PC(21) func1" GPIO_PC(21),GPIO_FUNC_1
+    item "GPIO_PE(12) func1" GPIO_PE(12),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART0_RTS_PINS
+    string "uart0 rts 引脚"
+    item "GPIO_PC(22) func1" GPIO_PC(22),GPIO_FUNC_1
+    item "GPIO_PE(11) func1" GPIO_PE(11),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+
+array UART1_RX_PINS
+    string "uart1 rx 引脚"
+    item "GPIO_PB(1) func1" GPIO_PB(1),GPIO_FUNC_1
+    item "GPIO_PC(3) func2" GPIO_PC(3),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART1_TX_PINS
+    string "uart1 tx 引脚"
+    item "GPIO_PB(0) func1" GPIO_PB(0),GPIO_FUNC_1
+    item "GPIO_PC(2) func2" GPIO_PC(2),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART1_CTS_PINS
+    string "uart1 cts 引脚"
+    item "GPIO_PB(3) func1" GPIO_PB(3),GPIO_FUNC_1
+    item "GPIO_PC(5) func2" GPIO_PC(5),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART1_RTS_PINS
+    string "uart1 rts 引脚"
+    item "GPIO_PB(2) func1" GPIO_PB(2),GPIO_FUNC_1
+    item "GPIO_PC(4) func2" GPIO_PC(4),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+
+array UART2_RX_PINS
+    string "uart2 rx 引脚"
+    item "GPIO_PD(12) func0" GPIO_PD(12),GPIO_FUNC_0
+    item "GPIO_NULL  " -1
+
+array UART2_TX_PINS
+    string "uart2 tx 引脚"
+    item "GPIO_PD(13) func0" GPIO_PD(13),GPIO_FUNC_0
+    item "GPIO_NULL  " -1
+
+
+array UART3_RX_PINS
+    string "uart3 rx 引脚"
+    item "GPIO_PB(22) func1" GPIO_PB(22),GPIO_FUNC_1
+    item "GPIO_PC(15) func3" GPIO_PC(15),GPIO_FUNC_3
+    item "GPIO_NULL  " -1
+
+array UART3_TX_PINS
+    string "uart3 tx 引脚"
+    item "GPIO_PB(23) func1" GPIO_PB(23),GPIO_FUNC_1
+    item "GPIO_PC(16) func3" GPIO_PC(16),GPIO_FUNC_3
+    item "GPIO_NULL  " -1
+
+
+array UART4_RX_PINS
+    string "UART4 rx 引脚"
+    item "GPIO_PB(24) func1" GPIO_PB(24),GPIO_FUNC_1
+    item "GPIO_PC(17) func3" GPIO_PC(17),GPIO_FUNC_3
+    item "GPIO_NULL  " -1
+
+array UART4_TX_PINS
+    string "UART4 tx 引脚"
+    item "GPIO_PB(25) func1" GPIO_PB(25),GPIO_FUNC_1
+    item "GPIO_PC(18) func3" GPIO_PC(18),GPIO_FUNC_3
+    item "GPIO_NULL  " -1
+
+array UART5_RX_PINS
+    string "UART5 rx 引脚"
+    item "GPIO_PB(26) func1" GPIO_PB(26),GPIO_FUNC_1
+    item "GPIO_PC(8) func3" GPIO_PC(8),GPIO_FUNC_3
+    item "GPIO_NULL  " -1
+
+array UART5_TX_PINS
+    string "UART5 tx 引脚"
+    item "GPIO_PB(27) func1" GPIO_PB(27),GPIO_FUNC_1
+    item "GPIO_PC(7) func3" GPIO_PC(7),GPIO_FUNC_3
+    item "GPIO_NULL  " -1
+
+
+array UART6_RX_PINS
+    string "UART6 rx 引脚"
+    item "GPIO_PC(1) func2" GPIO_PC(1),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+array UART6_TX_PINS
+    string "UART6 tx 引脚"
+    item "GPIO_PC(0) func2" GPIO_PC(0),GPIO_FUNC_2
+    item "GPIO_NULL  " -1
+
+
+array UART7_RX_PINS
+    string "UART7 rx 引脚"
+    item "GPIO_PE(4) func1" GPIO_PE(4),GPIO_FUNC_1
+    item "GPIO_PC(5) func1" GPIO_PC(5),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+array UART7_TX_PINS
+    string "UART7 tx 引脚"
+    item "GPIO_PE(3) func1" GPIO_PE(3),GPIO_FUNC_1
+    item "GPIO_PC(4) func1" GPIO_PC(4),GPIO_FUNC_1
+    item "GPIO_NULL  " -1
+
+
+array SOC_UART_DEVICES
+    int "soc uart 设备"
+    item "uart 0" 0
+    item "uart 1" 1
+    item "uart 2" 2
+    item "uart 3" 3
+    item "uart 4" 4
+    item "uart 5" 5
+    item "uart 6" 6
+    item "uart 7" 7
+
+array SOC_UART_BAUD_RATES
+    int "soc uart 波特率"
+    item      "50" 50
+    item      "75" 75
+    item     "110" 110
+    item     "134" 134
+    item     "150" 150
+    item     "200" 200
+    item     "300" 300
+    item     "600" 600
+    item    "1200" 1200
+    item    "1800" 1800
+    item    "2400" 2400
+    item    "4800" 4800
+    item    "9600" 9600
+    item   "19200" 19200
+    item   "38400" 38400
+    item   "57600" 57600
+    item  "115200" 115200
+    item  "230400" 230400
+    item  "460800" 460800
+    item  "500000" 500000
+    item  "576000" 576000
+    item  "921600" 921600
+    item "1000000" 1000000
+    item "1152000" 1152000
+    item "1500000" 1500000
+    item "2000000" 2000000
+    item "2500000" 2500000
+    item "3000000" 3000000
+    item "3500000" 3500000
+    item "4000000" 4000000

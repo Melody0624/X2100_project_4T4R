@@ -1,0 +1,95 @@
+menu "VDDIO_SD 电压配置"
+
+choice "VDDIO_SD 配置方式"
+    default CONFIG_AD100_GPIO_VDDIO_MANUAL_CONFIG
+
+config CONFIG_AD100_GPIO_VDDIO_MANUAL_CONFIG
+    bool "根据配置值进行设置"
+    select CONFIG_AD100_GPIO_VDDIO_CONFIG_MODE_MANUAL
+
+config CONFIG_AD100_GPIO_VDDIO_AUTO_CONFIG
+    bool "根据 SADC 自动配置"
+    select CONFIG_AD100_GPIO_VDDIO_CONFIG_MODE_SADC
+
+endchoice
+
+menuconfig CONFIG_AD100_GPIO_VDDIO_CONFIG_MODE_MANUAL
+    bool "VDDIO_SD 电平手动配置"
+    depends on CONFIG_AD100_GPIO_VDDIO_MANUAL_CONFIG
+    default n
+
+config CONFIG_AD100_GPIO_SD_VOLTAGE_VALUE
+    string "VDDIO_SD(1.8V/3.3V) 配置"
+    default 0
+    choice from AD100_GPIO_VOLTAGE_VALUE_LIST
+
+endmenu
+
+menuconfig CONFIG_AD100_GPIO_VDDIO_CONFIG_MODE_SADC
+    bool "VDDIO_SD 电平自动配置(依赖电路设计)"
+    depends on CONFIG_AD100_GPIO_VDDIO_AUTO_CONFIG
+    default n
+
+menuconfig CONFIG_AD100_GPIO_VDDIO_SD_AUTO_CONFIG
+    bool "VDDIO_SD 电平由SADC读出自动配置"
+    default y
+
+config CONFIG_AD100_GPIO_VDDIO_SD_ADC_CHANNEL
+    int "VDDIO SD 电路上接通的 adc 通道"
+    choice from GPIO_VOLTAGE_ADC_CHANNEL
+
+config CONFIG_AD100_GPIO_VDDIO_SD_R0
+    int "VDDIO SD 分压电阻 R0 (ADC_SD = VDDIO_SD * R1 / (R0 + R1))"
+    default 100000
+    help
+               +++   vddio_sd (3.3v or 1.8v)
+                |
+                |
+               [ ]
+               [ ]   R0
+                |
+     adc _______|
+                |
+               [ ]  R1
+               [ ]
+                |
+                |
+               ---   GND
+        ADC_SD = VDDIO_SD * R1 / (R0 + R1)
+
+config CONFIG_AD100_GPIO_VDDIO_SD_R1
+    int "VDDIO SD 分压电阻 R1(详见R0描述)"
+    default 100000
+    help
+        ADC_SD = VDDIO_SD * R1 / (R0 + R1)
+
+endmenu
+
+endmenu
+
+endmenu
+
+array AD100_GPIO_VOLTAGE_VALUE_LIST
+    string "ad100 gpio 引脚电平"
+    item "N/A" 0
+    item "GPIO-电压1.8V" 18
+    item "GPIO-电压3.3V" 33
+
+array GPIO_VOLTAGE_ADC_CHANNEL
+    int "adc 可选通道"
+    item "AUX0" 0
+    item "AUX1" 1
+    item "AUX2" 2
+    item "AUX3" 3
+    item "AUX4" 4
+    item "AUX5" 5
+    item "AUX6" 6
+    item "AUX7" 7
+    item "AUX8" 8
+    item "AUX9" 9
+    item "AUX10" 10
+    item "AUX11" 11
+    item "AUX12" 12
+    item "AUX13" 13
+    item "AUX14" 14
+    item "AUX15" 15

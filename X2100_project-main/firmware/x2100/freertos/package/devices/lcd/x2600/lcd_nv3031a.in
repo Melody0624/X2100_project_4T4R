@@ -1,0 +1,53 @@
+menuconfig CONFIG_X2600_TFT_NV3031A
+    bool "TFT NV3031 (240*240) (X2600) (6bit串行rgb)"
+    select CONFIG_X2600_LCD
+    depends on CONFIG_SOC_X2600
+
+array X2600_FB_FMT
+    string "fb 格式"
+    item "fb_fmt_RGB555" fb_fmt_RGB555
+    item "fb_fmt_RGB565" fb_fmt_RGB565
+    item "fb_fmt_RGB888" fb_fmt_RGB888
+    item "fb_fmt_ARGB8888" fb_fmt_ARGB8888
+    item "fb_fmt_NV12" fb_fmt_NV12
+    item "fb_fmt_NV21" fb_fmt_NV21
+    item "fb_fmt_yuv422" fb_fmt_yuv422
+
+config CONFIG_X2600_NV3031_POWER_EN
+    string "gpio power level (lcd power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PB(20),0: 表示power使能脚为PB20,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_X2600_NV3031_BACKLIGHT_EN
+    string "gpio backlight level (lcd 背光使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+config CONFIG_X2600_NV3031_CS
+    string "gpio SPI CS level (lcd spi片选引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+config CONFIG_X2600_NV3031_RST
+    string "gpio reset level (lcd 复位引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+config CONFIG_X2600_NV3031_SDA
+    string "gpio SPI SDA level (lcd spi SDA引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+config CONFIG_X2600_NV3031_SCL
+    string "gpio SPI SCl level (lcd spi SCl引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+config CONFIG_X2600_NV3031_FB_FMT
+    string "fb 格式选择"
+    default fb_fmt_ARGB8888
+    choice from X2600_FB_FMT
+
+endmenu

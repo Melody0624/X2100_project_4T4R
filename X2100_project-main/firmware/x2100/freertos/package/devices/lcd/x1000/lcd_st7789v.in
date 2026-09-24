@@ -1,0 +1,32 @@
+menuconfig CONFIG_X1000_SLCD_ST7789V
+    bool "SLCD ST7789V (X1000)"
+    select CONFIG_X1000_LCD
+    depends on CONFIG_SOC_X1000
+    depends on CONFIG_SOC_X1000_HAS_LCD
+
+config CONFIG_X1000_ST7789V_TE
+    string "gpio tearing effect(lcd 图像防裂屏引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1000_ST7789V_CS
+    string "gpio chip select(lcd 片选引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1000_ST7789V_RD
+    string "gpio lcd read signal(lcd 读引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1000_ST7789V_RST
+    string "gpio reset(lcd 复位引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1000_ST7789V_VDD_EN
+    string "gpio vdd enable(lcd vdd使能引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_X1000_SLCD_ST7789V

@@ -1,0 +1,3 @@
+config CONFIG_LIBJPEG
+    bool "libjpeg"
+    select CONFIG_DFS

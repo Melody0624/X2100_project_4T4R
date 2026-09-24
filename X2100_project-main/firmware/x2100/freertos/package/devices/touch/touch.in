@@ -1,0 +1,8 @@
+menu "触摸屏设备列表"
+
+source "package/devices/touch/gsl1680_touch.in"
+source "package/devices/touch/ft6236_touch.in"
+source "package/devices/touch/gt9xx_touch.in"
+source "package/devices/touch/resistance_touch.in"
+
+endmenu

@@ -1,0 +1,12 @@
+menu "WiFi设备列表"
+
+config CONFIG_DEVICES_WIRELESS
+    bool
+    default n
+
+
+source "package/devices/wireless/infineonwhd/Config.in"
+
+source "package/devices/wireless/atbm/Config.in"
+
+endmenu

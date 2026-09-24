@@ -1,0 +1,16 @@
+menuconfig CONFIG_LIB_SORT
+    bool "排序函数（sort）"
+
+config CONFIG_SORT_UP_CHAR
+    bool "char 类型(升序)"
+
+config CONFIG_SORT_DOWN_CHAR
+    bool "char 类型(降序)"
+
+config CONFIG_SORT_UP_INT
+    bool "int  类型(升序)"
+
+config CONFIG_SORT_DOWN_INT
+    bool "int  类型(降序)"
+
+endmenu

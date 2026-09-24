@@ -1,0 +1,28 @@
+menu "GPIO 电源"
+    help
+        "配置GPIO电源"
+
+choice "选择VDDIO_D (PA00~PA22) "
+    default CONFIG_X1830_VDDIO_D_1V8
+
+config CONFIG_X1830_VDDIO_D_1V8
+    bool "VDDIO_D = 1.8V (数据手册只推荐VDDIO_D = 1.8V)"
+
+config CONFIG_X1830_VDDIO_D_3V3
+    bool "VDDIO_D = 3.3V"
+
+endchoice
+
+choice "选择VDDIO (PA23~PA31/PB/PC/PD) "
+    default CONFIG_X1830_VDDIO_3V3
+
+config CONFIG_X1830_VDDIO_1V8
+    bool "VDDIO = 1.8V"
+
+config CONFIG_X1830_VDDIO_3V3
+    bool "VDDIO = 3.3V (数据手册只推荐VDDIO = 3.3V)"
+
+endchoice
+
+
+endmenu

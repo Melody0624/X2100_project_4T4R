@@ -1,0 +1,23 @@
+menuconfig CONFIG_AD100_SLCD_ST7789V_3LINE_SPI
+    bool "SLCD ST7789V (240*320) (AD100) (3line_spi接口)"
+    select CONFIG_AD100_LCD
+    depends on CONFIG_SOC_AD100
+
+config CONFIG_AD100_ST7789V_3LINE_SPI_POWER_EN
+    string "gpio power level (lcd power使能引脚及有效电平)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+    help
+        "如 GPIO_PB(20),0: 表示power使能脚为PB20,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_AD100_ST7789V_3LINE_SPI_CS
+    string "gpio chip select(lcd 片选引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+config CONFIG_AD100_ST7789V_3LINE_SPI_RST
+    string "gpio reset(lcd 复位引脚)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1
+
+endmenu # CONFIG_AD100_SLCD_ST7789V_3LINE_SPI

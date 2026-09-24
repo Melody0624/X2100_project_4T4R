@@ -1,0 +1,14 @@
+menuconfig CONFIG_DFS
+    bool "设备文件系统"
+
+source "package/filesystem/fat.in"
+source "package/filesystem/debugfs.in"
+source "package/filesystem/hotplug.in"
+source "package/filesystem/uffs.in"
+source "package/filesystem/yaffs.in"
+
+config CONFIG_CONN_FS
+    bool
+    default n
+
+endmenu

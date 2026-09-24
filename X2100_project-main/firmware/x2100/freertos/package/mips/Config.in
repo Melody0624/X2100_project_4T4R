@@ -1,0 +1,2 @@
+config CONFIG_MIPS32
+	bool

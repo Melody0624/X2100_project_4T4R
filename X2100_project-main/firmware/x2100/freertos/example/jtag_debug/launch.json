@@ -1,0 +1,62 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+
+       // GDB Debugging:
+       {
+          "program": "${workspaceFolder}/zero.elf",
+          "name": "Launch (gdb)",
+          "request": "launch",
+          "args": [],
+          "stopAtEntry": false,
+          "cwd": "${workspaceFolder}",
+          "externalConsole": false,
+          "internalConsoleOptions": "openOnSessionStart",
+          "type": "cppdbg",
+          "MIMode": "gdb",
+          "miDebuggerPath": "${workspaceFolder}/../tools/toolchains/mips-gcc540-elf/bin/mips-sde-elf-gdb",
+          "miDebuggerArgs": "",
+          "miDebuggerServerAddress": "localhost:3333",
+          "targetArchitecture": "mips",
+          "preLaunchTask": "build",
+          "customLaunchSetupCommands": [
+             {
+                "description": "gdb 启用整齐打印",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+             },
+             {
+                "text":"file ${workspaceFolder}/zero.elf",
+                "ignoreFailures": false
+             },
+             {
+                "text": "target remote localhost:3333",
+                "ignoreFailures": false
+             },
+             {
+                "text": "monitor reset halt",
+                "ignoreFailures": false
+             },
+             {
+                "text": "monitor x1600_init",
+                "ignoreFailures": false
+             },
+             {
+                "text": "load",
+                "ignoreFailures": false
+             },
+             {
+                "text": "monitor mips32 invalidate all",
+                "ignoreFailures": false
+             },
+             {
+                "text":"break do_exception_default"
+             },
+          ],
+          "logging": {
+             "engineLogging": true,
+          }
+       }
+    ]
+ }

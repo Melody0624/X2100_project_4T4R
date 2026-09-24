@@ -1,0 +1,78 @@
+menu "MMC 总线"
+
+config CONFIG_SOC_X2000_MSC0_BUS
+    bool "选择 MMC0"
+    select CONFIG_MMC
+
+choice "          选择MMC0 GPIO"
+    default CONFIG_SOC_X2000_MSC0_PD_8BIT
+    depends on CONFIG_SOC_X2000_MSC0_BUS
+
+config CONFIG_SOC_X2000_MSC0_PD_8BIT
+    bool "    MMC0 Bus 8bit (PD17 ~ PD26)"
+
+config CONFIG_SOC_X2000_MSC0_PD_4BIT
+    bool "    MMC0 Bus 4bit (PD17 ~ PD22)"
+
+endchoice
+
+config CONFIG_SOC_X2000_MSC0_MAX_FREQ
+    int "  MMC0最大速度"
+    default 100000000
+    depends on CONFIG_SOC_X2000_MSC0_BUS
+    help
+        "支持范围是 0 ~ 200M "
+
+
+
+config CONFIG_SOC_X2000_MSC1_BUS
+    bool "选择 MMC1/SDIO"
+    select CONFIG_MMC
+
+choice "          选择MMC1/SDIO GPIO"
+    default CONFIG_SOC_X2000_MSC1_PD_4BIT
+    depends on CONFIG_SOC_X2000_MSC1_BUS
+
+config CONFIG_SOC_X2000_MSC1_PD_4BIT
+    bool "    MMC1/SDIO Bus 4bit (PD08 ~ PD13)"
+
+endchoice
+
+config CONFIG_SOC_X2000_MSC1_MAX_FREQ
+    int "  MMC1/SDIO最大速度"
+    default 100000000
+    depends on CONFIG_SOC_X2000_MSC1_BUS
+    help
+        "支持范围是 0 ~ 200M "
+
+
+
+
+config CONFIG_SOC_X2000_MSC2_BUS
+    bool "选择 MMC2"
+    select CONFIG_MMC
+
+choice "          选择MMC2 GPIO"
+    default CONFIG_SOC_X2000_MSC2_PE_4BIT
+    depends on CONFIG_SOC_X2000_MSC2_BUS
+
+config CONFIG_SOC_X2000_MSC2_PE_4BIT
+    bool "    MMC2 Bus 4bit (PE00 ~ PE05)"
+
+endchoice
+
+config CONFIG_SOC_X2000_MSC2_MAX_FREQ
+    int "  MMC2最大速度"
+    default 100000000
+    depends on CONFIG_SOC_X2000_MSC2_BUS
+    help
+        "支持范围是 0 ~ 200M "
+
+config CONFIG_SOC_X2000_MSC2_VOLTAGE_SWITCH
+    string "mmc2 供电电压1.8V/3.3V切换"
+    depends on CONFIG_SOC_X2000_MSC2_BUS
+    choice from SOC_GPIO_PINS
+    default -1
+
+endmenu
+

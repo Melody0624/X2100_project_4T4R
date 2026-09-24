@@ -1,0 +1,29 @@
+menuconfig CONFIG_X1600_LCD
+    bool "LCD 驱动"
+    select CONFIG_FB
+
+config CONFIG_X1600_LCD_PAN_DISPLAY_SYNC
+    bool "pan display 时等待帧同步完成(帧缓冲数为一帧时推荐开启)"
+    default y
+
+config CONFIG_X1600_LCD_DESC_ADDR
+    int "frame desc 地址(用于保持开机logo,0表示不强行指定)"
+    default 0
+    help
+        有时候这个地址随缘,但一般来说放到ddr的末尾总是没有错的
+        比如64Mddr,指定到0x83f00000(63M)
+
+config CONFIG_X1600_LCD_FB0_ENABLE
+    bool "使能fb0"
+
+config CONFIG_X1600_LCD_FB0_FRM_CNT
+    int "fb0帧缓冲数量"
+    default 2
+    depends on CONFIG_X1600_LCD_FB0_ENABLE
+
+config CONFIG_X1600_LCD_FB0_NAME
+    string "设备节点名字"
+    default "fb0"
+    depends on CONFIG_X1600_LCD_FB0_ENABLE
+
+endmenu

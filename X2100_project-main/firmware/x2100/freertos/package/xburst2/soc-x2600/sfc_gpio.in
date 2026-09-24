@@ -1,0 +1,16 @@
+choice "        SFC IO组"
+    default CONFIG_X2600_SFC_PD
+    help
+        "依赖于SFC硬件连接"
+
+config CONFIG_X2600_SFC_PD0
+    bool "SFC_PD GROUP0: PD00 - PD05"
+    help
+        "选用PD0组 spl文件需选择含SFC_PD0的.bin文件"
+
+config CONFIG_X2600_SFC_PD
+    bool "SFC_PD GROUP1: PD06 - PD11"
+    help
+        "默认选用 spl文件需选择不含SFC_PD0的.bin文件"
+
+endchoice #SFC 接口IO组

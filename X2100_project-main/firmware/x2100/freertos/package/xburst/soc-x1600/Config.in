@@ -1,0 +1,105 @@
+
+config CONFIG_SOC_X1600S
+    bool
+    select CONFIG_SOC_X1600
+
+menuconfig CONFIG_SOC_X1600
+    bool "x1600系列 cpu 设置"
+    depends on CONFIG_SOC_X1600S
+
+menuconfig CONFIG_SOC_X1600_X1600
+    bool
+    depends on CONFIG_XBURST_X1600
+    select CONFIG_SOC_X1600_UART
+
+source package/xburst/soc-x1600/x1600-gpio.in
+
+
+endmenu
+
+menuconfig CONFIG_SOC_X1600_X1660
+    bool
+    depends on CONFIG_XBURST_X1660
+    select CONFIG_SOC_X1660_UART
+
+source package/xburst/soc-x1600/x1660-gpio.in
+
+endmenu
+
+
+source package/xburst/soc-x1600/uart.in
+
+source package/xburst/soc-x1600/i2c.in
+
+source package/xburst/soc-x1600/spi.in
+
+source package/xburst/soc-x1600/sslv.in
+
+source package/xburst/soc-x1600/mmc/mmc.in
+
+source package/xburst/soc-x1600/camera/camera.in
+
+source package/xburst/soc-x1600/lcd.in
+
+source package/xburst/soc-x1600/utils.in
+
+source package/xburst/soc-x1600/pcm.in
+
+source package/xburst/soc-x1600/can.in
+
+config CONFIG_X1600_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+    select CONFIG_DMA
+
+config CONFIG_X1600_ADC
+    bool "adc (电压采样)"
+    select CONFIG_ADC
+
+config CONFIG_X1600_AES
+    bool "aes (编解码)"
+    select CONFIG_AES
+
+config CONFIG_X1600_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X1600_RTC
+    bool "rtc (墙上时间)"
+    select CONFIG_RTC
+
+config CONFIG_X1600_DTRNG
+    bool "dtrng 驱动(获取随机数功能)"
+    select CONFIG_DTRNG
+
+config CONFIG_X1600_HASH
+    bool "hash 驱动(数据加密)"
+    select CONFIG_HASH
+
+menuconfig CONFIG_X1600_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+    select CONFIG_GPIO_PIN
+
+config CONFIG_X1600_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_X1600_EFUSE
+
+config CONFIG_X1600_PM
+    bool "休眠功能"
+    select CONFIG_PM
+
+config CONFIG_X1600_TCU
+    bool "TCU(Timer/Counter Unit)"
+
+config CONFIG_X1600_SCBOOT_DRIVER
+    bool "secure boot 驱动"
+    select CONFIG_SCBOOT_DRIVER
+    default n
+
+source package/xburst/soc-x1600/mac/mac.in
+
+endmenu

@@ -1,0 +1,90 @@
+config CONFIG_AD100_AIC
+    bool "aic(i2s 接口)"
+    select CONFIG_PCM
+
+menuconfig CONFIG_AD100_ICODEC
+    bool "icodec(内部codec)"
+    select CONFIG_PCM
+    select CONFIG_AD100_AIC
+
+config CONFIG_AD100_ICODEC_MIC_IN_GAIN
+    int "mic信号的增益(可填0,1,2,3)"
+    default 3
+    help
+        范围为0,1,2,3 对应0,6,20,30db
+        当启用回采电路一般置为0
+
+config CONFIG_AD100_ICODEC_SINGLE_END_EN
+    bool "使能ADCL中MIC输入为单端模式"
+    default n
+    help
+        ADCL中MIC输入模式默认为差分模式,
+        勾选后配置为单端模式
+
+config CONFIG_AD100_ICODEC_MENUAL_ALCL_GAIN
+    int "手动设置ALCL增益(范围[0,31])"
+    default 6
+    help
+        其中0代表-9db,6代表0db,31代表37.5db
+        增加1,音量增加1.5dB
+
+config CONFIG_AD100_ICODEC_HPL_GAIN
+    int "输出信号的增益 HPOUTL(范围[26,31])"
+    default 26
+    help
+        其中0-25无效,26代表0db,30与31代表6db
+        增加1,音量增加1.5db，上限为6db
+
+config CONFIG_AD100_ICODEC_MENUAL_ADC_VAL
+    int "录音音量默认值(对应寄存器ADCDGR的[0,7],可填范围是0到255)"
+    default 196
+
+config CONFIG_AD100_ICODEC_MENUAL_DAC_VAL
+    int "外放音量默认值(对应寄存器DACDGR的[0,7],可填范围是0到255)"
+    default 226
+
+menuconfig CONFIG_AD100_ICODEC_AGC
+    bool "AGC功能相关"
+    default n
+
+config CONFIG_AD100_ICODEC_AGC_ON
+    bool "开启AGC功能"
+    default y
+    help
+        在录音时开启AGC功能
+
+config CONFIG_AD100_ICODEC_GAIN_MAX
+    int "AGC模块能设置的最大的增益(PGAINMAX--可设置范围为0到7)"
+    default 7
+    help
+        最低 -13.5db 步长6db
+
+config CONFIG_AD100_ICODEC_GAIN_MIN
+    int "AGC模块能设置的最小的增益(PGAINMIN--可设置范围为0到7)"
+    default 0
+    help
+        最低 -18db 步长6db
+
+config CONFIG_AD100_ICODEC_PGAIN_MAX
+    int "最高阈值,超出这个阈值agc会降低增益(最高32767)"
+    default 16422
+    help
+        与db转换关系: 20lg(n/0x7fff)db
+
+config CONFIG_AD100_ICODEC_PGAIN_MIN
+    int "最低阈值,超出这个阈值agc会增加增益(最高32767)"
+    default 8294
+    help
+        与db转换关系: 20lg(n/0x7fff)db
+
+endmenu
+
+endmenu
+
+config CONFIG_AD100_AUDIO
+    bool
+
+config CONFIG_AD100_DMIC
+    bool "dmic(外接数字mic)"
+    select CONFIG_PCM
+    select CONFIG_AD100_AUDIO

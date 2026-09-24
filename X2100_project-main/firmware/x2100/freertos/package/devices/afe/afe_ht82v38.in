@@ -1,0 +1,55 @@
+menuconfig CONFIG_AFE_HT82V38
+    bool "AFE HT82V38"
+    depends on CONFIG_SOC_X2600
+
+config CONFIG_AFE_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 afe module 电源管理器)"
+    default "-1"
+
+config CONFIG_AFE_HT82V38_POWER_EN
+    string "gpio power enable(电源使能)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AFE_HT82V38_SLOAD_GPIO
+    string "sload gpio (初始化通讯片选引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AFE_HT82V38_SCLK_GPIO
+    string "sclk gpio(初始化时钟引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AFE_HT82V38_SDATA_GPIO
+    string "sdata gpio(初始化数据引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AFE_HT82V38_ADCCLK_GPIO
+    string "adcclk gpio (采样频率引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AFE_HT82V38_ADCCLK_FREQ
+    int "adcclk freq (采样频率设置)"
+    default -1
+
+config CONFIG_AFE_HT82V38_CDSCLK2_GPIO
+    string "cdsclk2 gpio(采样保持引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AFE_HT82V38_RED_CHANNEL_ON
+    bool "使能红色通道"
+    default n
+
+config CONFIG_AFE_HT82V38_GREE_CHANNEL_ON
+    bool "使能绿色通道"
+    default n
+
+config CONFIG_AFE_HT82V38_BLUE_CHANNEL_ON
+    bool "使能蓝色通道"
+    default n
+
+endmenu

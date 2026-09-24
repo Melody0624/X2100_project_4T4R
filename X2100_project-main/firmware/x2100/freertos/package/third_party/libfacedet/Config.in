@@ -1,0 +1,17 @@
+menuconfig CONFIG_LIBFACEDET
+    bool "libfacedet"
+    default n
+
+choice "          选择人脸识别SDK"
+    default CONFIG_LIBFACEDET_SDK
+
+config CONFIG_LIBFACEDET_SDK
+    bool "face_sdk"
+
+config CONFIG_LIBFACEDET_SDK_MODEL_SEPARATE
+    bool "face_sdk_model_separate"
+    help
+        "人脸识别模型分离"
+endchoice
+
+endmenu # CONFIG_LIBFACEDET

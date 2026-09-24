@@ -1,0 +1,27 @@
+menuconfig CONFIG_LCD_ILCDTOOLS
+    bool "通用 lcd 驱动"
+    select CONFIG_GPIO_BACKLIGHT
+    select CONFIG_PWM_BACKLIGHT
+    select CONFIG_GPIO_REGULATOR
+    select CONFIG_GPIO_PIN
+    default n
+
+choice "选择固件形式"
+    default MD_LCD_ILCDTOOLS_BIN
+config MD_LCD_ILCDTOOLS_BIN
+    bool "将 bin 包含进 rtos"
+config MD_LCD_ILCDTOOLS_FLASH_BIN
+    bool "将 bin 烧录到flash"
+endchoice
+
+config MD_LCD_ILCDTOOLS_BIN_NAME
+    string "配置文件名（需要放在 rtos 根目录下）"
+    default "lcdbin"
+    depends on MD_LCD_ILCDTOOLS_BIN
+
+config MD_LCD_ILCDTOOLS_FLASH_BIN_NAME
+    string "配置所在的分区名"
+    default "lcd"
+    depends on MD_LCD_ILCDTOOLS_FLASH_BIN
+
+endmenu

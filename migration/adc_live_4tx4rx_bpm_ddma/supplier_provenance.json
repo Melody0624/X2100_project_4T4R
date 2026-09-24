@@ -1,0 +1,30 @@
+{
+  "source_name": "vendor_bsis.c",
+  "source_sha256": "f3d34a8b4a43cadea04f6b4e1ebc5bd0fcfe1cf83f150b06c2f0972d7cac58b6",
+  "branch": "#elif (CHEETAH_CONFIG == cheetah_128_512_config)",
+  "generated_sha256": "8a1a83b68d8d05b283c0db1c7d36101ad2abe917f50b95e546af97475f989c3d",
+  "renamed_macros": [
+    "IS_MIRROR",
+    "CHEETAH_SAVE",
+    "SAVE_RAW_DATA",
+    "ADC_REPLAY",
+    "USE_USB_OUTPUT",
+    "UART_ADC_SEND",
+    "USE_BPM"
+  ],
+  "bpm_code": {
+    "source_name": "bpm_code_512.mat",
+    "source_sha256": "773e7afa491702b4ea25a846730bd6a90ee7d0d796d81c7ef5e6e61adf8d0ff8",
+    "mat_variable": "bpm_code",
+    "shape": [1, 512],
+    "minus_one_count": 248,
+    "plus_one_count": 264,
+    "matches_bpm_code_h": true,
+    "mismatch_count": 0,
+    "maximum_code_count": 512,
+    "frame_start_index": 0,
+    "reset_each_frame": true,
+    "behavior_source": "user-provided supplier statement 2026-09-23"
+  },
+  "hardware_validated": false
+}

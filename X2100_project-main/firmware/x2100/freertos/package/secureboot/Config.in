@@ -1,0 +1,18 @@
+menuconfig CONFIG_SCBOOT
+    bool "secureboot 安全启动"
+    depends on CONFIG_SCBOOT_DRIVER
+    default n
+
+config CONFIG_SECURE_BOOT_KERNEL
+    bool "kernel 验签+解密"
+    default n
+
+config CONFIG_CHECK_SIG_ROOTFS
+    bool "rootfs 验签"
+    default n
+
+config CONFIG_RSA3072
+    bool "使用rsa3072进行验签"
+    default n
+
+endmenu

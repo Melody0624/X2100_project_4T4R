@@ -1,0 +1,205 @@
+config CONFIG_USB1_HOST_SUPPORT
+    bool
+
+menuconfig CONFIG_USB_DRIVER
+    bool "USB驱动"
+
+config CONFIG_USB_IS_DEVICE
+    bool
+
+config CONFIG_USB_IS_HOST
+    bool
+
+menuconfig CONFIG_USB0
+    bool "USB0(支持OTG)驱动"
+    default y
+
+choice "USB0驱动模式"
+    default CONFIG_USB_PERIPHERAL
+
+config CONFIG_USB_PERIPHERAL
+    bool "USB0驱动设备模式"
+    select CONFIG_USB_IS_DEVICE
+
+config CONFIG_USB_HOST
+    bool "USB0驱动主机模式"
+    select CONFIG_USB_IS_HOST
+    select CONFIG_GPIO_PIN
+
+config CONFIG_USB_DUAL_ROLE
+    bool "USB0驱动OTG模式"
+    select CONFIG_USB_IS_DEVICE
+    select CONFIG_USB_IS_HOST
+    select CONFIG_GPIO_PIN
+
+endchoice # "USB0驱动(支持OTG)模式"
+
+choice "选择USB0设备模式下模拟的设备"
+    default CONFIG_USB_GADGET_SERIAL
+    depends on CONFIG_USB_IS_DEVICE
+
+config CONFIG_USB_GADGET_SERIAL
+    bool "USB串口设备驱动"
+
+config CONFIG_USB_GADGET_HID
+    bool "USB HID设备驱动"
+
+config CONFIG_USB_GADGET_HID_WAKEUP
+    bool "USB HID设备带唤醒功能驱动"
+
+config CONFIG_USB_GADGET_SERIAL_HID
+    bool "USB 串口和HID复合设备驱动"
+
+config CONFIG_USB_GADGET_UVC
+    bool "USB 摄像头设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+
+config CONFIG_USB_GADGET_UVC_N
+    bool "USB 多摄像头设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+
+config CONFIG_USB_GADGET_UVC_HID
+    bool "USB 摄像头和HID复合设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+
+config  CONFIG_USB_GADGET_UVC_CDC
+    bool "USB 摄像头和串口复合设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+
+config CONFIG_USB_GADGET_BULK
+    bool "USB通用块设备驱动"
+
+config CONFIG_USB_GADGET_UAC1
+    bool "USB 声卡1.0"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+    select CONFIG_RING_MEM
+
+config CONFIG_USB_GADGET_UVC_UAC1
+    bool "USB 摄像头和声卡1.0复合设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+    select CONFIG_RING_MEM
+
+config CONFIG_USB_GADGET_UVC_N_UAC1
+    bool "USB 多摄像头和声卡1.0复合设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+    select CONFIG_RING_MEM
+
+config CONFIG_USB_GADGET_MASS_STORAGE
+    bool "U盘设备驱动"
+
+config CONFIG_USB_GADGET_PRINTER
+    bool "USB 打印机设备驱动"
+
+config  CONFIG_USB_GADGET_DISPLAY
+    bool "USB 显示器设备驱动"
+
+config  CONFIG_USB_GADGET_DISPLAY_AUDIO_HID
+    bool "USB 显示器声卡触摸复合设备驱动"
+    select CONFIG_LIB_SORT
+    select CONFIG_SORT_UP_INT
+    select CONFIG_RING_MEM
+
+config  CONFIG_USB_GADGET_WINUSB
+    bool "USB WINUSB设备驱动"
+
+config CONFIG_USB_GADGET_RNDIS
+    bool "USB RNDIS 虚拟网卡"
+
+config CONFIG_USB_GADGET_NCM
+    bool "USB NCM 虚拟网卡"
+
+config CONFIG_USB_GADGET_ECM
+    bool "USB ECM 虚拟网卡"
+
+config CONFIG_USB_GADGET_APPLE
+    bool "USB Apple Mirror 屏幕镜像驱动"
+
+endchoice # "选择USB0设备模式下模拟的设备"
+
+config CONFIG_USB_DISABLE_VBUS
+    bool "关闭USB0的VBUS检测功能"
+
+config CONFIG_USB_FORCE_FULL_SPEED
+    bool "强制USB0为全速模式"
+
+config CONFIG_USB_HOST_VBUS_POWER_PIN
+    string "USB0主机模式 5V供电使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_USB_IS_HOST
+
+endmenu # CONFIG_USB0
+
+menuconfig CONFIG_USB1
+    bool "USB1(仅支持Host)驱动"
+    select CONFIG_USB_IS_HOST
+    depends on CONFIG_USB1_HOST_SUPPORT
+
+config CONFIG_USB1_FORCE_FULL_SPEED
+    bool "强制USB1驱动为全速模式"
+
+config CONFIG_USB1_HOST_VBUS_POWER_PIN
+    string "USB1主机模式 5V供电使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_USB1
+
+config CONFIG_USB_IRQ_THREAD_MODE
+    bool "使用线程处理usb中断请求,这样可以减少usb中断的时间"
+
+config CONFIG_USB_HOST_HID_MOUSE
+    bool "USB鼠标主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_HID_KEYBOARD
+    bool "USB键盘主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_HID_VENDOR
+    bool "USB 自定义HID主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_CDC_ACM
+    bool "USB CDC ACM主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_CH341
+    bool "USB CH341主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_WWAN
+    bool "USB WWAN主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_UVC
+    bool "USB 摄像头主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_UAC
+    bool "USB 音频主机驱动"
+    depends on CONFIG_USB_IS_HOST
+    select CONFIG_PCM
+    select CONFIG_LIB_RING_BUFFER
+
+menuconfig CONFIG_USB_HOST_MASS_STORAGE
+    bool "U盘主机驱动"
+    depends on CONFIG_USB_IS_HOST
+
+config CONFIG_USB_HOST_MASS_STORAGE_AUTO_MOUNT
+    bool "U盘自动挂载"
+    select CONFIG_LIB_CRC32
+    select CONFIG_DFS
+    select CONFIG_DFS_ELMFAT
+    select CONFIG_DFS_HOTPLUG
+
+endmenu # CONFIG_USB_HOST_MASS_STORAGE
+
+endmenu # CONFIG_USB_DRIVER

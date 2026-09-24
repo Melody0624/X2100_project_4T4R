@@ -1,0 +1,7 @@
+config CONFIG_LIBCXX
+    bool "libcxx(c++ support) 未经严格测试,君正不做支持"
+    select CONFIG_OS_HAS_CPP_SUPPORT
+config CONFIG_LIBCXX_RTTI
+    bool "    支持c++动态类型判断, typeid(dynamic_cast)"
+    default n
+    depends on CONFIG_LIBCXX

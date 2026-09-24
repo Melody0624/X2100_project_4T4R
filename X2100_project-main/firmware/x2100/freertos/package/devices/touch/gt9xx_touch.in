@@ -1,0 +1,62 @@
+array GT9XX_SERIES
+    int "GT9XX系列"
+    item "V1 (600*1024) " 0x1
+    item "V2 (720*1280) " 0x2
+    item "V3 (480*800) " 0x3
+    item "V4 (800*480) " 0x4
+    item "V5 (1080*1920) " 0x5
+    item "V6 (800*1280) " 0x6
+
+menuconfig CONFIG_GT9XX_TOUCH
+    bool "gt9xx触摸屏"
+    select CONFIG_INPUT
+
+config CONFIG_GTP_VERSION
+    string "GT9XX系列供应商版本"
+    choice from GT9XX_SERIES
+    default 0x1
+
+config CONFIG_GTP_DEV_NAME
+    string "触摸屏设备名称"
+    default "gt9xx"
+
+config CONFIG_GTP_POWER_REGULATOR_NAME
+    string "regulator name(通过名字获取 TP module 电源管理器)"
+    default "-1"
+
+config CONFIG_GTP_POWER_GPIO
+    string "gpio power(touchscreen 电源脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_GTP_RESET_GPIO
+    string "gpio reset(touchscreen 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_GTP_IRQ_GPIO
+    string "gpio irq(touchscreen 中断引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_GTP_MAX_EVENT_COUNT
+    int "触摸屏事件缓冲区大小"
+    default 8
+
+config CONFIG_GTP_MAX_TOUCH_NUMBER
+    int "能检测的最大触摸点个数(最大为10,最小为2，小于2计为2,大于10计为10)"
+    default 2
+
+config CONFIG_GTP_I2C_BUSNUM
+    int "i2c bus num(触摸屏挂接的i2c总线号)"
+    default -1
+
+config CONFIG_GTP_X_COORDS_MAX
+    int "最大X轴坐标值"
+    default 600
+
+config CONFIG_GTP_Y_COORDS_MAX
+    int "最大Y轴坐标值"
+    default 1024
+
+endmenu

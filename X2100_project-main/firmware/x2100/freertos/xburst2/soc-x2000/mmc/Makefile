@@ -1,0 +1,11 @@
+src-$(CONFIG_MMC) += mmc-x2000-gpio.c
+src-$(CONFIG_MMC) += mmc-x2000.c
+src-$(CONFIG_MMC) += mmc-x2000-hal.c
+src-$(CONFIG_MMC) += mmc-core.c
+src-$(CONFIG_MMC) += mmc-sd.c
+src-$(CONFIG_MMC) += mmc-sdio.c
+src-$(CONFIG_MMC) += mmc-sdio-cis.c
+src-$(CONFIG_MMC) += mmc-sdio-irq.c
+src-$(CONFIG_MMC) += mmc-sdio-io.c
+src-$(CONFIG_MMC) += mmc-mmc.c
+src-$(CONFIG_MMC) += mmc-block.c

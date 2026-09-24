@@ -1,0 +1,202 @@
+config CONFIG_SOC_X2000S
+    bool
+    select CONFIG_SOC_X2000
+
+menuconfig CONFIG_SOC_X2000
+    bool "x2000系列 cpu 设置"
+    depends on CONFIG_SOC_X2000S
+
+config CONFIG_X2000_DPU_HAL
+    bool
+
+menuconfig CONFIG_SOC_X2000_X2000
+    bool
+    depends on CONFIG_XBURST2_X2000
+
+source package/xburst2/soc-x2000/x2000-spl.in
+
+endmenu
+
+menuconfig CONFIG_SOC_X2000_X2100
+    bool
+    depends on CONFIG_XBURST2_X2100
+
+source package/xburst2/soc-x2000/x2100-spl.in
+
+endmenu
+
+source package/xburst2/soc-x2000/cpm_gpio_voltage.in
+
+source package/xburst2/soc-x2000/uart.in
+
+source package/xburst2/soc-x2000/gpio.in
+
+source package/xburst2/soc-x2000/i2c.in
+
+source package/xburst2/soc-x2000/mmc/mmc.in
+
+source package/xburst2/soc-x2000/spi.in
+source package/xburst2/soc-x2000/lcd.in
+source package/xburst2/soc-x2000/fb_layer_mixer.in
+source package/xburst2/soc-x2000/rotator.in
+source package/xburst2/soc-x2000/camera/camera.in
+
+config CONFIG_X2000_VCODEC
+    bool "h264 jpeg 编码/解码 (helix felix 模块)"
+    select CONFIG_LIB_NALU
+
+source package/xburst2/soc-x2000/utils.in
+
+config CONFIG_X2000_AUDIO
+    bool
+
+source package/xburst2/soc-x2000/pcm.in
+
+config CONFIG_X2000_DMIC
+    bool "dmic(外接数字mic)"
+    select CONFIG_PCM
+    select CONFIG_X2000_AUDIO
+
+config CONFIG_X2000_ADC
+    bool "adc (电压采样)"
+    select CONFIG_ADC
+
+config CONFIG_X2000_AES
+    bool "aes (编解码)"
+    select CONFIG_AES
+
+config CONFIG_X2000_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_X2000_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X2000_RTC
+    bool "rtc (墙上时间)"
+    select CONFIG_RTC
+
+config CONFIG_X2000_DTRNG
+    bool "dtrng 驱动(获取随机数功能)"
+    select CONFIG_DTRNG
+
+config CONFIG_X2000_HASH
+    bool "hash 驱动(数据加密)"
+    select CONFIG_HASH
+
+menuconfig CONFIG_X2000_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+    select CONFIG_GPIO_PIN
+
+config CONFIG_X2000_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+choice "选择读写efuse段的校验模式"
+    default CONFIG_X2000_EFUSE_MODE_NONE
+config CONFIG_X2000_EFUSE_MODE_HAMMING
+    bool "使用海明码对原始数据进行编码"
+    select CONFIG_EFUSE_MODE_HAMMING
+config CONFIG_X2000_EFUSE_MODE_NONE
+    bool "不使用编码校验功能，读写原始数据"
+    select CONFIG_EFUSE_MODE_NONE
+endchoice
+
+endmenu # CONFIG_X2000_EFUSE
+
+menuconfig CONFIG_X2000_PM
+    bool "电源管理 (关机/休眠)"
+    select CONFIG_PM
+
+config CONFIG_X2000_PM_REDUCE_VOLTAGE
+    string "休眠降低电压gpio与电平"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu
+
+config CONFIG_X2000_VPU_JPEG_ENCODE
+    bool "vpu_jpeg_encode(硬件编码Legacy)"
+
+menuconfig CONFIG_X2000_CONN
+    bool "conn(核间通信)"
+    select CONFIG_CONN
+    select CONFIG_RING_MEM
+
+config CONFIG_X2000_CONN_MAX_LINK_COUNT
+    int "conn 可用的最大连接数"
+    default 16
+
+endmenu
+
+menuconfig CONFIG_X2000_CONN_VIC
+    bool "为Linux端提供RTOS端的VIC驱动(核间通信)"
+    select CONFIG_X2000_CONN
+
+config CONFIG_X2000_CONN_VIC0
+    bool "使能 conn vic0"
+
+config CONFIG_X2000_CONN_VIC1
+    bool "使能 conn vic1"
+
+endmenu
+
+config CONFIG_X2000_CONN_FB
+    bool "为Linux端提供RTOS端的FB驱动(核间通信)"
+
+menuconfig CONFIG_X2000_CONN_ISP
+    bool "为Linux端提供RTOS端的ISP驱动(核间通信)"
+    select CONFIG_X2000_CONN
+
+config CONFIG_X2000_CONN_ISP0
+    bool "使能 conn isp0"
+
+config CONFIG_X2000_CONN_ISP1
+    bool "使能 conn isp1"
+
+endmenu
+
+
+menuconfig CONFIG_X2000_CONN_BLK
+    bool "为Linux端提供RTOS端的BLK(mmc)驱动(核间通信)"
+    select CONFIG_X2000_CONN
+
+config CONFIG_X2000_CONN_BLK_START_ADDR
+    int "块设备起始地址(单位字节)"
+    default 0x100000
+
+config CONFIG_X2000_CONN_BLK_SIZE
+    int "块设备大小"
+    default 10485760
+
+endmenu
+
+
+menuconfig  CONFIG_X2000_CONN_PCM
+    bool "为Linux端提供RTOS端的PCM驱动(核间通信)"
+    select CONFIG_X2000_CONN
+
+config CONFIG_X2000_CONN_PCM_PLAYBACK
+    bool "使能 conn_pcm_playback"
+
+endmenu
+
+
+menuconfig CONFIG_X2000_CONN_FS
+    bool "RTOS端的文件系统读/写相关操作通知到Linux端(核间通信)"
+    select CONFIG_CONN_FS
+    select CONFIG_X2000_CONN
+
+endmenu
+
+source package/xburst2/soc-x2000/mac/mac.in
+
+config CONFIG_X2000_SCBOOT_DRIVER
+    bool "secure boot 驱动"
+    select CONFIG_SCBOOT_DRIVER
+    default n
+
+endmenu # CONFIG_SOC_X2000

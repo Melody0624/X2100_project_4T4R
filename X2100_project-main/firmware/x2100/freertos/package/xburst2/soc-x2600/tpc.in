@@ -1,0 +1,11 @@
+
+menuconfig CONFIG_X2600_TPC
+    bool "tpc 打印头控制器驱动"
+
+config CONFIG_X2600_TPC_MOTOR_NUM
+    int "TPC 电机个数(1 ~ 2)"
+    default 2
+    help
+        "若设置为1，可作为一个4相8路电机使用，若设置为 2， 可作为两个2相4路电机使用"
+
+endmenu

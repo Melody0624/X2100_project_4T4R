@@ -1,0 +1,211 @@
+menuconfig CONFIG_X2000_MAC
+    bool "MAC (有线网卡驱动)"
+    select CONFIG_NET
+    select CONFIG_NET_LWIP
+    select CONFIG_GPIO_PIN
+    select CONFIG_MAC
+    select CONFIG_X2000_EFUSE
+    select CONFIG_X2000_DTRNG
+
+array MAC_PHY_MDC
+    int "设置PHY MDIO时钟"
+    item " MDC=7.14MHz " 0x0
+    item " MDC=4.83HMz " 0x1
+    item " MDC=18.75MHz " 0x2
+    item " MDC=11.5MHz " 0x3
+    item " MDC=2.94MHz " 0x4
+    item " MDC=2.46MHz " 0x5
+
+config CONFIG_X2000_MAC_PHY_CLK_RATE
+    int "PHY CLK 速率"
+    default 0
+
+menuconfig CONFIG_X2000_MAC0
+    bool "MAC0"
+
+choice "选择MAC0工作模式 (RMII/RGMII)"
+    default CONFIG_X2000_MAC0_RMII_MODE
+
+config CONFIG_X2000_MAC0_RMII_MODE
+    bool "  RMII_MODE（简化的百兆媒体独立接口）"
+
+config CONFIG_X2000_MAC0_RGMII_MODE
+    bool "  RGMII_MODE（简化的千兆媒体独立接口）"
+
+endchoice
+
+config CONFIG_X2000_MAC0_RX_CLK_DELAY
+    int "MAC0 RGMII RX CLK延时时间(范围：0~128)"
+    default 60
+    depends on CONFIG_X2000_MAC0_RGMII_MODE
+    help
+        例如：delay_time = X * 19.5(ps);
+        配置值范围0-128,RXCLK延时的时间范围0-2.5ns
+        具体配置值需要由phy来确定,TXCLK和RXCLK和data保证2ns左右的delay.
+        如果phy端已经做了delay,mac控制器端就不需要设置或补足差值.
+
+config CONFIG_X2000_MAC0_TX_CLK_DELAY
+    int "MAC0 RGMII TX CLK延时时间(范围：0~128)"
+    default 60
+    depends on CONFIG_X2000_MAC0_RGMII_MODE
+    help
+        例如：delay_time = X * 19.5(ps);
+        配置值范围0-128,TXCLK延时的时间范围0-2.5ns
+        具体配置值需要由phy来确定,TXCLK和RXCLK和data保证2ns左右的delay.
+        如果phy端已经做了delay,mac控制器端就不需要设置或补足差值.
+
+config CONFIG_X2000_MAC0_PHY_ADDR
+    int "MAC0 PHY 地址 (如果自动扫描PHY地址，设置为-1)"
+    default -1
+
+config CONFIG_X2000_MAC0_PHY_POWER_GPIO
+    string "MAC0 PHY 电源使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X2000_MAC0_PHY_POWER_DELAY
+    int "MAC PHY 上电延时时间 单位：ms"
+    default 1
+
+config CONFIG_X2000_MAC0_PHY_RESET_GPIO
+    string "MAC0 PHY 复位引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X2000_MAC0_PHY_RESET_DELAY
+    int "MAC0 PHY 复位延迟时间 单位：us"
+    default 10000
+
+config CONFIG_X2000_MAC0_PHY_IRQ_GPIO
+    string "MAC0 PHY 中断引脚 (如果使用轮训模式，设置为-1)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_MAC0_PHY_MDC
+    string "MAC PHY MDIO 时钟"
+    choice from MAC_PHY_MDC
+    default 0x1
+
+menuconfig CONFIG_X2000_MAC0_IPV4_ADDR
+    bool "static IPv4 Address (不调用dhcp获取地址)"
+    default n
+
+config CONFIG_X2000_MAC0_IPADDR
+    string "IPv4: IP address"
+    default "192.168.1.110"
+
+config CONFIG_X2000_MAC0_GWADDR
+    string "IPv4: Gateway address"
+    default "192.168.1.1"
+
+config CONFIG_X2000_MAC0_MSKADDR
+    string "IPv4: Mask address"
+    default "255.255.255.0"
+endmenu
+
+config CONFIG_X2000_MAC0_NOT_USE_PHY_CLK
+    bool "不使用phy_clk引脚 (例如：使用外部晶振作为使用源)"
+    default n
+
+config CONFIG_X2000_MAC0_RMII_TX_CLK
+    int "RMII模式下tx_clk输出时钟 (可以输出给phy作为时钟源，如果不使用设置为0)"
+    depends on CONFIG_X2000_MAC0_RMII_MODE
+    default 0
+
+endmenu # CONFIG_X2000_MAC0
+
+menuconfig CONFIG_X2000_MAC1
+    bool "MAC1"
+
+choice "选择MAC1工作模式 (RMII/RGMII)"
+    default CONFIG_X2000_MAC1_RMII_MODE
+
+config CONFIG_X2000_MAC1_RMII_MODE
+    bool "  RMII_MODE（简化的百兆媒体独立接口）"
+
+config CONFIG_X2000_MAC1_RGMII_MODE
+    bool "  RGMII_MODE（简化的千兆媒体独立接口）"
+
+endchoice
+
+config CONFIG_X2000_MAC1_RX_CLK_DELAY
+    int "MAC1 RGMII RX CLK延时时间(范围：0~128)"
+    default 60
+    depends on CONFIG_X2000_MAC1_RGMII_MODE
+    help
+        例如：delay_time = X * 19.5(ps);
+        配置值范围0-128,RXCLK延时的时间范围0-2.5ns
+        具体配置值需要由phy来确定,TXCLK和RXCLK和data保证2ns左右的delay.
+        如果phy端已经做了delay,mac控制器端就不需要设置或补足差值.
+
+config CONFIG_X2000_MAC1_TX_CLK_DELAY
+    int "MAC1 RGMII TX CLK延时时间(范围：0~128)"
+    default 60
+    depends on CONFIG_X2000_MAC1_RGMII_MODE
+    help
+        例如：delay_time = X * 19.5(ps);
+        配置值范围0-128,TXCLK延时的时间范围0-2.5ns
+        具体配置值需要由phy来确定,TXCLK和RXCLK和data保证2ns左右的delay.
+        如果phy端已经做了delay,mac控制器端就不需要设置或补足差值.
+
+config CONFIG_X2000_MAC1_PHY_ADDR
+    int "MAC1 PHY 地址 (如果自动扫描PHY地址，设置为-1)"
+    default -1
+
+config CONFIG_X2000_MAC1_PHY_POWER_GPIO
+    string "MAC1 PHY 电源使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X2000_MAC1_PHY_POWER_DELAY
+    int "MAC PHY 上电延时时间 单位：ms"
+    default 1
+
+config CONFIG_X2000_MAC1_PHY_RESET_GPIO
+    string "MAC1 PHY 复位引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X2000_MAC1_PHY_RESET_DELAY
+    int "MAC1 PHY 复位延迟时间 单位：us"
+    default 10000
+
+config CONFIG_X2000_MAC1_PHY_IRQ_GPIO
+    string "MAC1 PHY 中断引脚 (如果使用轮训模式，设置为-1)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_MAC1_PHY_MDC
+    string "MAC PHY MDIO 时钟"
+    choice from MAC_PHY_MDC
+    default 0x1
+
+menuconfig CONFIG_X2000_MAC1_IPV4_ADDR
+    bool "static IPv4 Address (不调用dhcp获取地址)"
+    default n
+
+config CONFIG_X2000_MAC1_IPADDR
+    string "IPv4: IP address"
+    default "192.168.1.120"
+
+config CONFIG_X2000_MAC1_GWADDR
+    string "IPv4: Gateway address"
+    default "192.168.1.1"
+
+config CONFIG_X2000_MAC1_MSKADDR
+    string "IPv4: Mask address"
+    default "255.255.255.0"
+endmenu
+
+config CONFIG_X2000_MAC1_NOT_USE_PHY_CLK
+    bool "不使用phy_clk引脚 (例如：使用外部晶振作为使用源)"
+    default n
+
+config CONFIG_X2000_MAC1_RMII_TX_CLK
+    int "RMII模式下tx_clk输出时钟 (可以输出给phy作为时钟源，如果不使用设置为0)"
+    depends on CONFIG_X2000_MAC1_RMII_MODE
+    default 0
+
+endmenu # CONFIG_X2000_MAC1
+
+endmenu # CONFIG_X2000_MAC

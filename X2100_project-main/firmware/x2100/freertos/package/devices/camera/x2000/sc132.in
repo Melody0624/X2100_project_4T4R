@@ -1,0 +1,55 @@
+menuconfig CONFIG_X2000_SENSOR_SC132
+    bool "sensor sc132 (mipi,raw8)"
+    select CONFIG_X2000_CAMERA
+    depends on CONFIG_SOC_X2000
+
+array SENSOR_RESOLUTION
+    string "sensor sc132 resolution"
+    item "1080*1280 60fps" "SC132_1080_1280_60FPS"
+    item "1080*1280 120fps" "SC132_1080_1280_120FPS"
+
+config CONFIG_X2000_SC132_SENSOR_NAME
+    string "sensor module name"
+    default "sc132-ir"
+
+config CONFIG_X2000_SC132_GPIO_RESET
+    string "gpio reset(sensor 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_SC132_GPIO_PWDN
+    string "gpio pwdn(sensor 电源控制引脚, 低有效)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_SC132_GPIO_POWER
+    string "gpio power(sensor 电源控制引脚, 高有效)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_SC132_I2C_BUSNUM
+    int "i2c bus num (sensor 挂接的i2c总线号)"
+    default -1
+
+config CONFIG_X2000_SC132_I2C_ADDR
+	int "i2c device addr (sensor的i2c地址)"
+	default -1
+
+config CONFIG_X2000_SC132_VIC_BUSNUM
+	int "vic bus num (sensor 挂接的vic总线号)"
+	default -1
+
+config CONFIG_X2000_SC132_SENSOR_RESOLUTION
+    string "sensor 选择分辨率"
+    choice from SENSOR_RESOLUTION
+    default "SC132_1080_1280_60FPS"
+
+config CONFIG_X2000_SENSOR_SC132_ISP_BIN_SELECT
+    bool "sensor isp bin select"
+    default n
+config CONFIG_X2000_SENSOR_SC132_ISP_BIN_PATH
+    string "sensor isp bin path"
+    default "devices/camera/x2000/sc132/sc132-ir-x2000.bin"
+    depends on CONFIG_X2000_SENSOR_SC132_ISP_BIN_SELECT
+
+endmenu

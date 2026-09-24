@@ -1,0 +1,9 @@
+menuconfig CONFIG_X1830_VIC
+    bool "vic (camera 驱动)"
+    select CONFIG_CAMERA
+
+config CONFIG_X1830_VIC_FRAME_CNT
+    int "帧缓冲数量"
+    default 2
+
+endmenu # CONFIG_X1830_VIC

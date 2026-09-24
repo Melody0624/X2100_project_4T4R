@@ -1,0 +1,71 @@
+menuconfig CONFIG_X1000_MAC
+    bool "MAC (有线网卡驱动)"
+    select CONFIG_NET
+    select CONFIG_NET_LWIP
+    select CONFIG_GPIO_PIN
+    select CONFIG_MAC
+    select CONFIG_X1000_EFUSE
+
+array MAC_PHY_MDC
+    int "设置PHY MDIO时钟"
+    item " MDC=2.85MHz " 0x0
+    item " MDC=1.93HMz " 0x1
+    item " MDC=7.5MHz " 0x2
+    item " MDC=4.6MHz " 0x3
+    item " MDC=1.17MHz " 0x4
+    item " MDC=0.98MHz " 0x5
+
+config CONFIG_X1000_MAC_PHY_ADDR
+    int "MAC PHY 地址 (如果自动扫描PHY地址，设置为-1)"
+    default -1
+
+config CONFIG_X1000_MAC_PHY_POWER_GPIO
+    string "MAC PHY 电源使能引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1000_MAC_PHY_POWER_DELAY
+    int "MAC PHY 上电延时时间 单位：ms"
+    default 1
+
+config CONFIG_X1000_MAC_PHY_RESET_GPIO
+    string "MAC PHY 复位引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+config CONFIG_X1000_MAC_PHY_RESET_DELAY
+    int "MAC PHY 复位延迟时间 单位：us"
+    default 10000
+
+config CONFIG_X1000_MAC_PHY_IRQ_GPIO
+    string "MAC PHY 中断引脚 (如果使用轮训模式，设置为-1)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1000_MAC_PHY_MDC
+    string "MAC PHY MDIO 时钟"
+    choice from MAC_PHY_MDC
+    default 0x3
+
+menuconfig CONFIG_X1000_MAC_IPV4_ADDR
+    bool "static IPv4 Address (不调用dhcp获取地址)"
+    default n
+
+config CONFIG_X1000_MAC_IPADDR
+    string "IPv4: IP address"
+    default "192.168.1.110"
+
+config CONFIG_X1000_MAC_GWADDR
+    string "IPv4: Gateway address"
+    default "192.168.1.1"
+
+config CONFIG_X1000_MAC_MSKADDR
+    string "IPv4: Mask address"
+    default "255.255.255.0"
+endmenu
+
+config CONFIG_X1000_MAC_NOT_USE_PHY_CLK
+    bool "不使用phy_clk引脚 (例如：使用外部晶振作为使用源)"
+    default n
+
+endmenu # CONFIG_X1000_MAC

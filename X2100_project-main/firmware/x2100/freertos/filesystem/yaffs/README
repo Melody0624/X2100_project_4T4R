@@ -1,0 +1,53 @@
+1. 工程结构
+    dfs_yaffs_s.c: dfs操作接口和初始化配置
+    yaffs_flashif.c: flash操作接口
+    yaffs_osglue.c: 互斥量和后台线程接口
+
+    yaffs/yaffs_guts.c: (重要)yaffs主要的初始化函数
+    yaffs/yaffs_allocator.c: yaffs_tnode 和 yaffs_obj申请分配接口
+    yaffs/yaffs_bitmap.c: chunk数位操作
+    yaffs/yaffs_checkptrw.c: checkpoint检查点接口,用于大数据量的文件系统掉电重启恢复
+    yaffs/yaffs_ecc.c: yaffs自身ecc校验接口
+    yaffs/yaffs_endian.c: 大小端转换接口
+    yaffs/yaffs_nameval.c: name-value存储操作接口, 适用于少量数据的操作,主要用于xattr存储
+    yaffs/yaffs_nand.c: yaffs nand操作中间层接口
+    yaffs/yaffs_packedtags1.c: yaffs1对tag数据的打包接口
+    yaffs/yaffs_packedtags2.c: yaffs2对tag数据的打包接口
+    yaffs/yaffs_summary.c: summary摘要操作, 带summary tag的块为摘要块,用于记录所有数据块的摘要信息
+    yaffs/yaffs_tagscompat.c: yaffs1 tags识别
+    yaffs/yaffs_tagsmarshall.c: yaffs2 tags识别
+    yaffs/yaffs_verify.c: 块验证操作接口, 验证yaffs块完整性和状态
+    yaffs/yaffs_yaffs1.c: yaffs1其他相关操作接口
+    yaffs/yaffs_yaffs2.c: yaffs1其他相关操作接口
+
+    yaffs/direct/yaffs_attribs.c: 文件扩展属性操作接口
+    yaffs/direct/yaffs_error.c: 错误码相关
+    yaffs/direct/yaffs_hweight.c: 汉明重量计算
+    yaffs/direct/yaffsfs.c: yaffs文件系统操作中间层接口
+
+    yaffs/utils/: 镜像制作工具相关代码
+
+2. yaffs2 flash存储结构
+    使用inband_tags: tags数据存储在数据区, 不读写oob, 适用于oob区过小或不可靠的flash
+    |     数据区     | oob区域 |
+    |   Data    |tags|    \    |
+    不使用inband_tags: tags数据存储在oob, 2k的flash数据大小为28字节
+    |     数据区     | oob区域 |
+    |      Data      |   tags  |
+    注意: 由于cloner烧录工具不支持向oob区写入yaffs格式的元数据,因此仅支持yaffs2 inband_tags
+
+3. yaffs2镜像制作工具使用和烧录
+    filesystem/output_tools/mkyaffs2:
+        镜像制作工具,仅测试inband tags的yaffs2文件系统, 生成镜像后烧录到rootfs分区即可
+        ./mkyaffs2 -i -p [flash页大小] -s [oob区大小] [源镜像目录] [生成的镜像名称]
+    filesystem/output_tools/unyaffs2:
+        镜像解压工具,仅测试inband tags的yaffs2文件系统, 将镜像解压成文件形式
+        ./unyaffs2 -i -p [flash页大小] -s [oob区大小] [源镜像名称] [生成的镜像目录]
+    ./yaffs/utils/: 
+        yaffs1和yaffs2的镜像制作工具和镜像解压工具源码, 可以单独编译，也可以勾选CONFIG_DFS_YAFFS_IMG_UTILS配置跟随整个工程编译
+    注意：仅测试了mkyaffs2镜像制作工具和解压工具的inband_tags模式
+
+4. 打印信息控制
+    debug打印信息在yaffs_osglue.c进行控制, 0xFFFFFFFF为全开
+
+注意: 本工程没有对yaffs1, yaffs2非inband tags模式,以及nor emmc介质进行测试

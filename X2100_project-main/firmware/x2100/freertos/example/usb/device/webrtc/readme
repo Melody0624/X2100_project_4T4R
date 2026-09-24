@@ -1,0 +1,33 @@
+uvc + uac + 回声消除 + 降噪
+
+文件说明：
+    gadget_usb_uvc_uac1.c         demo代码
+    gadget_usb_uvc_uac1_data.c    demo代码, 三路录音数据 far near filter, 用于算法调试
+    include                       头文件
+    ingenic_apm.cpp               算法代码包装 c++ -》 c, 方便c代码调用算法
+    ingenic_apm.h                 算法包装导出的api
+    libwebrtc.a                   算法库
+
+编译配置流程：
+
+    Iconigtool 必选配置
+        USB 摄像头和声卡1.0复合设备驱动(CONFIG_USB_GADGET_UVC_UAC1)
+        libcxx(c++ support) 未经严格测试,君正不做支持(CONFIG_LIBCXX)
+
+    拷贝文件到vendor目录
+
+    修改 package/vendor/vendor.mk, 添加算法库和头文件
+        package_lib-y += vendor/libwebrtc.a
+        CFLAGS += -Ivendor/include/webrtc_audio_processing
+
+    修改 vendor/Makefile, 添加编译文件
+        src-y += vendor.c gadget_usb_uvc_uac1.c ingenic_apm.cpp
+
+    修改 vendor/vendor.c 添加函数调用
+        int gadget_usb_uvc_uac1_test(int index, int channel);
+        void vendor_init(void)
+        {
+            printf("vendor init...\n");
+            gadget_usb_uvc_uac1_test(1, 0);
+        }
+

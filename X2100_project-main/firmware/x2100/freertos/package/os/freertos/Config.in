@@ -1,0 +1,4 @@
+menuconfig CONFIG_OS_FREERTOS
+    bool "系统类型 freeRTOS"
+
+endmenu

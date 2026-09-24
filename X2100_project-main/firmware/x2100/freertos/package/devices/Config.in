@@ -1,0 +1,17 @@
+menuconfig CONFIG_DEVICES
+    bool "外设"
+
+source "package/devices/lcd/lcd.in"
+source "package/devices/backlight/backlight.in"
+source "package/devices/keyboard/keyboard.in"
+source "package/devices/touch/touch.in"
+source "package/devices/camera/camera.in"
+source "package/devices/codec/codec.in"
+source "package/devices/mmc/mmc.in"
+source "package/devices/ramdisk/ramdisk.in"
+source "package/devices/regulator/regulator.in"
+source "package/devices/wireless/Config.in"
+source "package/devices/afe/afe.in"
+source "package/devices/cis/cis.in"
+
+endmenu # CONFIG_DEVICES

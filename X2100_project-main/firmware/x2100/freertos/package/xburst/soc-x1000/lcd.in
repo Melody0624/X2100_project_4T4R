@@ -1,0 +1,22 @@
+config CONFIG_SOC_X1000_HAS_LCD
+    bool
+
+menuconfig CONFIG_X1000_LCD
+    bool "LCD 驱动"
+    select CONFIG_FB
+    depends on CONFIG_SOC_X1000_HAS_LCD
+
+config CONFIG_X1000_LCD_FB0_ENABLE
+    bool "使能fb0"
+
+config CONFIG_X1000_LCD_FB0_FRM_CNT
+    int "fb0帧缓冲数量"
+    default 2
+    depends on CONFIG_X1000_LCD_FB0_ENABLE
+
+config CONFIG_X1000_LCD_FB0_NAME
+    string "设备节点名字"
+    default "fb0"
+    depends on CONFIG_X1000_LCD_FB0_ENABLE
+
+endmenu

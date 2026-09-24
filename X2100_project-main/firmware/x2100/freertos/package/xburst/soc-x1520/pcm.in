@@ -1,0 +1,9 @@
+config CONFIG_X1520_AIC
+    bool "aic(i2s 接口)"
+    select CONFIG_PCM
+    select CONFIG_DMA
+
+config CONFIG_X1520_ICODEC
+    bool "icodec(内部codec)"
+    select CONFIG_PCM
+    select CONFIG_X1520_AIC

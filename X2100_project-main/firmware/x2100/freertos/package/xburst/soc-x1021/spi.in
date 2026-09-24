@@ -1,0 +1,89 @@
+array SOC_X1021_SPI0_MISO_IO
+    string "SPI MISO(DR) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MISO" GPIO_PC(11)
+
+array SOC_X1021_SPI0_MOSI_IO
+    string "SPI MOSI(DT) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MOSI" GPIO_PC(12)
+
+array SOC_X1021_SPI1_MISO_IO
+    string "SPI MISO(DR) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MISO" GPIO_PB(9)
+
+array SOC_X1021_SPI1_MOSI_IO
+    string "SPI MOSI(DT) 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_MOSI" GPIO_PB(8)
+
+array SOC_X1021_SPI0_CLK_IO
+    string "SPI CLK 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_CLK" GPIO_PC(13)
+
+array SOC_X1021_SPI1_CLK_IO
+    string "SPI CLK 引脚"
+    item "GPIO_NULL  " -1
+    item "GPIO_SPI_CLK" GPIO_PB(10)
+
+menu "SPI 总线"
+    help
+        "依赖于 SPI 驱动"
+
+config CONFIG_X1021_SPI0
+    bool "选择 SPI0"
+    select CONFIG_SPI
+    select CONFIG_DMA
+
+config CONFIG_X1021_SPI0_MISO
+    string "        MISO"
+    default -1
+    choice from SOC_X1021_SPI0_MISO_IO
+    depends on CONFIG_X1021_SPI0
+    help
+        "MISO= -1,表示不使用MISO引脚"
+
+config CONFIG_X1021_SPI0_MOSI
+    string "        MOSI"
+    default -1
+    choice from SOC_X1021_SPI0_MOSI_IO
+    depends on CONFIG_X1021_SPI0
+    help
+        "MOSI= -1,表示不使用MOSI引脚"
+
+config CONFIG_X1021_SPI0_CLK
+    string "        CLK"
+    default -1
+    choice from SOC_X1021_SPI0_CLK_IO
+    depends on CONFIG_X1021_SPI0
+
+config CONFIG_X1021_SPI1
+    bool "选择 SPI1"
+    select CONFIG_SPI
+    select CONFIG_DMA
+
+config CONFIG_X1021_SPI1_MISO
+    string "        MISO"
+    default -1
+    choice from SOC_X1021_SPI1_MISO_IO
+    depends on CONFIG_X1021_SPI1
+    help
+        "MISO= -1,表示不使用MISO引脚,即只接收不发送"
+
+config CONFIG_X1021_SPI1_MOSI
+    string "        MOSI"
+    default -1
+    choice from SOC_X1021_SPI1_MOSI_IO
+    depends on CONFIG_X1021_SPI1
+    help
+        "MOSI= -1,表示不使用MOSI引脚,即只发送不接收"
+
+config CONFIG_X1021_SPI1_CLK
+    string "        CLK"
+    default -1
+    choice from SOC_X1021_SPI1_CLK_IO
+    depends on CONFIG_X1021_SPI1
+
+endmenu # SPI 总线

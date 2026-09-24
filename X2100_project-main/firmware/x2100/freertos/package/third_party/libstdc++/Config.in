@@ -1,0 +1,3 @@
+config CONFIG_LIBSTDCPP
+    bool "libstdc++(c++ support) 未经严格测试,君正不做支持"
+    select CONFIG_OS_HAS_CPP_SUPPORT

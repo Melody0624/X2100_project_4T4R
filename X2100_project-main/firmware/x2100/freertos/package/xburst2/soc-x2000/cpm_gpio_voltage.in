@@ -1,0 +1,125 @@
+menu "VDDIO_CIM/VDDIO_SD 电压配置"
+
+choice "VDDIO_CIM/VDDIO_SD 配置方式"
+    default CONFIG_SOC_X2000_VDDIO_MANUAL_CONFIG
+
+config CONFIG_SOC_X2000_VDDIO_MANUAL_CONFIG
+    bool "根据配置值进行设置"
+    select CONFIG_SOC_X2000_VDDIO_CONFIG_MODE_MANUAL
+
+config CONFIG_SOC_X2000_VDDIO_AUTO_CONFIG
+    bool "根据 SADC 自动配置"
+    select CONFIG_SOC_X2000_VDDIO_CONFIG_MODE_AUTO
+
+endchoice
+
+menuconfig CONFIG_SOC_X2000_VDDIO_CONFIG_MODE_MANUAL
+    bool "VDDIO_CIM/VDDIO_SD 电平手动配置"
+    depends on CONFIG_SOC_X2000_VDDIO_MANUAL_CONFIG
+    default n
+
+config CONFIG_SOC_X2000_VDDIO_DVP_VOLTAGE_VALUE
+    string "VDDIO_CIM(1.8V/3.3V) 配置"
+    default 1
+    choice from SOC_X2000_GPIO_VOLTAGE_VALUE_LIST
+
+config CONFIG_SOC_X2000_VDDIO_SD_VOLTAGE_VALUE
+    string "VDDIO_SD(1.8V/3.3V) 配置"
+    default 0
+    choice from SOC_X2000_GPIO_VOLTAGE_VALUE_LIST
+
+endmenu
+
+menuconfig CONFIG_SOC_X2000_VDDIO_CONFIG_MODE_AUTO
+    bool "VDDIO_CIM/VDDIO_SD 电平自动配置(依赖电路设计)"
+    depends on CONFIG_SOC_X2000_VDDIO_AUTO_CONFIG
+    default n
+
+menuconfig CONFIG_SOC_X2000_VDDIO_DVP_BASED_ON_SADC
+    bool "VDDIO_CIM 电平由SADC读出自动配置"
+    default y
+
+config CONFIG_SOC_X2000_VDDIO_DVP_ADC_CHANNEL
+    int "VDDIO CIM 电路上接通的 adc 通道"
+    choice from SOC_X2000_GPIO_VOLTAGE_ADC_CHANNEL
+
+config CONFIG_SOC_X2000_VDDIO_DVP_R0
+    int "VDDIO CIM 分压电阻 R0 (ADC_CIM = VDDIO_CIM * R1 / (R0 + R1))"
+    default 100000
+    help
+               +++   vddio_cim (3.3v or 1.8v)
+                |
+                |
+               [ ]
+               [ ]   R0
+                |
+     adc _______|
+                |
+               [ ]  R1
+               [ ]
+                |
+                |
+               ---   GND
+        ADC_CIM = VDDIO_CIM * R1 / (R0 + R1)
+
+config CONFIG_SOC_X2000_VDDIO_DVP_R1
+    int "VDDIO CIM 分压电阻 R1(详见R0描述)"
+    default 100000
+    help
+        ADC_CIM = VDDIO_CIM * R1 / (R0 + R1)
+
+endmenu
+
+menuconfig CONFIG_SOC_X2000_VDDIO_SD_BASED_ON_SADC
+    bool "VDDIO_SD 电平由SADC读出自动配置"
+    default y
+
+config CONFIG_SOC_X2000_VDDIO_SD_ADC_CHANNEL
+    int "VDDIO SD 电路上接通的 adc 通道"
+    choice from SOC_X2000_GPIO_VOLTAGE_ADC_CHANNEL
+
+config CONFIG_SOC_X2000_VDDIO_SD_R0
+    int "VDDIO SD 分压电阻 R0 (ADC_SD = VDDIO_SD * R1 / (R0 + R1))"
+    default 100000
+    help
+               +++   vddio_sd (3.3v or 1.8v)
+                |
+                |
+               [ ]
+               [ ]   R0
+                |
+     adc _______|
+                |
+               [ ]  R1
+               [ ]
+                |
+                |
+               ---   GND
+        ADC_SD = VDDIO_SD * R1 / (R0 + R1)
+
+config CONFIG_SOC_X2000_VDDIO_SD_R1
+    int "VDDIO SD 分压电阻 R1(详见R0描述)"
+    default 100000
+    help
+        ADC_SD = VDDIO_SD * R1 / (R0 + R1)
+
+endmenu
+
+endmenu
+
+endmenu
+
+array SOC_X2000_GPIO_VOLTAGE_VALUE_LIST
+    string "x2000 gpio 引脚电平"
+    item "N/A" -1
+    item "GPIO-电压1.8V" 1
+    item "GPIO-电压3.3V" 0
+
+array SOC_X2000_GPIO_VOLTAGE_ADC_CHANNEL
+    int "adc 可选通道"
+    item "AUX0" 0
+    item "AUX1" 1
+    item "AUX2" 2
+    item "AUX3" 3
+    item "AUX4" 4
+    item "AUX5" 5

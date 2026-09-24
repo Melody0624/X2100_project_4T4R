@@ -1,0 +1,9 @@
+config CONFIG_X2000_AIC
+    bool "aic(i2s 接口)"
+    select CONFIG_PCM
+    select CONFIG_X2000_AUDIO
+
+config CONFIG_X2000_ICODEC
+    bool "icodec(内部codec)"
+    select CONFIG_PCM
+    select CONFIG_X2000_AIC

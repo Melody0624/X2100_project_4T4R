@@ -1,0 +1,2 @@
+编译后的文件无法直接烧录，需手动填充 DDRID 和分区信息，详见《USBClonerFactoryTool使用说明文档》。
+用户可使用USBCloner，在POLICY配置NOR ID为0xc84018，点击合并镜像，即可生成可用的iamge.bin文件，用于进行OTA升级。

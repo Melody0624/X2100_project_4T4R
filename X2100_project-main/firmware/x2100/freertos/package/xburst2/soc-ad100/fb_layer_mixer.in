@@ -1,0 +1,5 @@
+config CONFIG_AD100_FB_LAYER_MIXER
+    bool "lcd layer mixer(图像叠加)"
+    select CONFIG_AD100_DPU_HAL
+    help
+        获取AD100 lcd 4个层叠加后的像素数据

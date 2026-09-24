@@ -1,0 +1,43 @@
+menuconfig CONFIG_CODEC_AK4951
+    bool "codec ak4951"
+    select CONFIG_I2C
+
+config CONFIG_AK4951_GPIO_PWDN
+    string "gpio pwdn(codec 电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AK4951_GPIO_SPEAKER_POWER
+    string "gpio speaker power(codec 扬声器电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_AK4951_I2C_BUSNUM
+    int "i2c bus num (codec 挂接的i2c总线号)"
+    default -1
+
+config CONFIG_AK4951_PLAYBACK_MAX_GAIN
+    int "playback max gain (codec 播放最大音量增益)"
+    default 0x58
+    help
+        "播放音量增益范围：0x01~0xCB 值越小增益越大"
+
+config CONFIG_AK4951_PLAYBACK_MIN_GAIN
+    int "playback min gain (codec 播放最小音量增益)"
+    default 0xC6
+    help
+        "播放音量增益范围：0x01~0xCB 值越小增益越大"
+
+config CONFIG_AK4951_CAPTURE_MAX_GAIN
+    int "capture max gain (codec 录音最大音量增益)"
+    default 0xF1
+    help
+        "录音音量增益范围：0x05~0xF1 值越大增益越大"
+
+config CONFIG_AK4951_CAPTURE_MIN_GAIN
+    int "capture min gain (codec 录音最小音量增益)"
+    default 0x05
+    help
+        "录音音量增益范围：0x05~0xF1 值越大增益越大"
+
+endmenu

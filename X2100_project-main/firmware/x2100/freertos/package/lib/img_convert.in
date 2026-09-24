@@ -1,0 +1,13 @@
+menuconfig CONFIG_IMG_CONVERT
+    bool "图像格式转换"
+
+config CONFIG_YUV422_TO_RGB
+    bool "YUV422_TO_RGB"
+
+config CONFIG_BAYER16_TO_RGB
+    bool "BAYER16_TO_RGB"
+
+config CONFIG_CMYK_TO_RGB
+    bool "CMYK_TO_RGB"
+endmenu
+

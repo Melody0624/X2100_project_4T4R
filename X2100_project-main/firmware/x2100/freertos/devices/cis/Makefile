@@ -1,0 +1,1 @@
+src-$(CONFIG_CIS_DL520) += cis/cis_dl520/cis_dl520_data.c

@@ -1,0 +1,110 @@
+menuconfig CONFIG_XBURST2
+    bool "xburst2系列cpu"
+    select CONFIG_MIPS32
+
+choice "选择具体的cpu/soc"
+
+config CONFIG_XBURST2_X2000
+    bool "x2000"
+    select CONFIG_SOC_X2000S
+    select CONFIG_SOC_X2000_X2000
+
+config CONFIG_XBURST2_X2100
+    bool "x2100 (x2000系列)"
+    select CONFIG_SOC_X2000S
+    select CONFIG_SOC_X2000_X2100
+
+config CONFIG_XBURST2_X2600
+    bool "x2600"
+    select CONFIG_SOC_X2600S
+    select CONFIG_SOC_X2600_X2600
+    select CONFIG_USB1_HOST_SUPPORT
+
+config CONFIG_XBURST2_X2670
+    bool "x2670(x2600系列)"
+    select CONFIG_SOC_X2600S
+    select CONFIG_SOC_X2600_X2670
+    select CONFIG_USB1_HOST_SUPPORT
+
+config CONFIG_XBURST2_AD100
+    bool "ad100"
+    select CONFIG_SOC_AD100S
+    select CONFIG_SOC_AD100_AD100
+
+config CONFIG_XBURST2_AD101
+    bool "ad101(ad100系列)"
+    select CONFIG_SOC_AD100S
+    select CONFIG_SOC_AD100_AD101
+
+config CONFIG_XBURST2_AD102N
+    bool "ad102n(ad100系列)"
+    select CONFIG_SOC_AD100S
+    select CONFIG_SOC_AD100_AD102N
+    select CONFIG_USB1_HOST_SUPPORT
+
+config CONFIG_XBURST2_AD102P
+    bool "ad102p(ad100系列)"
+    select CONFIG_SOC_AD100S
+    select CONFIG_SOC_AD100_AD102P
+    select CONFIG_USB1_HOST_SUPPORT
+
+endchoice
+
+config CONFIG_XBURST2_CP0_TIMER
+    bool "cpu 自带的定时器"
+
+config CONFIG_XBURST2_MSA
+    bool "msa 指令支持(gcc -msa)"
+    default y
+
+source package/xburst2/soc-x2000/Config.in
+source package/xburst2/soc-x2600/Config.in
+source package/xburst2/soc-ad100/Config.in
+
+config CONFIG_EXTAL_CLOCK
+    int "cpu 外部主晶振频率"
+    default 24000000
+
+config CONFIG_XBURST2_RTC_32K
+    bool "外接 32.768K 晶振"
+
+config BITS_PER_LONG
+    int
+    default 32
+
+config CONFIG_XBURST2_IRQ
+    bool "irq中断支持"
+    select CONFIG_IRQ
+    default y
+
+config CONFIG_XBURST2_CACHE
+    bool "cache缓存支持"
+    select CONFIG_CACHE
+    default y
+
+config CONFIG_XBURST2_SPINLOCK
+    bool "spinlock自旋锁支持"
+    select CONFIG_SPINLOCK
+    default y
+
+config CONFIG_XBURST2_CLK
+    bool "时钟驱动"
+    select CONFIG_CLK
+    default y
+
+config CONFIG_XBURST2_SYSTICK
+    bool "ost timer(操作系统时钟源)"
+    select CONFIG_SYSTICK
+    default y
+
+config CONFIG_XBURST2_GPIO
+    bool "gpio驱动"
+    select CONFIG_GPIO
+    default y
+
+config CONFIG_XBURST2_DMA
+    bool "dma驱动"
+    select CONFIG_DMA
+    default y
+
+endmenu

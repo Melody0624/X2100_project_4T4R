@@ -1,0 +1,117 @@
+menuconfig CONFIG_DFS_ELMFAT
+    bool "支持fat文件系统"
+    default n
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION0
+    bool "fat文件系统 挂载分区0"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION0_NAME
+    string "挂载分区0名称"
+    default "partition0"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION0
+
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION1
+    bool "fat文件系统 挂载分区1"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION1_NAME
+    string "挂载分区1名称"
+    default "partition1"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION1
+
+
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION2
+    bool "fat文件系统 挂载分区2"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION2_NAME
+    string "挂载分区2名称"
+    default "partition2"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION2
+
+
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION3
+    bool "fat文件系统 挂载分区3"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION3_NAME
+    string "挂载分区3名称"
+    default "partition3"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION3
+
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION4
+    bool "fat文件系统 挂载分区4"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION4_NAME
+    string "挂载分区4名称"
+    default "partition4"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION4
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION5
+    bool "fat文件系统 挂载分区5"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION5_NAME
+    string "挂载分区5名称"
+    default "partition5"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION5
+
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION6
+    bool "fat文件系统 挂载分区6"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION6_NAME
+    string "挂载分区6名称"
+    default "partition6"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION6
+
+
+
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION7
+    bool "fat文件系统 挂载分区7"
+    default n
+    help
+        "查询是否有同名设备注册,如果已经注册则自动挂载为fat格式"
+
+config CONFIG_DFS_ELMFAT_MOUNT_PARTITION7_NAME
+    string "挂载分区7名称"
+    default "partition7"
+    depends on CONFIG_DFS_ELMFAT_MOUNT_PARTITION7
+
+
+endmenu

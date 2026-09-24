@@ -1,0 +1,115 @@
+config CONFIG_SOC_X2600S
+    bool
+    select CONFIG_SOC_X2600
+
+menuconfig CONFIG_SOC_X2600
+    bool "x2600系列 cpu 设置"
+    depends on CONFIG_SOC_X2600S
+
+config CONFIG_X2600_DPU_HAL
+    bool
+
+menuconfig CONFIG_SOC_X2600_X2600
+    bool
+    depends on CONFIG_XBURST2_X2600
+
+source package/xburst2/soc-x2600/x2600-spl.in
+source package/xburst2/soc-x2600/x2600-gpio.in
+
+endmenu
+
+menuconfig CONFIG_SOC_X2600_X2670
+    bool
+    depends on CONFIG_XBURST2_X2670
+
+source package/xburst2/soc-x2600/x2670-spl.in
+source package/xburst2/soc-x2600/x2670-gpio.in
+
+endmenu
+
+source package/xburst2/soc-x2600/cpm_gpio_voltage.in
+source package/xburst2/soc-x2600/uart.in
+source package/xburst2/soc-x2600/lcd.in
+source package/xburst2/soc-x2600/fb_layer_mixer.in
+source package/xburst2/soc-x2600/sfc_gpio.in
+source package/xburst2/soc-x2600/mac/mac.in
+source package/xburst2/soc-x2600/mmc/mmc.in
+source package/xburst2/soc-x2600/i2c.in
+source package/xburst2/soc-x2600/audio.in
+source package/xburst2/soc-x2600/adc.in
+source package/xburst2/soc-x2600/camera/camera.in
+source package/xburst2/soc-x2600/spi.in
+source package/xburst2/soc-x2600/sslv.in
+source package/xburst2/soc-x2600/can.in
+source package/xburst2/soc-x2600/tpc.in
+source package/xburst2/soc-x2600/jpeg/jpeg.in
+
+menuconfig CONFIG_X2600_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+    select CONFIG_GPIO_PIN
+
+config CONFIG_X2600_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_X2600_EFUSE
+
+config CONFIG_X2600_AES
+    bool "aes (编解码)"
+    select CONFIG_AES
+
+config CONFIG_X2600_HASH
+    bool "hash (哈希摘要算法)"
+    select CONFIG_HASH
+
+config CONFIG_X2600_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_X2600_VCODEC
+    bool "h264 解码 (felix 模块)"
+    select CONFIG_LIB_NALU
+
+config CONFIG_X2600_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_X2600_DTRNG
+    bool "dtrng 驱动(获取随机数功能)"
+    select CONFIG_DTRNG
+
+config CONFIG_X2600_WDT1
+    bool "watchdog1(看门狗的定时器功能，无复位)"
+
+menuconfig CONFIG_X2600_SCBOOT_DRIVER
+    bool "secure boot 驱动"
+    select CONFIG_SCBOOT_DRIVER
+    select CONFIG_GPIO_PIN
+    default n
+
+config CONFIG_X2600_SCBOOT_EFUSE_GPIO
+    string "EFUSE_VDDQ (需要写 key 时使用)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_X2600_SCBOOT_DRIVER
+
+config CONFIG_X2600_PM
+    bool "电源管理 (关机/休眠)"
+    select CONFIG_PM
+    default n
+
+menuconfig CONFIG_X2600_CONN
+    bool "conn(核间通信)"
+    select CONFIG_CONN
+    select CONFIG_RING_MEM
+
+config CONFIG_X2600_CONN_MAX_LINK_COUNT
+    int "conn 可用的最大连接数"
+    default 16
+
+endmenu
+
+endmenu # CONFIG_SOC_X2600

@@ -1,0 +1,134 @@
+menuconfig CONFIG_AWTK
+    bool "awtk"
+    default n
+
+menuconfig CONFIG_AWTK_DEFINE
+    bool "awtk 可配置宏"
+    default y
+
+config CONFIG_AWTK_USE_GUI_MAIN
+    bool "嵌入式系统有自己的main函数时"
+    default y
+
+config CONFIG_AWTK_WITH_BITMAP_FONT
+    bool "支持预先解码的位图字体"
+    default n
+
+config CONFIG_AWTK_WITH_STB_IMAGE
+    bool "支持png/jpeg图片"
+    default y
+
+config CONFIG_AWTK_WITH_STB_FONT
+    bool "用stb支持Truetype字体"
+    default y
+
+config CONFIG_AWTK_WITH_FT_FONT
+    bool "用freetype支持Truetype字体"
+    default n
+
+config CONFIG_AWTK_WITH_FS_RES
+    bool "支持从文件系统加载资源"
+    default n
+
+config CONFIG_AWTK_APP_RES_ROOT
+    string "指明资源所在的路径"
+    default "/awtk"
+    depends on CONFIG_AWTK_WITH_FS_RES
+
+config CONFIG_AWTK_WITH_UNICODE_BREAK
+    bool "使用标准的UNICODE换行算法"
+    default y
+
+config CONFIG_AWTK_WITH_BITMAP_BGRA
+    bool "将图片解码成BGRA8888格式，否则解码成RGBA8888的格式"
+    default y
+
+config CONFIG_AWTK_WITH_BITMAP_BGR565
+    bool "将不透明的PNG图片解码成BGR565格式,如果LCD是此格式,则可以提高性能"
+    default n
+
+config CONFIG_AWTK_WITH_BITMAP_RGB565
+    bool "将不透明的PNG图片解码成RGB565格式,如果LCD是此格式,则可以提高性能"
+    default n
+
+config CONFIG_AWTK_WITH_NULL_IM
+    bool "不需输入法"
+    default y
+
+config CONFIG_AWTK_HAS_STD_MALLOC
+    bool "有标准的malloc/free/calloc等函数"
+    default y
+
+config CONFIG_AWTK_HAS_PTHREAD
+    bool "有标准的pthread等函数"
+    default y
+
+config CONFIG_AWTK_HAS_STDIO
+    bool "有标准的fopen/fclose等函数"
+    default n
+
+config CONFIG_AWTK_HAS_FAST_MEMCPY
+    bool "有优化版本的memcpy函数"
+    default y
+
+config CONFIG_AWTK_WITH_NANOVG_AGGE
+    bool "启用agge作为nanovg的后端(较agg作为后端：大(56KB编译后)，快，图形质量稍差)"
+    select CONFIG_AWTK_WITH_3RD_NANOVG
+    select CONFIG_AWTK_NANOVG_BACKEND_AGGE
+    default y
+
+config CONFIG_AWTK_WITH_NANOVG_AGG
+    bool "启用agg作为nanovg的后端(较agge作为后端：小，慢，图形质量好)"
+    default n
+    select CONFIG_AWTK_WITH_3RD_NANOVG
+    select CONFIG_AWTK_NANOVG_BACKEND_AGG
+
+config CONFIG_AWTK_ENABLE_CURSOR
+    bool "启用鼠标指针"
+    default y
+
+config CONFIG_AWTK_WITH_VGCANVAS_CAIRO
+    bool "启用cairo作为nanovg的后端"
+    default n
+    select CONFIG_AWTK_WITH_3RD_NANOVG
+    select CONFIG_AWTK_VGCANVAS_CAIRO
+
+config CONFIG_AWTK_WITHOUT_WIDGET_ANIMATORS
+    bool "不使用控件动画"
+    default n
+
+config CONFIG_AWTK_WITHOUT_WINDOW_ANIMATORS
+    bool "不使用窗口动画"
+    default n
+
+config CONFIG_AWTK_WITHOUT_DIALOG_HIGHLIGHTER
+    bool "不使用对话框高亮策略"
+    default n
+
+config CONFIG_AWTK_WITHOUT_EXT_WIDGETS
+    bool "不使用扩展控件"
+    default n
+
+config CONFIG_AWTK_WITH_WIDGET_TYPE_CHECK
+    bool "控件类型检查"
+    default y
+
+config CONFIG_AWTK_WITH_WCSXXX
+    bool "出现wcsxxx之类的函数没有定义时，请定义该宏"
+    default n
+
+config CONFIG_AWTK_WITH_3RD_NANOVG
+    bool
+
+config CONFIG_AWTK_VGCANVAS_CAIRO
+    bool
+
+config CONFIG_AWTK_NANOVG_BACKEND_AGG
+    bool
+
+config CONFIG_AWTK_NANOVG_BACKEND_AGGE
+    bool
+
+endmenu # CONFIG_AWTK_DEFINE
+
+endmenu # CONFIG_AWTK

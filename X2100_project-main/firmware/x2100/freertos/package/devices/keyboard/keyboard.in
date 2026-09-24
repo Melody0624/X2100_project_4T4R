@@ -1,0 +1,8 @@
+menu "按键设备列表"
+
+source package/devices/keyboard/keyboard_code.in
+source package/devices/keyboard/gpio_keyboard.in
+source package/devices/keyboard/adc_keyboard.in
+source package/devices/keyboard/matrix_keyboard.in
+
+endmenu

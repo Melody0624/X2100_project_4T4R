@@ -1,0 +1,6 @@
+menuconfig CONFIG_SHELL
+    bool "shell命令行"
+    default y
+    depends on CONFIG_DFS
+
+endmenu

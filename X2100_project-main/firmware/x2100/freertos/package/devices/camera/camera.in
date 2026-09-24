@@ -1,0 +1,45 @@
+menu "摄像头设备列表"
+
+source "package/devices/camera/x1000/gc0308.in"
+source "package/devices/camera/x1000/bf20a6.in"
+source "package/devices/camera/x1000/gc2155.in"
+source "package/devices/camera/x1000/sc031IoT.in"
+
+source "package/devices/camera/x1021/gc0328.in"
+source "package/devices/camera/x1021/ov9732.in"
+
+source "package/devices/camera/x1520/gc2145.in"
+source "package/devices/camera/x1520/ov9281.in"
+source "package/devices/camera/x1520/ov9732.in"
+
+source "package/devices/camera/x1600/sc031.in"
+source "package/devices/camera/x1600/sc132.in"
+source "package/devices/camera/x1600/gc0328.in"
+source "package/devices/camera/x1600/pag7930.in"
+source "package/devices/camera/x1600/sc035.in"
+source "package/devices/camera/x1600/sti2250.in"
+
+source "package/devices/camera/x1830/ov2735.in"
+source "package/devices/camera/x1830/imx307.in"
+source "package/devices/camera/x1830/ar0522.in"
+source "package/devices/camera/x1830/ar0230.in"
+
+source "package/devices/camera/x2000/sc031.in"
+source "package/devices/camera/x2000/sc132.in"
+source "package/devices/camera/x2000/sc035.in"
+source "package/devices/camera/x2000/sc2310.in"
+source "package/devices/camera/x2000/sc2355.in"
+source "package/devices/camera/x2000/ov2735.in"
+source "package/devices/camera/x2000/ov9281.in"
+source "package/devices/camera/x2000/ov9284.in"
+source "package/devices/camera/x2000/gc1054.in"
+source "package/devices/camera/x2000/gc2053.in"
+source "package/devices/camera/x2000/gc2053_dvp.in"
+source "package/devices/camera/x2000/jz0378.in"
+source "package/devices/camera/x2000/gvm8666b.in"
+source "package/devices/camera/x2000/imx335.in"
+source "package/devices/camera/x2000/sc120.in"
+source "package/devices/camera/x2000/cheetah.in"
+
+source "package/devices/camera/x2600/sc031.in"
+endmenu

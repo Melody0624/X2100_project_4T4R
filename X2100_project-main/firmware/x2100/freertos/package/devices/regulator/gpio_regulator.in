@@ -1,0 +1,57 @@
+menuconfig CONFIG_GPIO_REGULATOR
+    bool "gpios regulator(gpio控制电源)"
+    select CONFIG_REGULATOR
+
+
+config CONFIG_GPIO_REGULATOR0
+    bool "gpio_regulator0"
+
+config CONFIG_GPIO_REGULATOR0_GPIO
+    string "regulator0 引脚及有效电平"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_GPIO_REGULATOR0
+    help
+        "如 GPIO_PB(20),0: 表示regulator0 引脚为PB20,且为低电平有效 (具体使能有效电平请查看硬件原理图)"
+
+config CONFIG_GPIO_REGULATOR0_NAME
+    string "regulator0 名字"
+    default "regulator_gpio0"
+    depends on CONFIG_GPIO_REGULATOR0
+
+
+config CONFIG_GPIO_REGULATOR1
+    bool "gpio_regulator1"
+
+config CONFIG_GPIO_REGULATOR1_GPIO
+    string "regulator1 引脚及有效电平"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_GPIO_REGULATOR1
+    help
+        "如 GPIO_PB(20),0: 表示regulator1 引脚为PB20,且为低电平有效 (具体使能有效电平请查看硬件原理图)"
+
+config CONFIG_GPIO_REGULATOR1_NAME
+    string "regulator1 名字"
+    default "regulator_gpio1"
+    depends on CONFIG_GPIO_REGULATOR1
+
+
+config CONFIG_GPIO_REGULATOR2
+    bool "gpio_regulator2"
+
+config CONFIG_GPIO_REGULATOR2_GPIO
+    string "regulator2 引脚及有效电平"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_GPIO_REGULATOR2
+    help
+        "如 GPIO_PB(20),0: 表示regulator2 引脚为PB20,且为低电平有效 (具体使能有效电平请查看硬件原理图)"
+
+config CONFIG_GPIO_REGULATOR2_NAME
+    string "regulator2 名字"
+    default "regulator_gpio2"
+    depends on CONFIG_GPIO_REGULATOR2
+
+
+endmenu # CONFIG_GPIO_REGULATOR

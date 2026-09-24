@@ -1,0 +1,6 @@
+config CONFIG_APPLICATION_LOAD_KERNEL
+    bool "加载Linux镜像"
+    select CONFIG_APPLICATION
+    default n
+    help
+        "RTOS(core-0)加载镜像 SPL(core-0)引导Linux系统"

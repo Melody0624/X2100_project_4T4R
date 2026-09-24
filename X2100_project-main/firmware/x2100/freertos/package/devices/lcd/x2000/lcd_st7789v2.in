@@ -1,0 +1,35 @@
+menuconfig CONFIG_X2000_TFT_ST7789V2
+    bool "TFT ST7789V2 (240x320) (X2000)"
+    select CONFIG_X2000_LCD
+    depends on CONFIG_SOC_X2000
+
+config CONFIG_X2000_ST7789V2_RST
+    string "gpio reset level (lcd 复位引脚及有效电平)"
+    choice from SOC_GPIO_PINS
+    default -1,0
+    help
+        "如 GPIO_PB(17),0: 表示reset脚为PB17,且为低电平有效 (具体reset有效电平请查看屏IC手册)"
+
+config CONFIG_X2000_ST7789V2_POWER_EN
+    string "gpio power level (lcd power使能引脚及有效电平)"
+    choice from SOC_GPIO_PINS
+    default -1,0
+    help
+        "如 GPIO_PB(20),0: 表示power使能脚为PB20,且为低电平有效 (具体power使能有效电平请查看硬件原理图)"
+
+config CONFIG_X2000_ST7789V2_SPI_CS
+    string "spi cs pin(spi 片选脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_ST7789V2_SPI_SDA
+    string "spi sda pin(mosi 输出引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X2000_ST7789V2_SPI_SCL
+    string "spi clk pin(时钟引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+endmenu # CONFIG_X2000_TFT_ST7789V2

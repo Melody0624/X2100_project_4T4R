@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+original_sdk=/home/melody/Manhattan_Project/freertos
+build_sdk=/home/melody/Manhattan_Project/freertos_mt4t4r_nor_uart2_3m_ota_single_20260922
+output_root=/mnt/d/downloads/X2100_project-main/artifacts/mt4t4r_nor_uart2_3m_ota_single_20260922
+
+bash "${source_dir}/test_host.sh"
+test -f "${original_sdk}/Makefile"
+test "${build_sdk}" != "${original_sdk}"
+if [[ ! -e ${build_sdk} ]]; then
+    mkdir "${build_sdk}"
+    cp -a "${original_sdk}/." "${build_sdk}/"
+    printf '%s\n' mt4t4r-nor-capture >"${build_sdk}/.mt4t4r-nor-isolated"
+elif [[ ! -f ${build_sdk}/.mt4t4r-nor-isolated ]]; then
+    echo "Refusing existing unmarked build directory: ${build_sdk}" >&2
+    exit 1
+fi
+
+cd "${build_sdk}"
+mkdir -p xburst2/soc-x2000/spl
+cp "${source_dir}/spl/x2100l-spl-sfc-nor-ota-1200M-500M.bin" \
+    xburst2/soc-x2000/spl/
+for name in vendor.c complex_abs_f32.c complex_abs_f32.h motorcycle_output.c \
+    motorcycle_output.h adc_capture_packet.c adc_capture_packet.h \
+    radar_frontend.c radar_frontend.h radar_4tx4rx_profile.c \
+    radar_4tx4rx_profile.h ddma_resolver.c ddma_resolver.h radar_pipeline.h \
+    radar_synthetic.c radar_synthetic.h radar_rf_profile.c radar_rf_profile.h \
+    bpm_code.h radar_config.h radar_diagnostics.h radar_diagnostics.c \
+    supplier_profile_options.h supplier_registers.inc radar_can_protocol.h \
+    radar_can_protocol.c; do
+    cp "${source_dir}/${name}" "vendor/${name}"
+done
+cp "${source_dir}/radar_types_live.h" vendor/radar_types.h
+cp "${source_dir}/vendor.Makefile.stage4" vendor/Makefile
+mkdir -p vendor/cheetah devices/camera/x2000/cheetah package/devices/camera/x2000
+cp "${source_dir}/cheetah/cheetah.c" vendor/cheetah/
+cp "${source_dir}/cheetah/cheetah.h" vendor/cheetah/
+cp "${source_dir}/sensor_cheetah.c" devices/camera/x2000/cheetah/
+cp "${source_dir}/radar_types_live.h" devices/camera/x2000/cheetah/radar_types.h
+cp "${source_dir}/devices_camera.Makefile" devices/camera/Makefile
+cp "${source_dir}/devices_init.c" devices/init.c
+cp "${source_dir}/camera.in" package/devices/camera/camera.in
+cp "${source_dir}/cheetah.in" package/devices/camera/x2000/cheetah.in
+cp "${source_dir}/x2100_mt4t4r_product_nor_defconfig" \
+    configs/x2100_mt4t4r_product_nor_defconfig
+sed -i 's/\r$//' package/devices/camera/x2000/cheetah.in \
+    configs/x2100_mt4t4r_product_nor_defconfig
+make x2100_mt4t4r_product_nor_defconfig
+
+mkdir -p "${output_root}"
+for mode in selftest adc_capture; do
+    if [[ ${mode} == selftest ]]; then
+        selftest=1
+        capture=0
+    else
+        selftest=0
+        capture=1
+    fi
+    make clean >"${output_root}/${mode}_clean.log" 2>&1
+    make -j"$(nproc)" RADAR_BUILD_SELFTEST="${selftest}" \
+        RADAR_BUILD_CAPTURE_ONLY="${capture}" \
+        >"${output_root}/${mode}_build.log" 2>&1 || {
+            tail -100 "${output_root}/${mode}_build.log" >&2
+            exit 1
+        }
+    strings zero.elf | grep -F '[BPM-DDMA] guarded 4TX4RX pipeline started' >/dev/null
+    if [[ ${mode} == selftest ]]; then
+        strings zero.elf | grep -F '[SIM] SYNTHETIC ADC ONLY - NOT real radar measurements' >/dev/null
+    else
+        strings zero.elf | grep -F '[ADC-CAPTURE] MT-4T4R-01 table confirmed; raw capture only' >/dev/null
+        strings zero.elf | grep -F '[ADC-CAPTURE] RAW ADC ONLY - range/velocity/angle output disabled' >/dev/null
+    fi
+    python3 "${source_dir}/package_mt4t4r_nor.py" "${build_sdk}" \
+        "${output_root}/${mode}" "${mode}"
+done
+
+cp "${source_dir}/x2100_mt4t4r_product_nor_defconfig" "${output_root}/"
+cp "${source_dir}/test-results/"*.log "${output_root}/"
+echo "Built MT-4T4R X2100L SFC NOR selftest and ADC-capture candidates in ${output_root}"

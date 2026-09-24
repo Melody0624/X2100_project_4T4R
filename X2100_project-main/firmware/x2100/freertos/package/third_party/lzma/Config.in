@@ -1,0 +1,2 @@
+config CONFIG_LZMA
+    bool "lzma compression"

@@ -1,0 +1,3 @@
+config CONFIG_X2600_ADC
+    bool "adc (电压采样)"
+    select CONFIG_ADC

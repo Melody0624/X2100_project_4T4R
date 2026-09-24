@@ -1,0 +1,29 @@
+usb apple 有线镜像投屏
+
+编译配置流程：
+    Iconigtool 必选配置 (基于ad100_evb_v10_lvgl_nor_deconfig)
+        CONFIG_EFUSE
+        CONFIG_AD100_EFUSE
+        CONFIG_USB_GADGET_APPLE (USB Apple Mirror 屏幕镜像)
+
+    拷贝文件到vendor目录
+
+    修改 package/vendor/vendor.mk, 添加算法库和头文件
+        package_lib-y += vendor/libapplemirror.a
+
+    修改 vendor/Makefile, 添加编译文件
+        src-y += vendor.c ios_wired_screen_projection.c
+
+    修改 ios_wired_screen_projection.c, 使能SPK_EN
+        #define GPIO_PB(n)      (1 * 32 + (n))
+        #define GPIO_SPK_EN     GPIO_PB(11)   // 修改为实际的GPIO_SPK_EN
+
+    修改 vendor/vendor.c 添加函数调用
+        #include <stdio.h>
+        void ios_wired_screen_projection_test(void);
+        void vendor_init(void *arg)
+        {
+            printf("vendor init...\n");
+            ios_wired_screen_projection_test();
+        }
+

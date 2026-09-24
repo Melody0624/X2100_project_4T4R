@@ -1,0 +1,28 @@
+menu "ramdisk设备"
+
+menuconfig CONFIG_RAMDISK_DEVICE
+    bool "ramdisk Device"
+    select CONFIG_RAMDISK
+
+choice "选择RAMDISK类型"
+    default CONFIG_RAMDISK_DEVICE_ALLOC
+
+config CONFIG_RAMDISK_DEVICE_ALLOC
+    bool "malloc申请ramdisk空间"
+
+config CONFIG_RAMDISK_DEVICE_MAPPED_PRE_LOAD
+    bool "使用loader加载内容(堆栈高地址空间)"
+    help
+        "ramdisk容量大小 由loader程序传入, ramdisk起始地址:用户堆栈结束地址 - ramdisk容量大小"
+endchoice
+
+config CONFIG_RAMDISK_DEVICE_SIZE
+    string "malloc申请ramdisk容量大小:单位Byte"
+    default 589824
+    depends on CONFIG_RAMDISK_DEVICE_ALLOC
+    help
+        "支持范围: 72KByte ~ 设备有效内存空间"
+
+endmenu
+
+endmenu

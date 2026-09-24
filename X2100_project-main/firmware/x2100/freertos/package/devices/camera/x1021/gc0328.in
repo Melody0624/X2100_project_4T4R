@@ -1,0 +1,43 @@
+menuconfig CONFIG_X1021_SENSOR_GC0328
+    bool "sensor gc0328 (dvp,raw10)"
+    select CONFIG_I2C
+    select CONFIG_X1021_VIC
+    depends on CONFIG_SOC_X1021
+
+config CONFIG_X1021_GC0328_GPIO_RESET
+    string "gpio reset(sensor 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1021_GC0328_GPIO_PWDN
+    string "gpio pwdn(sensor 电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1021_GC0328_GPIO_I2C_SEL
+    string "gpio i2c select(sensor i2c 使能脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_X1021_GC0328_I2C_BUSNUM
+    int "i2c bus num (sensor 挂接的i2c总线号)"
+    default -1
+
+config CONFIG_X1021_GC0328_I2C_ADDR
+    int "i2c slave address (sensor 的i2c地址)"
+    default 0x21
+    choice from X1021_GC0328_I2C_ADDRS
+
+
+choice "    选择格式"
+    default CONFIG_X1021_SENSOR_GC0328_FMT_YUYV
+
+config CONFIG_X1021_SENSOR_GC0328_FMT_YUYV
+    bool "fmt yuyv"
+
+config CONFIG_X1021_SENSOR_GC0328_FMT_NV12
+    bool "fmt nv12"
+
+endchoice
+
+endmenu # CONFIG_X1021_SENSOR_GC0328

@@ -1,0 +1,8 @@
+menuconfig CONFIG_ADC_RTS_TOUCH
+    bool "ADC电阻触摸屏"
+    select CONFIG_ADC
+    select CONFIG_INPUT
+    select CONFIG_LIB_RING_BUFFER
+    depends on CONFIG_SOC_AD100
+
+endmenu

@@ -1,0 +1,10 @@
+menuconfig CONFIG_AD100_JPEG
+    bool "jpeg编解码"
+
+config CONFIG_AD100_JPEG_ENC
+    bool "JPEG Encode(硬件编码)"
+
+config CONFIG_AD100_JPEG_DEC
+    bool "JPEG Decode(硬件解码)"
+
+endmenu

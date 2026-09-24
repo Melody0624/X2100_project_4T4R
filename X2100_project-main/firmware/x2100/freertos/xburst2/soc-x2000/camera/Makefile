@@ -1,0 +1,12 @@
+src-$(CONFIG_X2000_CAMERA) += camera.c
+src-$(CONFIG_X2000_CAMERA) += hal/camera_gpio.c
+src-$(CONFIG_X2000_CAMERA) += hal/csi.c
+src-$(CONFIG_X2000_CAMERA) += hal/vic.c
+src-$(CONFIG_X2000_CAMERA) += cim/cim.c
+src-$(CONFIG_X2000_CAMERA) += vic/vic_channel_mem.c
+src-$(CONFIG_X2000_CAMERA) += isp/vic_channel_tiziano.c
+src-$(CONFIG_X2000_CAMERA) += isp/isp.c
+src-$(CONFIG_X2000_CAMERA) += isp/mscaler.c
+src-$(CONFIG_X2000_CAMERA) += isp/isp_sensor.c
+src-$(CONFIG_X2000_CAMERA) += isp/isp_tuning.c
+obj-$(CONFIG_X2000_CAMERA) += xburst2/soc-x2000/camera/isp/isp-core/isp-core.a

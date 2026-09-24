@@ -1,0 +1,16 @@
+menuconfig CONFIG_OS
+    bool "操作系统"
+
+source package/os/freertos/Config.in
+
+source package/os/itos/Config.in
+
+source package/os/posix/Config.in
+
+config CONFIG_OS_MODULE
+    bool "模块加载功能"
+    depends on CONFIG_DFS_DEBUGFS
+    help
+     模块加载功能可以更好的解耦应用程序/os之间的联系，方便调试和产品发布
+
+endmenu

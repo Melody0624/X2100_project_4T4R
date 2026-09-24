@@ -1,0 +1,9 @@
+menuconfig CONFIG_SYMBOLS
+    bool "符号相关选项"
+    help
+     主要用于查找和记录镜像中的符号，如果不确定，不用选择
+
+config CONFIG_FUNC_SYMBOLS
+    bool "记录相关函数的符号"
+
+endmenu

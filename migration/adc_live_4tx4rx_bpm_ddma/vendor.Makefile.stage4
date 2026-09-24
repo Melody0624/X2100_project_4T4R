@@ -1,0 +1,31 @@
+CFLAGS += -Ivendor/ne10_fft_lib/inc
+CFLAGS += -Ivendor/cheetah
+RADAR_BUILD_SELFTEST ?= 1
+RADAR_BUILD_CAPTURE_ONLY ?= 0
+RADAR_BUILD_EXPERIMENTAL_LIVE ?= 0
+CFLAGS += -DRADAR_SELFTEST_INPUT=$(RADAR_BUILD_SELFTEST)
+CFLAGS += -DRADAR_CAPTURE_ONLY=$(RADAR_BUILD_CAPTURE_ONLY)
+CFLAGS += -DRADAR_EXPERIMENTAL_LIVE=$(RADAR_BUILD_EXPERIMENTAL_LIVE)
+
+ifeq ($(CONFIG_XBURST2_MSA),y)
+CFLAGS += -mmsa
+endif
+
+src-y += vendor.c
+src-y += complex_abs_f32.c
+src-y += motorcycle_output.c
+src-y += adc_capture_packet.c
+src-y += radar_can_protocol.c
+src-y += radar_frontend.c
+src-y += radar_4tx4rx_profile.c
+src-y += ddma_resolver.c
+src-y += radar_rf_profile.c
+src-y += radar_synthetic.c
+src-y += radar_diagnostics.c
+src-y += radar_tracking.c
+src-y += radar_warning.c
+src-y += cheetah/cheetah.c
+src-y += ne10_fft_lib/src/NE10_fft.c
+src-y += ne10_fft_lib/src/NE10_rfft_float32.c
+src-y += ne10_fft_lib/src/NE10_rfft_float32_mxu.c
+src-y += ne10_fft_lib/src/NE10_fft_generic_float32.c

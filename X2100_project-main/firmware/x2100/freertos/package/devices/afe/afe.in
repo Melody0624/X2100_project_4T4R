@@ -1,0 +1,3 @@
+menu "afe设备列表"
+source "package/devices/afe/afe_ht82v38.in"
+endmenu

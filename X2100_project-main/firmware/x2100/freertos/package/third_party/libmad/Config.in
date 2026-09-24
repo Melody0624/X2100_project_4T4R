@@ -1,0 +1,2 @@
+config CONFIG_LIBMAD
+    bool "libmad(mp3解码库)"

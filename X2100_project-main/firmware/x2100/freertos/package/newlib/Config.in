@@ -1,0 +1,11 @@
+menuconfig CONFIG_NEWLIB
+    bool "c 标准库(newlib)"
+
+config CONFIG_MIPS_SETJMP
+    bool "MIPS setjmp/longjmp support"
+    default n
+    help
+        使用 jz_setjmp.S 中的 MIPS 汇编实现替代工具链自带的 setjmp
+        优化 o32 FPXX/FP64 模式下浮点寄存器 8 字节对齐问题
+
+endmenu

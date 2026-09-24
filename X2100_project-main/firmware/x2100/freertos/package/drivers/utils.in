@@ -1,0 +1,18 @@
+menu "utils drivers(实用驱动列表)"
+
+config CONFIG_GPIO_PIN
+    bool "gpio pin driver(结合gpio与有效电平的操作)"
+    depends on CONFIG_GPIO
+    default y
+
+config CONFIG_MEMORY_INHERIT
+    bool "驱动内存继承接口"
+    default n
+    select CONFIG_LIB_CRC32
+    help
+        内存继承涉及两类区域：
+        配置区：存放要继承的外设配置结构体数据
+        工作区：驱动在运行时通过malloc申请的内存
+        默认情况下，配置区和工作区都使用Uboot中SHARE_MEM指定的内存区域。
+
+endmenu

@@ -1,0 +1,119 @@
+config CONFIG_SOC_AD100S
+    bool
+    select CONFIG_SOC_AD100
+
+menuconfig CONFIG_SOC_AD100
+    bool "ad100系列 cpu 设置"
+    depends on CONFIG_SOC_AD100S
+
+config CONFIG_AD100_DPU_HAL
+    bool
+
+menuconfig CONFIG_SOC_AD100_AD100
+    bool
+    depends on CONFIG_XBURST2_AD100
+
+source package/xburst2/soc-ad100/ad100-spl.in
+source package/xburst2/soc-ad100/ad100-gpio.in
+
+endmenu
+
+menuconfig CONFIG_SOC_AD100_AD101
+    bool
+    depends on CONFIG_XBURST2_AD101
+
+source package/xburst2/soc-ad100/ad101-spl.in
+source package/xburst2/soc-ad100/ad101-gpio.in
+
+endmenu
+
+menuconfig CONFIG_SOC_AD100_AD102N
+    bool
+    depends on CONFIG_XBURST2_AD102N
+
+source package/xburst2/soc-ad100/ad102n-spl.in
+source package/xburst2/soc-ad100/ad102-gpio.in
+
+endmenu
+
+menuconfig CONFIG_SOC_AD100_AD102P
+    bool
+    depends on CONFIG_XBURST2_AD102P
+
+source package/xburst2/soc-ad100/ad102p-spl.in
+source package/xburst2/soc-ad100/ad102-gpio.in
+
+endmenu
+
+source package/xburst2/soc-ad100/cpm_gpio_voltage.in
+source package/xburst2/soc-ad100/uart.in
+source package/xburst2/soc-ad100/lcd.in
+source package/xburst2/soc-ad100/fb_layer_mixer.in
+source package/xburst2/soc-ad100/sfc_gpio.in
+source package/xburst2/soc-ad100/mac/mac.in
+source package/xburst2/soc-ad100/mmc/mmc.in
+source package/xburst2/soc-ad100/i2c.in
+source package/xburst2/soc-ad100/audio.in
+source package/xburst2/soc-ad100/adc.in
+source package/xburst2/soc-ad100/spi.in
+source package/xburst2/soc-ad100/can.in
+source package/xburst2/soc-ad100/jpeg/jpeg.in
+
+menuconfig CONFIG_AD100_EFUSE
+    bool "efuse (芯片熔丝内容)"
+    select CONFIG_EFUSE
+    select CONFIG_GPIO_PIN
+
+config CONFIG_AD100_EFUSE_VDDQ
+    string "EFUSE_VDDQ"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_AD100_EFUSE
+
+config CONFIG_AD100_AES
+    bool "aes (编解码)"
+    select CONFIG_AES
+
+config CONFIG_AD100_HASH
+    bool "hash (哈希摘要算法)"
+    select CONFIG_HASH
+
+config CONFIG_AD100_PWM
+    bool "pwm (脉宽调制)"
+    select CONFIG_PWM
+
+config CONFIG_AD100_VCODEC
+    bool "h264 解码 (felix 模块)"
+    select CONFIG_LIB_NALU
+
+config CONFIG_AD100_WDT
+    bool "watchdog(看门狗)"
+    select CONFIG_WDT
+
+config CONFIG_AD100_DTRNG
+    bool "dtrng 驱动(获取随机数功能)"
+    select CONFIG_DTRNG
+
+config CONFIG_AD100_WDT1
+    bool "watchdog1(看门狗的定时器功能，无复位)"
+
+menuconfig CONFIG_AD100_SCBOOT_DRIVER
+    bool "secure boot 驱动"
+    select CONFIG_SCBOOT_DRIVER
+    select CONFIG_GPIO_PIN
+    default n
+
+config CONFIG_AD100_SCBOOT_EFUSE_GPIO
+    string "EFUSE_VDDQ (需要写 key 时使用)"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+
+endmenu # CONFIG_AD100_SCBOOT_DRIVER
+
+config CONFIG_AD100_PM
+    bool "电源管理 (关机/休眠)"
+    select CONFIG_PM
+    default n
+
+endmenu # CONFIG_SOC_AD100

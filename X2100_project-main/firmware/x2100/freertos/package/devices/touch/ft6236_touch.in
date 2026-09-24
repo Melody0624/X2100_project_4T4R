@@ -1,0 +1,48 @@
+menuconfig CONFING_FT6236_TOUCH
+    bool "ft6236触摸屏"
+    select CONFIG_INPUT
+
+config CONFIG_FT6236_DEV_NAME
+    string "触摸屏设备名称"
+    default "ft6236"
+
+config CONFIG_FT6236_MAX_EVENT_COUNT
+    int "触摸屏事件缓冲区大小"
+    default 64
+
+config CONFIG_FT6236_MAX_TOUCH_NUMBER
+    int "能检测的最大触摸点个数(最大为5,最小为1，小于1计为1,大于5计为5)"
+    default 1
+
+config CONFIG_FT6236_SCREEN_X
+    string "ft6236触摸屏长"
+    default 480
+
+config CONFIG_FT6236_SCREEN_Y
+    string "ft6236触摸屏宽"
+    default 320
+
+config CONFIG_FT6236_REGULATOR_NAME
+    string "regulator name(通过名字获取 TP module 电源管理器)"
+    default "-1"
+
+config CONFIG_FT6236_POWER
+    string "gpio power(ft6236 电源控制引脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_FT6236_GPIO_RESET
+    string "gpio reset(ft6236 复位脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_FT6236_GPIO_INT
+    string "gpio int(ft6236 中断脚)"
+    choice from SOC_GPIO_PINS
+    default -1
+
+config CONFIG_FT6236_I2C_BUSNUM
+    int "i2c bus num (ft6236 挂接的i2c总线号)"
+    default -1
+
+endmenu

@@ -1,0 +1,11 @@
+src-y += dfs.c
+src-y += dfs_device.c
+src-y += dfs_file.c
+src-y += dfs_fs.c
+src-y += dfs_posix.c
+src-y += filesystem_init.c
+src-y += conn_fs_posix/dfs_posix_conn_fs.c
+src-$(CONFIG_SHELL) += dfs_shell.c
+src-$(CONFIG_DFS_HOTPLUG) += filesystem_hotplug.c
+#src-y += poll.c
+#src-y += select.c

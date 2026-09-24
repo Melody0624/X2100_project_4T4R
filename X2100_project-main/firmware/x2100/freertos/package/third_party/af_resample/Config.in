@@ -1,0 +1,2 @@
+config CONFIG_AF_RESAMPLE
+    bool "af_resample(音频重采样,支持整型运算)"

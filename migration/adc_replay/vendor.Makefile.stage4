@@ -1,0 +1,13 @@
+CFLAGS += -Ivendor/ne10_fft_lib/inc
+
+ifeq ($(CONFIG_XBURST2_MSA),y)
+CFLAGS += -mmsa
+endif
+
+src-y += vendor.c
+src-y += complex_abs_f32.c
+src-y += motorcycle_output.c
+src-y += ne10_fft_lib/src/NE10_fft.c
+src-y += ne10_fft_lib/src/NE10_rfft_float32.c
+src-y += ne10_fft_lib/src/NE10_rfft_float32_mxu.c
+src-y += ne10_fft_lib/src/NE10_fft_generic_float32.c

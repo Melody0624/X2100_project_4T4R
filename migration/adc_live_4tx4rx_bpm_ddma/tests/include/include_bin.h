@@ -1,0 +1,1 @@
+/* Embedded old reference blobs are disabled in this production pipeline. */

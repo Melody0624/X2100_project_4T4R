@@ -1,0 +1,2 @@
+config CONFIG_FAAD2
+    bool "faad2(AAC解码库)"

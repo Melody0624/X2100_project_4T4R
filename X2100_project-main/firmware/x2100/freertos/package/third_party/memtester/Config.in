@@ -1,0 +1,2 @@
+config CONFIG_MEMTESTER
+    bool "memtester(内存测试) 未经严格测试,君正不做支持"

@@ -1,0 +1,52 @@
+menuconfig CONFIG_WIRELESS_ATBM
+    bool "Altobeam WiFi Host Driver"
+    depends on CONFIG_MMC
+    select CONFIG_DEVICES_WIRELESS
+
+config CONFIG_WIRELESS_ATBM_BUSNUM
+    int "wifi mmc num(mmc/sdio 总线号)"
+    default -1
+    help
+        WiFi外设挂接在哪个mmc总线,
+
+array WIRELESS_ATBM_DEVICE
+    string "wifi 选择型号"
+    item "wifi 选择atbm6031-x" 0x6031
+    item "wifi 选择atbm6132" 0x6132
+
+config CONFIG_WIRELESS_ATBM_DEVICE
+    string "wifi 选择型号"
+    choice from WIRELESS_ATBM_DEVICE
+    default 0x6031
+
+config CONFIG_WIRELESS_ATBM_BT_WIFI_POWER
+    string "gpio bt wifi power on(控制整个bt,wifi模块的供电)"
+    default -1,0
+    choice from SOC_GPIO_PIN_LEVELS
+
+config CONFIG_WIRELESS_ATBM_WLAN_REG_ON
+    string "gpio wlan reg on(wifi使能引脚)"
+    default -1,0
+    choice from SOC_GPIO_PIN_LEVELS
+
+config CONFIG_WIRELESS_ATBM_WLAN_WAKE_HOST
+    string "gpio wlan wake host (wifi 唤醒/中断 主控的引导)"
+    default -1
+    choice from SOC_GPIO_PIN_LEVELS
+
+array WIRELESS_ATBM_IRQ
+    string "wifi 选择中断方式"
+    item "wifi 选择sdio中断" 0x0
+    item "wifi 选择gpio中断" 0x1
+
+config CONFIG_WIRELESS_ATBM_IRQ
+    string "wifi 选择中断方式"
+    choice from WIRELESS_ATBM_IRQ
+    default 0x0
+
+config CONFIG_WIRELESS_ATBM_IRQ_GPIO
+    string "gpio wifi irq (wifi gpio中断引脚)"
+    default -1
+    choice from SOC_GPIO_PINS
+
+endmenu

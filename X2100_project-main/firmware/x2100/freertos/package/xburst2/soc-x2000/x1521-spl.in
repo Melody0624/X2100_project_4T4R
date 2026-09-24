@@ -1,0 +1,4 @@
+array SOC_SPL_BIN_FILES
+    string "soc spl bin 文件列表"
+    item "没有 spl"
+    item "spl sfc nor cpu:600M ddr:200M" xburst/soc-x1021/spl/x1521-spl-sfc-nor-600M-200M.bin

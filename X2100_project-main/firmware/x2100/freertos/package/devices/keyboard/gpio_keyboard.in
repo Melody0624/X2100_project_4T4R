@@ -1,0 +1,385 @@
+menuconfig CONFIG_GPIO_KEYBOARD
+    bool "独立按键驱动"
+    select CONFIG_INPUT
+
+config CONFIG_GPIO_KEYBOARD_DEV_NAME
+    string "独立按键设备名称"
+    default "gpio_keyboard"
+
+config CONFIG_GPIO_KEYBOARD_MAX_EVENT_COUNT
+    int "独立按键事件缓冲区大小"
+    default 64
+
+config CONFIG_GPIO_KEYBOARD_DELAY_TIME_MS
+    string "按键消抖时间(ms)"
+    default 20
+
+config CONFIG_ADD_GPIO_KEYBOARD1
+    bool "添加按键1"
+    default n
+
+config CONFIG_GPIO_KEYBOARD1
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD1
+
+config CONFIG_GPIO_KEYBOARD1_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD1
+
+config CONFIG_GPIO_KEYBOARD1_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD1
+
+config CONFIG_ADD_GPIO_KEYBOARD2
+    bool "添加按键2"
+    default n
+
+config CONFIG_GPIO_KEYBOARD2
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD2
+
+config CONFIG_GPIO_KEYBOARD2_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD2
+
+config CONFIG_GPIO_KEYBOARD2_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD2
+
+config CONFIG_ADD_GPIO_KEYBOARD3
+    bool "添加按键3"
+    default n
+
+config CONFIG_GPIO_KEYBOARD3
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD3
+
+config CONFIG_GPIO_KEYBOARD3_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD3
+
+config CONFIG_GPIO_KEYBOARD3_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD3
+
+config CONFIG_ADD_GPIO_KEYBOARD4
+    bool "添加按键4"
+    default n
+
+config CONFIG_GPIO_KEYBOARD4
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD4
+
+config CONFIG_GPIO_KEYBOARD4_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD4
+
+config CONFIG_GPIO_KEYBOARD4_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD4
+
+config CONFIG_ADD_GPIO_KEYBOARD5
+    bool "添加按键5"
+    default n
+
+config CONFIG_GPIO_KEYBOARD5
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD5
+
+config CONFIG_GPIO_KEYBOARD5_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD5
+
+config CONFIG_GPIO_KEYBOARD5_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD5
+
+config CONFIG_ADD_GPIO_KEYBOARD6
+    bool "添加按键6"
+    default n
+
+config CONFIG_GPIO_KEYBOARD6
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD6
+
+config CONFIG_GPIO_KEYBOARD6_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD6
+
+config CONFIG_GPIO_KEYBOARD6_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD6
+
+config CONFIG_ADD_GPIO_KEYBOARD7
+    bool "添加按键7"
+    default n
+
+config CONFIG_GPIO_KEYBOARD7
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD7
+
+config CONFIG_GPIO_KEYBOARD7_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD7
+
+config CONFIG_GPIO_KEYBOARD7_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD7
+
+config CONFIG_ADD_GPIO_KEYBOARD8
+    bool "添加按键8"
+    default n
+
+config CONFIG_GPIO_KEYBOARD8
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD8
+
+config CONFIG_GPIO_KEYBOARD8_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD8
+
+config CONFIG_GPIO_KEYBOARD8_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD8
+
+config CONFIG_ADD_GPIO_KEYBOARD9
+    bool "添加按键9"
+    default n
+
+config CONFIG_GPIO_KEYBOARD9
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD9
+
+config CONFIG_GPIO_KEYBOARD9_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD9
+
+config CONFIG_GPIO_KEYBOARD9_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD9
+
+config CONFIG_ADD_GPIO_KEYBOARD10
+    bool "添加按键10"
+    default n
+
+config CONFIG_GPIO_KEYBOARD10
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD10
+
+config CONFIG_GPIO_KEYBOARD10_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD10
+
+config CONFIG_GPIO_KEYBOARD10_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD10
+
+config CONFIG_ADD_GPIO_KEYBOARD11
+    bool "添加按键11"
+    default n
+
+config CONFIG_GPIO_KEYBOARD11
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD11
+
+config CONFIG_GPIO_KEYBOARD11_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD11
+
+config CONFIG_GPIO_KEYBOARD11_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD11
+
+config CONFIG_ADD_GPIO_KEYBOARD12
+    bool "添加按键12"
+    default n
+
+config CONFIG_GPIO_KEYBOARD12
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD12
+
+config CONFIG_GPIO_KEYBOARD12_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD12
+
+config CONFIG_GPIO_KEYBOARD12_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD12
+
+config CONFIG_ADD_GPIO_KEYBOARD13
+    bool "添加按键13"
+    default n
+
+config CONFIG_GPIO_KEYBOARD13
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD13
+
+config CONFIG_GPIO_KEYBOARD13_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD13
+
+config CONFIG_GPIO_KEYBOARD13_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD13
+
+config CONFIG_ADD_GPIO_KEYBOARD14
+    bool "添加按键14"
+    default n
+
+config CONFIG_GPIO_KEYBOARD14
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD14
+
+config CONFIG_GPIO_KEYBOARD14_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD14
+
+config CONFIG_GPIO_KEYBOARD14_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD14
+
+config CONFIG_ADD_GPIO_KEYBOARD15
+    bool "添加按键15"
+    default n
+
+config CONFIG_GPIO_KEYBOARD15
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD15
+
+config CONFIG_GPIO_KEYBOARD15_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD15
+
+config CONFIG_GPIO_KEYBOARD15_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD15
+
+config CONFIG_ADD_GPIO_KEYBOARD16
+    bool "添加按键16"
+    default n
+
+config CONFIG_GPIO_KEYBOARD16
+    string "按键"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_ADD_GPIO_KEYBOARD16
+
+config CONFIG_GPIO_KEYBOARD16_ACTIVE_LEVEL
+    string "按键按下电平"
+    default 0
+    choice from KEYBOARD_LEVEL
+    depends on CONFIG_ADD_GPIO_KEYBOARD16
+
+config CONFIG_GPIO_KEYBOARD16_CODE
+    string "键值"
+    default KEY_HOME
+    choice from KEYBOARD_VALUE
+    depends on CONFIG_ADD_GPIO_KEYBOARD16
+
+config CONFIG_ADD_GPIO_KEYBOARD_OTHER
+    bool "添加更多按键"
+
+config CONFIG_GPIO_KEYBOARDn
+    string "按键"
+    default
+    depends on CONFIG_ADD_GPIO_KEYBOARD_OTHER
+    help
+        "Add other inde keyboard format:{keyboard_gpio1, keyboard_value1, keyboard_ative_level1}, {keyboard_gpio2, keyboard_value2, keyboard_ative_level2},"
+        "注意：格式采用大括号中间采用逗号{按键IO口, 按键值, 按键触发电平}"
+
+endmenu
+
+array KEYBOARD_LEVEL
+    string "ACTIVE_LEVEL"
+    item "ACTIVE_LEVEL" 0
+    item "ACTIVE_LEVEL" 1

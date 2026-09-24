@@ -1,0 +1,101 @@
+menuconfig CONFIG_GPIO_SPI
+    bool "GPIO_SPI驱动"
+    select CONFIG_SPI
+
+config CONFIG_GPIO_SPI0
+    bool "选择 GPIO_SPI0"
+
+config CONFIG_GPIO_SPI0_ID
+    string "        bus_id(总线号)"
+    default 10
+    depends on CONFIG_GPIO_SPI0
+
+config CONFIG_GPIO_SPI0_DIN
+    string "        din（输入引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI0
+    help
+        "din = -1,表示不使用din引脚"
+
+config CONFIG_GPIO_SPI0_DOUT
+    string "        dout（输出引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI0
+    help
+        "dout = -1,表示不使用dout引脚"
+
+config CONFIG_GPIO_SPI0_CLK
+    string "        clk（时钟引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI0
+    help
+        "clk 引脚必须进行配置"
+
+config CONFIG_GPIO_SPI1
+    bool "选择 GPIO_SPI1"
+
+config CONFIG_GPIO_SPI1_ID
+    string "        bus_id(总线号)"
+    default 11
+    depends on CONFIG_GPIO_SPI1
+
+config CONFIG_GPIO_SPI1_DIN
+    string "        din（输入引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI1
+    help
+        "din = -1,表示不使用din引脚"
+
+config CONFIG_GPIO_SPI1_DOUT
+    string "        dout（输出引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI1
+    help
+        "dout = -1,表示不使用dout引脚"
+
+config CONFIG_GPIO_SPI1_CLK
+    string "        clk（时钟引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI1
+    help
+        "clk 引脚必须进行配置"
+
+config CONFIG_GPIO_SPI2
+    bool "选择 GPIO_SPI2"
+
+config CONFIG_GPIO_SPI2_ID
+    string "        bus_id(总线号)"
+    default 12
+    depends on CONFIG_GPIO_SPI2
+
+config CONFIG_GPIO_SPI2_DIN
+    string "        din（输入引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI2
+    help
+        "din = -1,表示不使用din引脚"
+
+config CONFIG_GPIO_SPI2_DOUT
+    string "        dout（输出引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI2
+    help
+        "dout = -1,表示不使用dout引脚"
+
+config CONFIG_GPIO_SPI2_CLK
+    string "        clk（时钟引脚）"
+    default -1
+    choice from SOC_GPIO_PINS
+    depends on CONFIG_GPIO_SPI2
+    help
+        "clk 引脚必须进行配置"
+
+endmenu

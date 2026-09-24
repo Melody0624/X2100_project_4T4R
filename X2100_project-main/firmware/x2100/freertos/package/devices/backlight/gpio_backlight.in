@@ -1,0 +1,48 @@
+menuconfig CONFIG_GPIO_BACKLIGHT
+    bool "GPIO背光"
+    select CONFIG_BACKLIGHT
+
+config CONFIG_GPIO_BACKLIGHT0
+    bool "gpio_backlight0"
+
+config CONFIG_GPIO_BACKLIGHT0_GPIO
+    string "GPIO 引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_GPIO_BACKLIGHT0
+
+config CONFIG_GPIO_BACKLIGHT0_NAME
+    string "背光名字"
+    default "backlight_gpio0"
+    depends on CONFIG_GPIO_BACKLIGHT0
+
+config CONFIG_GPIO_BACKLIGHT1
+    bool "gpio_backlight1"
+
+config CONFIG_GPIO_BACKLIGHT1_GPIO
+    string "GPIO 引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_GPIO_BACKLIGHT1
+
+config CONFIG_GPIO_BACKLIGHT1_NAME
+    string "背光名字"
+    default "backlight_gpio1"
+    depends on CONFIG_GPIO_BACKLIGHT1
+
+config CONFIG_GPIO_BACKLIGHT2
+    bool "gpio_backlight2"
+
+config CONFIG_GPIO_BACKLIGHT2_GPIO
+    string "GPIO 引脚"
+    choice from SOC_GPIO_PIN_LEVELS
+    default -1,0
+    depends on CONFIG_GPIO_BACKLIGHT2
+
+config CONFIG_GPIO_BACKLIGHT2_NAME
+    string "背光名字"
+    default "backlight_gpio2"
+    depends on CONFIG_GPIO_BACKLIGHT2
+
+
+endmenu # CONFIG_GPIO_BACKLIGHT

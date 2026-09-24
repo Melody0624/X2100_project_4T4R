@@ -1,0 +1,34 @@
+menuconfig CONFIG_X1830_LCD
+    bool "LCD 驱动"
+    select CONFIG_FB
+
+config CONFIG_X1830_LCD_PAN_DISPLAY_SYNC
+    bool "pan display 时等待帧同步完成(帧缓冲数为一帧时推荐开启)"
+    default y
+
+config CONFIG_X1830_LCD_FB0_ENABLE
+    bool "使能fb0"
+
+config CONFIG_X1830_LCD_FB0_FRM_CNT
+    int "fb0帧缓冲数量"
+    default 2
+    depends on CONFIG_X1830_LCD_FB0_ENABLE
+
+config CONFIG_X1830_LCD_FB0_NAME
+    string "设备节点名字"
+    default "fb0"
+    depends on CONFIG_X1830_LCD_FB0_ENABLE
+
+config CONFIG_X1830_LCD_FB1_ENABLE
+    bool "使能fb1"
+
+config CONFIG_X1830_LCD_FB1_FRM_CNT
+    int "fb1帧缓冲数量"
+    default 2
+    depends on CONFIG_X1830_LCD_FB1_ENABLE
+
+config CONFIG_X1830_LCD_FB1_NAME
+    string "设备节点名字"
+    default "fb1"
+    depends on CONFIG_X1830_LCD_FB1_ENABLE
+endmenu

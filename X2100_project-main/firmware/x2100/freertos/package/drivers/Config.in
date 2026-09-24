@@ -1,0 +1,263 @@
+menuconfig CONFIG_DRIVERS
+    bool "驱动"
+
+config CONFIG_IRQ
+    bool
+
+config CONFIG_CACHE
+    bool
+
+config CONFIG_SPINLOCK
+    bool
+
+config CONFIG_CLK
+    bool
+
+config CONFIG_SYSTICK
+    bool
+
+config CONFIG_GPIO
+    bool
+
+config CONFIG_REGULATOR
+    bool
+
+config CONFIG_UART
+    bool
+
+config CONFIG_PM
+    bool
+
+config CONFIG_ROTATOR
+    bool
+
+config CONFIG_FB
+    bool
+
+config CONFIG_DMA
+    bool
+
+config CONFIG_SPI
+    bool
+
+config CONFIG_SSLV
+    bool
+
+config CONFIG_I2C
+    bool
+
+config CONFIG_MMC
+    bool
+
+config CONFIG_RAMDISK
+    bool
+
+config CONFIG_PCM
+    bool
+
+config CONFIG_ADC
+    bool
+
+config CONFIG_AES
+    bool
+
+config CONFIG_SECURITY_AES
+    bool
+
+config CONFIG_PWM
+    bool
+
+config CONFIG_EFUSE
+    bool
+
+config CONFIG_EFUSE_MODE_HAMMING
+    bool
+
+config CONFIG_EFUSE_MODE_NONE
+    bool
+
+config CONFIG_WDT
+    bool
+
+config CONFIG_RTC
+    bool
+
+config CONFIG_DTRNG
+    bool
+
+config CONFIG_HASH
+    bool
+
+config CONFIG_DES
+    bool
+
+config CONFIG_MAC
+    bool
+
+config CONFIG_CAN
+    bool
+
+config CONFIG_CAMERA
+    bool
+
+config CONFIG_ISP
+    bool
+
+config CONFIG_BACKLIGHT
+    bool
+
+config CONFIG_MSCALER
+    bool
+
+config CONFIG_CONN
+    bool
+
+config CONFIG_SCBOOT_DRIVER
+    bool
+
+config CONFIG_INPUT
+    bool
+    select CONFIG_LIB_RING_BUFFER
+
+config CONFIG_HRTIMER
+    bool "高精度定时器"
+    select CONFIG_SYSTICK
+
+config CONFIG_LCD_GPIO
+    bool "LCD_GPIO驱动(提供8080时序读写接口)"
+
+source package/drivers/gpio_spi.in
+
+source package/drivers/gpio_i2c.in
+
+source "package/drivers/usb/usb.in"
+
+menuconfig CONFIG_SFC
+    bool "SFC驱动"
+
+choice "选择存储介质"
+    default CONFIG_SFC_NOR
+
+config CONFIG_SFC_NOR
+    bool "NorFlash存储介质"
+
+config CONFIG_SFC_NAND
+    bool "NandFlash存储介质"
+
+endchoice
+
+config CONFIG_SFC_RATE
+    int "sfc时钟频率"
+    default 100000000
+
+config CONFIG_EXTRA_NOR_INFO_OFF
+    int "sfc nor 额外的信息列表(用于单个固件匹配多个nor设备)"
+    default 0x5c00
+    depends on CONFIG_SFC_NOR
+
+config CONFIG_SFC_NAND_JUMP_CHECK_BADBLOCK
+    bool "NandFlash 跳过检测坏块"
+    depends on CONFIG_SFC_NAND
+
+endmenu # CONFIG_SFC
+
+menuconfig CONFIG_RTOS_OTA_UPDATE
+    bool "rtos 的ota升级"
+    select CONFIG_LIB_CRC32
+
+choice "选择OTA升级的存储介质"
+
+config CONFIG_OTA_SFC_NOR
+    bool "NorFlash存储介质"
+    depends on CONFIG_SFC_NOR
+
+config CONFIG_OTA_SFC_NAND
+    bool "NandFlash存储介质"
+    depends on CONFIG_SFC_NAND
+
+config CONFIG_OTA_MMC
+    bool "mmc存储介质"
+    depends on CONFIG_EMMC_DEVICE
+
+endchoice
+
+endmenu #CONFIG_RTOS_OTA_UPDATE
+
+menuconfig CONFIG_OTA_AB_UPGRADE
+    bool "AB分区ota升级"
+    select CONFIG_LIB_CRC32
+
+choice "选择AB分区OTA升级的存储介质"
+
+config CONFIG_OTA_AB_SFC_NOR
+    bool "NorFlash存储介质"
+    depends on CONFIG_SFC_NOR
+
+config CONFIG_OTA_AB_SFC_NAND
+    bool "NandFlash存储介质"
+    depends on CONFIG_SFC_NAND
+
+config CONFIG_OTA_AB_MMC
+    bool "mmc存储介质"
+    depends on CONFIG_EMMC_DEVICE
+
+endchoice
+
+endmenu #CONFIG_OTA_AB_UPGRADE
+
+menuconfig CONFIG_CONSOLE
+    bool "console 驱动(主要用于printf输出)"
+    default y
+
+choice "选择 console device"
+    default CONFIG_CONSOLE_USE_UART
+
+config CONFIG_CONSOLE_USE_UART
+    bool "uart console"
+    select CONFIG_UART_CONSOLE
+
+endchoice
+
+menuconfig CONFIG_UART_CONSOLE
+    bool "uart 作为console device"
+    depends on CONFIG_CONSOLE_USE_UART
+
+config CONFIG_UART_CONSOLE_UART_ID
+    int "uart id"
+    choice from SOC_UART_DEVICES
+
+config CONFIG_UART_CONSOLE_BAUD_RATE
+    int "uart 波特率"
+    default 115200
+    choice from SOC_UART_BAUD_RATES
+
+config CONFIG_UART_CONSOLE_RX_MODE_POLL
+    bool "uart 使用轮询接收模式"
+    default n
+    help
+        "当Linux和RTOS同时存在时,只能使用轮询模式"
+
+endmenu # CONFIG_UART_CONSOLE
+
+endmenu # CONFIG_CONSOLE
+
+source package/drivers/utils.in
+source package/drivers/pwm_scanner.in
+
+menuconfig CONFIG_PWM_AUDIO
+    bool "PWM 音频播放"
+    select CONFIG_LIBSAMPLERATE
+    default n
+
+config CONFIG_PWM_AUDIO_GPIO
+    string "PWM 音频输出脚"
+    default -1
+    choice from SOC_GPIO_PINS
+
+config CONFIG_PWM_AUDIO_GPIO_AMP_ENABLE
+    string "功放使能脚"
+    default -1
+    choice from SOC_GPIO_PINS
+endmenu
+
+endmenu # CONFIG_DRVIERS

@@ -1,0 +1,5 @@
+menu "设备电源管理"
+
+source "package/devices/regulator/gpio_regulator.in"
+
+endmenu

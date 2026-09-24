@@ -1,0 +1,115 @@
+menuconfig CONFIG_XBURST
+    bool "xburst系列cpu"
+    select CONFIG_MIPS32
+
+choice "选择具体的cpu/soc"
+
+config CONFIG_XBURST_X1000
+    bool "x1000"
+    select CONFIG_SOC_X1000S
+    select CONFIG_SOC_X1000_X1000
+
+config CONFIG_XBURST_X1500L
+    bool "x1500l (x1000系列)"
+    select CONFIG_SOC_X1000S
+    select CONFIG_SOC_X1000_X1500L
+
+config CONFIG_XBURST_X1500
+    bool "x1500 (x1000系列)"
+    select CONFIG_SOC_X1000S
+    select CONFIG_SOC_X1000_X1500
+
+config CONFIG_XBURST_X1021
+    bool "x1021"
+    select CONFIG_SOC_X1021S
+    select CONFIG_SOC_X1021_X1021
+
+config CONFIG_XBURST_X1521
+    bool "x1521 (x1021系列)"
+    select CONFIG_SOC_X1021S
+    select CONFIG_SOC_X1021_X1521
+
+config CONFIG_XBURST_X1520
+    bool "x1520"
+    select CONFIG_SOC_X1520
+
+config CONFIG_XBURST_X1600
+    bool "x1600"
+    select CONFIG_SOC_X1600S
+    select CONFIG_SOC_X1600_X1600
+
+config CONFIG_XBURST_X1660
+    bool "x1660 (x1600系列)"
+    select CONFIG_SOC_X1600S
+    select CONFIG_SOC_X1600_X1660
+
+config CONFIG_XBURST_X1630
+    bool "x1630 (x1830系列)"
+    select CONFIG_SOC_X1830S
+    select CONFIG_SOC_X1830_X1630
+
+config CONFIG_XBURST_X1830
+    bool "x1830"
+    select CONFIG_SOC_X1830S
+    select CONFIG_SOC_X1830_X1830
+
+endchoice
+
+config CONFIG_CP0_TIMER
+    bool "cpu 自带的定时器"
+    help
+        x1000以及x1000以前的芯片应该是没有
+
+source package/xburst/soc-x1000/Config.in
+source package/xburst/soc-x1021/Config.in
+source package/xburst/soc-x1520/Config.in
+source package/xburst/soc-x1600/Config.in
+source package/xburst/soc-x1830/Config.in
+
+config CONFIG_EXTAL_CLOCK
+    int "cpu 外部主晶振频率"
+    default 24000000
+
+config CONFIG_XBURST_RTC_32K
+    bool "外接 32.768K 晶振"
+
+config BITS_PER_LONG
+    int
+    default 32
+
+config CONFIG_XBURST_IRQ
+    bool "irq中断支持"
+    select CONFIG_IRQ
+    default y
+
+config CONFIG_XBURST_CACHE
+    bool "cache缓存支持"
+    select CONFIG_CACHE
+    default y
+
+config CONFIG_XBURST_SPINLOCK
+    bool "spinlock自旋锁支持"
+    select CONFIG_SPINLOCK
+    default y
+
+config CONFIG_XBURST_CLK
+    bool "时钟驱动"
+    select CONFIG_CLK
+    default y
+
+config CONFIG_XBURST_SYSTICK
+    bool "ost timer(操作系统时钟源)"
+    select CONFIG_SYSTICK
+    default y
+
+config CONFIG_XBURST_GPIO
+    bool "gpio驱动"
+    select CONFIG_GPIO
+    default y
+
+config CONFIG_XBURST_DMA
+    bool "dma驱动"
+    select CONFIG_DMA
+    default y
+
+endmenu
