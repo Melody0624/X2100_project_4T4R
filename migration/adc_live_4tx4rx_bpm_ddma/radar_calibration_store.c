@@ -32,12 +32,20 @@ static uint32_t checksum(const struct calibration_block *block)
     return hash;
 }
 
+int radar_calibration_matrix_zero(const float values[RADAR_CALIB_COMPLEX_FLOATS])
+{
+    for (unsigned int i = 0; i < RADAR_CALIB_COMPLEX_FLOATS; ++i)
+        if (values[i] != 0.0f) return 0;
+    return 1;
+}
+
 static int valid(const struct calibration_block *block)
 {
     if (block->magic != STORE_MAGIC || block->version != STORE_VERSION ||
         (block->flags & ~3u) != 0u || block->checksum != checksum(block))
         return 0;
-    if (block->flags & 1u) {
+    if ((block->flags & 1u) &&
+        !radar_calibration_matrix_zero(block->complex_values)) {
         for (unsigned int i = 0; i < RADAR_CALIB_COMPLEX_FLOATS; i += 2u) {
             float real = block->complex_values[i];
             float imag = block->complex_values[i + 1u];

@@ -27,6 +27,7 @@ gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_adc_capture_packet.c \
     tee "${test_dir}/adc_capture_packet${suffix}.log"
 
 gcc "${flags[@]}" -Wall -Wextra -Werror \
+    -DRADAR_EXPERIMENTAL_LIVE=1 -DRADAR_SELFTEST_INPUT=0 \
     -I../../X2100_project-latest/firmware/x2100/freertos/vendor \
     tests/test_radar_control.c radar_control.c radar_calibration_store.c \
     radar_4tx4rx_profile.c adc_capture_packet.c -lm \
@@ -51,7 +52,9 @@ gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_resolver.c ddma_resolver.c \
     -lm -o "${test_dir}/test_resolver${suffix}"
 timeout --kill-after=2s 45s "${test_dir}/test_resolver${suffix}" | tee "${test_dir}/resolver${suffix}.log"
 
-gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_geometry.c radar_4tx4rx_profile.c \
+gcc "${flags[@]}" -Wall -Wextra -Werror \
+    -DRADAR_EXPERIMENTAL_LIVE=1 -DRADAR_SELFTEST_INPUT=0 \
+    tests/test_geometry.c radar_4tx4rx_profile.c \
     -lm -o "${test_dir}/test_geometry${suffix}"
 "${test_dir}/test_geometry${suffix}" | tee "${test_dir}/geometry${suffix}.log"
 gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_ego_motion.c \

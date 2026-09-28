@@ -39,7 +39,11 @@ unsigned int radar_4tx4rx_tx_subband(unsigned int anchor_subband,
 void radar_4tx4rx_get_calibration(unsigned int virtual_index,
                                   float *real,
                                   float *imag);
+void radar_4tx4rx_get_firmware_calibration(unsigned int virtual_index,
+                                           float *real,
+                                           float *imag);
 void radar_4tx4rx_set_calibration(const float values[32]);
+void radar_4tx4rx_reset_calibration(void);
 void radar_4tx4rx_get_angle_axis(float values[128]);
 void radar_4tx4rx_set_angle_axis(const float values[128]);
 int radar_4tx4rx_has_angle_axis_override(void);

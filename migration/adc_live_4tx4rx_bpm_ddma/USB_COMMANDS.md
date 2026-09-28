@@ -11,7 +11,7 @@
 | `readreg [0] HEXADDR`、`writereg [0] HEXADDR HEXVALUE` | 访问 Cheetah 0 号芯片；写前必须 `SetFrameCnt 0`，写后需人工确认 RF 配置正确。 |
 | `delay MS`、`ResetRams` | 延时最多 1000 ms；ResetRams 必须先暂停处理。 |
 | `getBoardVersion`、`getTemperature`、`setAngle DEG` | 查询构建/温度；`setAngle` 只保留标靶角度元数据，不改变整机安装角，也未接入自动标定。 |
-| `angCalibMat read`、`angCalibMat write <32 floats>` | 读出16个虚拟通道的复数补偿，写入顺序为 `TX0RX0.real TX0RX0.imag TX0RX1.real TX0RX1.imag ... TX3RX3.imag`。读回显示 `source=default`（单位补偿 `1+0j`）或 `source=flash`。每路不能是零复数，其他值须是有限浮点数且绝对值不超过100。写入 Flash 并读回验证，重启后才用于测角。 |
+| `angCalibMat read`、`angCalibMat write <32 floats>` | 读出16个虚拟通道的复数补偿，写入顺序为 `TX0RX0.real TX0RX0.imag TX0RX1.real TX0RX1.imag ... TX3RX3.imag`。实验版实测固件的 `source=firmware` 是编入源码的 0° 角反候选系数，`source=flash` 是非零 Flash 矩阵并优先使用。Flash 矩阵若全部 32 个数为 0，重启后回退到源码系数；也可用写入 32 个零来恢复该回退状态。非零矩阵的每路不能是零复数，所有值须是有限浮点数且绝对值不超过100。写入 Flash 并读回验证，重启后才用于测角。 |
 | `angFFT read`、`angFFT write <128 floats>` | 读出128个方位FFT bin对应的角度（度），`source=default` 为天线几何生成的角度轴。写入有限且位于 -90° 到 +90° 的128值，需有至少1°跨度；写入并验证后，重启才用于方位角插值。bin顺序是 `0..127`，与现有测角FFT结果一致。 |
 | `uds` | 仍返回 `ERR`。旧 UDS/EOL 依赖未经验证的 4TX 角度及尚未绑定的 CAN 传输，不能作为有效校准写入。 |
 | `otaUpgrade` | 明确返回 `ERR`；用户提供的当前 NOR 分区为 non-OTA，不能开始升级。 |

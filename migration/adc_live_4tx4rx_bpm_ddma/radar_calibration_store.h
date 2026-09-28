@@ -10,5 +10,7 @@ int radar_calibration_load(float complex_values[RADAR_CALIB_COMPLEX_FLOATS],
                            unsigned int *flags);
 /* flags: bit 0 = complex matrix, bit 1 = angle axis. */
 int radar_calibration_save(const float *values, unsigned int flag);
+/* A saved all-zero matrix selects the firmware default after reboot. */
+int radar_calibration_matrix_zero(const float values[RADAR_CALIB_COMPLEX_FLOATS]);
 
 #endif

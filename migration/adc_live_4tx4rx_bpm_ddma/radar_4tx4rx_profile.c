@@ -69,17 +69,34 @@ const char *radar_waveform_error(const struct radar_waveform *w)
     return NULL;
 }
 
-/* Identity values prevent unknown board calibration from corrupting data.
- * A production build must load 16 measured complex coefficients instead. */
-static float calibration_real[RADAR_NUM_VIRTUAL_ANTS] = {
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+/* Experimental board-specific broadside candidate from
+ * Record_20260928_202805_adc.dat, range bin 5, TX-major RX0..RX3.
+ * Flash CAL4 values, when present, override these firmware defaults. */
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+static const float firmware_calibration_real[RADAR_NUM_VIRTUAL_ANTS] = {
+    1.000000f, -0.935064f, -0.697341f, 1.191529f,
+    -0.091294f, -0.278997f, 0.881429f, -0.049072f,
+    0.497096f, -0.784077f, 0.282913f, 0.674274f,
+    0.022635f, 0.505457f, -1.150743f, -0.063695f,
 };
 
-static float calibration_imag[RADAR_NUM_VIRTUAL_ANTS] = {
-    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+static const float firmware_calibration_imag[RADAR_NUM_VIRTUAL_ANTS] = {
+    0.000000f, 0.398385f, -0.786336f, -0.129519f,
+    1.004782f, -0.996838f, -0.629665f, 1.230434f,
+    0.775442f, -0.567465f, -0.929807f, 0.901324f,
+    -1.420770f, 1.368615f, 0.940266f, -1.674663f,
 };
+#else
+/* Synthetic and capture-only builds retain the identity calibration. */
+static const float firmware_calibration_real[RADAR_NUM_VIRTUAL_ANTS] = {
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+};
+static const float firmware_calibration_imag[RADAR_NUM_VIRTUAL_ANTS] = {0};
+#endif
+static float calibration_real[RADAR_NUM_VIRTUAL_ANTS];
+static float calibration_imag[RADAR_NUM_VIRTUAL_ANTS];
+static int has_flash_calibration;
 static float custom_angle_axis[128];
 static int has_custom_angle_axis;
 
@@ -155,12 +172,12 @@ void radar_4tx4rx_profile_log(void)
            velocity_resolution, sampling_velocity_limit);
     printf("[DDMA4] common BPM + DDMA; ambiguous/contaminated peaks are rejected\n");
     printf("[ARRAY] document geometry: 16-element ULA signed d=-1.960 mm d/lambda=%.7f\n", radar_4tx4rx_spacing_wavelengths());
-    printf("[ARRAY] right-to-left TX1..4/RX1..4 routing user-confirmed; Flash calibration loaded at control init if valid\n");
+    printf("[ARRAY] right-to-left TX1..4/RX1..4 routing user-confirmed; live build uses compiled broadside candidate unless Flash has a nonzero matrix\n");
 #if RADAR_CAPTURE_ONLY
     printf("[DDMA4] algorithm decoding disabled in raw-capture build\n");
     printf("[DDMA4] raw ADC output does not require array calibration\n");
 #elif RADAR_EXPERIMENTAL_LIVE
-    printf("[DDMA4] EXPERIMENTAL LIVE: assumed DDMA TX offsets; amplitude/phase calibration pending\n");
+    printf("[DDMA4] EXPERIMENTAL LIVE: assumed DDMA TX offsets; compiled amplitude/phase candidate unverified on hardware\n");
     printf("[DDMA4] detections are diagnostic only, not validated 4TX measurements\n");
 #elif !RADAR_FRONTEND_4TX_PROFILE_READY
     printf("[DDMA4] BLOCKED: verified 4TX RF profile and array calibration pending\n");
@@ -191,8 +208,25 @@ void radar_4tx4rx_get_calibration(unsigned int virtual_index,
 {
     if (virtual_index >= RADAR_NUM_VIRTUAL_ANTS)
         virtual_index = 0u;
-    *real = calibration_real[virtual_index];
-    *imag = calibration_imag[virtual_index];
+    *real = has_flash_calibration ? calibration_real[virtual_index] :
+                                    firmware_calibration_real[virtual_index];
+    *imag = has_flash_calibration ? calibration_imag[virtual_index] :
+                                    firmware_calibration_imag[virtual_index];
+}
+
+void radar_4tx4rx_get_firmware_calibration(unsigned int virtual_index,
+                                           float *real,
+                                           float *imag)
+{
+    if (virtual_index >= RADAR_NUM_VIRTUAL_ANTS)
+        virtual_index = 0u;
+    *real = firmware_calibration_real[virtual_index];
+    *imag = firmware_calibration_imag[virtual_index];
+}
+
+void radar_4tx4rx_reset_calibration(void)
+{
+    has_flash_calibration = 0;
 }
 
 void radar_4tx4rx_set_calibration(const float values[32])
@@ -201,6 +235,7 @@ void radar_4tx4rx_set_calibration(const float values[32])
         calibration_real[i] = values[2u * i];
         calibration_imag[i] = values[2u * i + 1u];
     }
+    has_flash_calibration = 1;
 }
 
 void radar_4tx4rx_get_angle_axis(float values[128])

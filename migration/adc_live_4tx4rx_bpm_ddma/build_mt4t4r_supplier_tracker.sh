@@ -96,10 +96,11 @@ MT-4T4R 原厂航迹/预警库接入实验版：
 3. 固件位于 live_full_experimental/rtos-with-spl.bin；配套SFC NOR配置文件在同目录。
 4. 只通过主机侧算法回归和交叉编译/符号链接检查；未完成本版实板运行、长时间稳定性、已知目标精度与预警方向验证。
 5. 从检测点估计自车纵向速度并做径向投影补偿；至少5个可信内点才启用，点不足则保持原始速度。安装角设为180度。
-   [EGO] valid=1 表示本帧应用补偿，valid=0 表示本帧未补偿。当前4TX分离/复数幅相校准仍为实验性假设。
+   [EGO] valid=1 表示本帧应用补偿，valid=0 表示本帧未补偿。4TX分离仍为实验性假设。
 6. 之前出现的CPU保留指令异常未定位；本版不作为量产或道路预警程序。
 7. USB发送线程改为非阻塞512字节写入；连续约2秒无USB请求完成会打印[HOST-USB]超时，5秒后自动重试。若sent持续不增长，再拔插USB数据线并连接上位机。
 8. 本版将ASCII命令接到同一个USB CDC口，不重复初始化USB；已实现和明确拒绝的命令见USB_COMMANDS.md。MMC2已重新启用以供SD卡录制，但尚未实板验证。
 9. angCalibMat/angFFT 读写使用独立CAL4 Flash块，读回验证后重启生效；主机测试通过，实板Flash读写和已知角度目标尚未验证。
+10. 实验版源码内置Record_20260928_202805_adc.dat的0度角反16通道幅相候选系数。Flash angCalibMat全0或未配置时使用源码值；有效非零Flash矩阵优先。该系数仅在当前场景的留出帧上验证了内部稳定性，不代表全角度或跨板精度。
 EOF
 echo "Built MT-4T4R supplier tracking/warning experiment in ${output_root}"

@@ -179,7 +179,7 @@ int main(void)
     assert(strstr(response, "ERR usage"));
 
     send("angCalibMat read");
-    assert(strstr(response, "source=default count=32 1 0 1 0"));
+    assert(strstr(response, "source=firmware count=32 1 0 -0.935064 0.398385"));
     send("angFFT read");
     assert(strstr(response, "source=default count=128"));
     send("angCalibMat write 1 0");
@@ -222,6 +222,26 @@ int main(void)
             radar_4tx4rx_get_angle_axis(axis);
             assert(axis[1] == -1.0f && axis[127] == 1.0f);
         }
+        used = (size_t)snprintf(line, sizeof(line), "angCalibMat write");
+        for (unsigned int i = 0; i < 32u; ++i)
+            used += (size_t)snprintf(line + used, sizeof(line) - used, " 0");
+        send(line);
+        assert(strstr(response, "OK angCalibMat saved"));
+        send("angCalibMat read");
+        assert(strstr(response, "source=firmware count=32 1 0 -0.935064 0.398385"));
+        radar_control_init();
+        {
+            float real, imag, axis[128];
+            radar_4tx4rx_get_calibration(1u, &real, &imag);
+            assert(real < -0.935f && real > -0.936f &&
+                   imag > 0.398f && imag < 0.399f);
+            radar_4tx4rx_get_angle_axis(axis);
+            assert(axis[1] == -1.0f);
+        }
+        send("angCalibMat read");
+        assert(strstr(response, "source=firmware count=32 1 0 -0.935064 0.398385"));
+        send("angFFT read");
+        assert(strstr(response, "source=flash count=128 0 -1 -2"));
     }
     puts("RADAR_CONTROL=PASS frame/raw/calibration-Flash/RF-write/OTA-reject");
     return 0;

@@ -153,6 +153,7 @@ void radar_control_init(void)
     int read_result = sfc_nor_flash_read(RADAR_CONFIG_FLASH_OFFSET,
                                          sizeof(magic), (uint8_t *)&magic);
     flash_config_valid = 0;
+    radar_4tx4rx_reset_calibration();
     frames_remaining = -1;
     raw_enabled = 0;
     if (read_result == sizeof(magic) &&
@@ -170,7 +171,7 @@ void radar_control_init(void)
                       sizeof(saved_raw)) == 0 && saved_raw <= 1u)
             raw_enabled = saved_raw;
         if (calibration_state == 1) {
-            if (flags & 1u)
+            if ((flags & 1u) && !radar_calibration_matrix_zero(calibration_values))
                 radar_4tx4rx_set_calibration(calibration_values);
             if (flags & 2u)
                 radar_4tx4rx_set_angle_axis(calibration_axis);
@@ -178,7 +179,9 @@ void radar_control_init(void)
         printf("[CAL4] flash=%s matrix=%s angle_axis=%s\n",
                calibration_state == 1 ? "valid" :
                calibration_state == 0 ? "erased" : "invalid",
-               (calibration_state == 1 && (flags & 1u)) ? "saved" : "identity",
+               (calibration_state == 1 && (flags & 1u) &&
+                !radar_calibration_matrix_zero(calibration_values)) ?
+                   "flash" : "firmware-candidate",
                (calibration_state == 1 && (flags & 2u)) ? "saved" : "geometry");
     }
     printf("[CMD] config=%s flash_read=%d magic=0x%08lX frames=%ld output=%s\n",
@@ -421,22 +424,25 @@ static void process_command(char *line)
             int state = radar_calibration_load(calibration_values,
                                                calibration_axis, &saved_flags);
             float *data = flag == 1u ? calibration_values : calibration_axis;
+            int use_flash = state == 1 && (saved_flags & flag) &&
+                (flag != 1u || !radar_calibration_matrix_zero(calibration_values));
             size_t used;
             if (state < 0) {
                 reply("ERR 4T4R calibration Flash unreadable or invalid\r\n");
                 return;
             }
-            if (state == 0 || !(saved_flags & flag)) {
+            if (!use_flash) {
                 if (flag == 1u) {
-                    for (unsigned int i = 0; i < count; ++i)
-                        data[i] = i % 2u ? 0.0f : 1.0f;
+                    for (unsigned int i = 0; i < count / 2u; ++i)
+                        radar_4tx4rx_get_firmware_calibration(i, &data[2u * i],
+                                                                &data[2u * i + 1u]);
                 } else radar_4tx4rx_get_angle_axis(data);
             }
             used = (size_t)snprintf(calibration_response,
                                     sizeof(calibration_response),
                                     "%s source=%s count=%u",
-                                    name, (state == 1 && (saved_flags & flag)) ?
-                                    "flash" : "default", count);
+                                    name, use_flash ?
+                                    "flash" : flag == 1u ? "firmware" : "default", count);
             for (unsigned int i = 0; i < count && used < sizeof(calibration_response); ++i) {
                 int written = snprintf(calibration_response + used,
                                        sizeof(calibration_response) - used,
