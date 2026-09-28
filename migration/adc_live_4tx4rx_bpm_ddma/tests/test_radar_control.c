@@ -10,14 +10,37 @@ static char command[4096];
 static char response[256];
 static int32_t saved_max = -1;
 static uint8_t saved_raw;
+static int flash_magic_valid = 1;
+static int flash_blank;
+static int flash_scan_read_failure;
+static unsigned int magic_writes;
 static unsigned int register_writes;
 
 int sfc_nor_flash_read(uint32_t offset, uint32_t length, uint8_t *buffer)
 {
+    assert(offset >= 0x1DB000u && offset + length <= 0x200000u);
+    if (flash_scan_read_failure && offset == 0x1FFF00u)
+        return -1;
+    memset(buffer, 0xFF, length);
+    if (offset == 0x1DB000u && flash_magic_valid) {
+        const uint32_t magic = 0x52414456u;
+        memcpy(buffer, &magic, sizeof(magic));
+    }
+    if (!flash_magic_valid && !flash_blank &&
+        offset == 0x1FFF00u)
+        buffer[0] = 0x42;
+    return (int)length;
+}
+
+int sfc_nor_flash_write(uint32_t offset, uint32_t length,
+                        const uint8_t *buffer)
+{
     const uint32_t magic = 0x52414456u;
-    assert(offset == 0x1DB000u && length == 4u);
-    memcpy(buffer, &magic, 4u);
-    return 4;
+    assert(offset == 0x1DB000u && length == 4u &&
+           memcmp(buffer, &magic, sizeof(magic)) == 0);
+    flash_magic_valid = 1;
+    ++magic_writes;
+    return (int)length;
 }
 
 int param_get(ParamID id, void *buffer, uint32_t length)
@@ -86,6 +109,26 @@ static void send(const char *line)
 
 int main(void)
 {
+    flash_magic_valid = 0;
+    flash_blank = 0;
+    radar_control_init();
+    send("setRawDataFlg 1");
+    assert(!radar_control_raw_enabled() && saved_raw == 0 && magic_writes == 0 &&
+           strstr(response, "ERR Flash config invalid"));
+
+    flash_blank = 1;
+    flash_scan_read_failure = 1;
+    send("setRawDataFlg 1");
+    assert(saved_raw == 0 && magic_writes == 0 &&
+           strstr(response, "ERR Flash config read failed"));
+    flash_scan_read_failure = 0;
+    send("setRawDataFlg 1");
+    assert(saved_raw == 1 && !radar_control_raw_enabled() && magic_writes == 1 &&
+           strstr(response, "reboot to take effect"));
+    radar_control_init();
+    assert(radar_control_raw_enabled());
+    send("setRawDataFlg 0");
+    assert(saved_raw == 0 && radar_control_raw_enabled());
     radar_control_init();
     assert(radar_control_running() && !radar_control_raw_enabled());
 
@@ -104,7 +147,10 @@ int main(void)
     assert(register_writes == 1 && strstr(response, "ERR stop frames"));
 
     send("setRawDataFlg 1");
-    assert(saved_raw == 1 && radar_control_raw_enabled());
+    assert(saved_raw == 1 && !radar_control_raw_enabled() &&
+           strstr(response, "reboot to take effect"));
+    radar_control_init();
+    assert(radar_control_raw_enabled());
     send("setRawDataFlg 2");
     assert(saved_raw == 1 && strstr(response, "ERR usage"));
     send("otaUpgrade");

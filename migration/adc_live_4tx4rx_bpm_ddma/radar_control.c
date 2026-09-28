@@ -14,6 +14,7 @@
 #include "radar_control.h"
 
 #define RADAR_CONFIG_FLASH_OFFSET 0x1DB000u
+#define RADAR_CONFIG_FLASH_LENGTH 0x25000u
 #define RADAR_CONFIG_MAGIC 0x52414456u
 
 static int flash_config_valid;
@@ -23,6 +24,25 @@ static int32_t target_angle = 666;
 static int sd_fd = -1;
 static uint32_t sd_frames;
 static char control_line[4096];
+
+/* The config partition can be initialized only when every byte is erased.
+ * A missing magic word alone does not prove the board has no calibration. */
+static int config_partition_erased(void)
+{
+    uint32_t words[64] __attribute__((aligned(64)));
+    for (uint32_t offset = 0; offset < RADAR_CONFIG_FLASH_LENGTH;
+         offset += sizeof(words)) {
+        const uint8_t *bytes = (const uint8_t *)words;
+        if (sfc_nor_flash_read(RADAR_CONFIG_FLASH_OFFSET + offset,
+                               sizeof(words), (uint8_t *)words) !=
+            sizeof(words))
+            return -1;
+        for (unsigned int index = 0; index < sizeof(words); ++index)
+            if (bytes[index] != 0xFFu)
+                return 0;
+    }
+    return 1;
+}
 
 static int write_all(int fd, const uint8_t *data, uint32_t bytes)
 {
@@ -91,8 +111,12 @@ static int parse_addr(const char *text, uint16_t *addr)
 void radar_control_init(void)
 {
     uint32_t magic = 0;
-    if (sfc_nor_flash_read(RADAR_CONFIG_FLASH_OFFSET, sizeof(magic),
-                           (uint8_t *)&magic) == sizeof(magic) &&
+    int read_result = sfc_nor_flash_read(RADAR_CONFIG_FLASH_OFFSET,
+                                         sizeof(magic), (uint8_t *)&magic);
+    flash_config_valid = 0;
+    frames_remaining = -1;
+    raw_enabled = 0;
+    if (read_result == sizeof(magic) &&
         magic == RADAR_CONFIG_MAGIC) {
         int32_t saved_frames;
         uint8_t saved_raw;
@@ -104,8 +128,9 @@ void radar_control_init(void)
                       sizeof(saved_raw)) == 0 && saved_raw <= 1u)
             raw_enabled = saved_raw;
     }
-    printf("[CMD] config=%s frames=%ld output=%s\n",
+    printf("[CMD] config=%s flash_read=%d magic=0x%08lX frames=%ld output=%s\n",
            flash_config_valid ? "valid" : "unavailable",
+           read_result, (unsigned long)magic,
            (long)frames_remaining, raw_enabled ? "raw-ADC" : "points");
 }
 
@@ -167,20 +192,48 @@ static void process_command(char *line)
     }
     if (strcmp(argv[0], "setRawDataFlg") == 0) {
         uint8_t readback;
+        int initialize = 0;
         if (argc != 2 || parse_int(argv[1], &value) || (value != 0 && value != 1)) {
             reply("ERR usage: setRawDataFlg <0|1>\r\n");
             return;
         }
-        if (!flash_config_valid ||
-            param_set(PARAM_OUT_RAW_DATA_FLG, &value, 1u) != 0 ||
-            param_get(PARAM_OUT_RAW_DATA_FLG, &readback,
-                      sizeof(readback)) != 0 || readback != (uint8_t)value) {
-            reply("ERR Flash config unavailable; output mode unchanged\r\n");
+        if (!flash_config_valid) {
+            int erased = config_partition_erased();
+            if (erased != 1) {
+                reply(erased < 0 ?
+                      "ERR Flash config read failed; no write\r\n" :
+                      "ERR Flash config invalid and not blank; no write\r\n");
+                return;
+            }
+            initialize = 1;
+        }
+        if (param_set(PARAM_OUT_RAW_DATA_FLG, &value, 1u) != 0) {
+            reply("ERR Flash write failed; output mode unchanged\r\n");
             return;
         }
-        raw_enabled = (uint8_t)value;
-        reply(value ? "OK raw ADC mode enabled and saved\r\n" :
-                      "OK point/track mode enabled and saved\r\n");
+        if (param_get(PARAM_OUT_RAW_DATA_FLG, &readback,
+                      sizeof(readback)) != 0 || readback != (uint8_t)value) {
+            reply("ERR Flash readback unverified; output mode unchanged\r\n");
+            return;
+        }
+        if (initialize) {
+            uint32_t magic_words[64] __attribute__((aligned(64)));
+            uint32_t verified = 0;
+            magic_words[0] = RADAR_CONFIG_MAGIC;
+            if (sfc_nor_flash_write(RADAR_CONFIG_FLASH_OFFSET,
+                                    sizeof(magic_words[0]),
+                                    (const uint8_t *)magic_words) !=
+                    sizeof(magic_words[0]) ||
+                sfc_nor_flash_read(RADAR_CONFIG_FLASH_OFFSET,
+                                   sizeof(verified), (uint8_t *)&verified) !=
+                    sizeof(verified) || verified != RADAR_CONFIG_MAGIC) {
+                reply("ERR Flash config initialization unverified; output mode unchanged\r\n");
+                return;
+            }
+            flash_config_valid = 1;
+        }
+        reply(value ? "OK raw ADC flag saved; reboot to take effect\r\n" :
+                      "OK point/track flag saved; reboot to take effect\r\n");
         return;
     }
     if (strcmp(argv[0], "getBoardVersion") == 0) {
