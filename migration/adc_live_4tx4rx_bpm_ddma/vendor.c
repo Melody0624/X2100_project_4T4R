@@ -21,6 +21,9 @@
 #include "radar_tracking.h"
 #include "radar_ego_motion.h"
 #include "radar_warning.h"
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+#include "radar_control.h"
+#endif
 
 /* Compile the original BPM table without importing the old application's
  * large radar_types.h dependency graph.  stdint.h above provides int8_t. */
@@ -2432,9 +2435,17 @@ static void adc_live_task(void *arg)
         printf("[HOST] MotorCycle protocol init=%s, max_detections=%u\n",
                usb_result == 0 ? "ok" : "FAILED",
                MOTORCYCLE_OUTPUT_MAX_DETECTIONS);
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+        if (usb_result != 0)
+            return;
+        radar_control_init();
+#endif
     }
 
     while (1) {
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+        radar_control_poll();
+#endif
 #if RADAR_SELFTEST_INPUT
         uint64_t cycle_start = systick_get_time_us();
 #if RADAR_SELFTEST_SEQUENCE
@@ -2460,6 +2471,25 @@ static void adc_live_task(void *arg)
             continue;
         }
 
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+        if (!radar_control_running()) {
+            radar_frontend_release_frame(payload);
+            continue;
+        }
+        if (radar_control_raw_enabled()) {
+            radar_control_save_adc(attempted_frames + 1u, payload,
+                                   RADAR_PAYLOAD_BYTES);
+            int result = motorcycle_output_publish_adc(++attempted_frames,
+                                                        payload,
+                                                        RADAR_PAYLOAD_BYTES);
+            radar_frontend_release_frame(payload);
+            radar_control_frame_done();
+            if (result < 0)
+                printf("[HOST] raw ADC send failed: %d\n", result);
+            continue;
+        }
+#endif
+
         frame_start = systick_get_time_us();
         if (radar_pipeline_process(payload, ADC_PAYLOAD_BYTES, ++attempted_frames) < 0) {
             if (attempted_frames == 1u || attempted_frames % REPLAY_REPORT_FRAMES == 0u) {
@@ -2469,11 +2499,17 @@ static void adc_live_task(void *arg)
 #if !RADAR_SELFTEST_INPUT
             radar_frontend_release_frame(payload);
 #endif
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+            radar_control_frame_done();
+#endif
             msleep(10);
             continue;
         }
 #if !RADAR_SELFTEST_INPUT
         radar_frontend_release_frame(payload);
+#endif
+#if RADAR_EXPERIMENTAL_LIVE && !RADAR_SELFTEST_INPUT
+        radar_control_frame_done();
 #endif
 
         if (total_frames == 0u) {

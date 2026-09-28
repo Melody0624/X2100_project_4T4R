@@ -1,6 +1,7 @@
 CFLAGS += -Ivendor/ne10_fft_lib/inc
 CFLAGS += -Ivendor/cheetah
 CFLAGS += -Ivendor/motor_cycle_demo/inc
+CFLAGS += -Ivendor/mmw_msg_pkt
 RADAR_BUILD_SELFTEST ?= 1
 RADAR_BUILD_CAPTURE_ONLY ?= 0
 RADAR_BUILD_EXPERIMENTAL_LIVE ?= 0
@@ -24,6 +25,10 @@ src-y += radar_rf_profile.c
 src-y += radar_synthetic.c
 src-y += radar_diagnostics.c
 src-y += supplier_tracking_adapter.c
+ifeq ($(RADAR_BUILD_EXPERIMENTAL_LIVE),1)
+src-y += radar_control.c
+src-y += config_manager.c
+endif
 src-y += motor_cycle_demo/src/general_functions.c
 src-y += motor_cycle_demo/src/algorithm_functions.c
 package_lib-y += -L$(TOPDIR)vendor/motor_cycle_demo/mmwlib -lmmw_tracking -lmmw_warning

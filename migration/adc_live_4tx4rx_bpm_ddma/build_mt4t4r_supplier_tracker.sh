@@ -32,9 +32,12 @@ for name in vendor.c complex_abs_f32.c complex_abs_f32.h motorcycle_output.c \
     bpm_code.h radar_config.h radar_diagnostics.h radar_diagnostics.c \
     radar_tracking.h radar_tracking.c radar_ego_motion.h radar_warning.h radar_warning.c \
     supplier_profile_options.h supplier_registers.inc radar_can_protocol.h \
-    radar_can_protocol.c supplier_tracking_adapter.c; do
+    radar_can_protocol.c supplier_tracking_adapter.c radar_control.c \
+    radar_control.h; do
     cp "${source_dir}/${name}" "vendor/${name}"
 done
+cp "/mnt/d/downloads/X2100_project-main/X2100_project-latest/firmware/x2100/freertos/vendor/config_manager.c" vendor/
+cp "/mnt/d/downloads/X2100_project-main/X2100_project-latest/firmware/x2100/freertos/vendor/config_manager.h" vendor/
 cp "${source_dir}/motorcycle_output_supplier_usb_watchdog.c" vendor/motorcycle_output.c
 cp "${source_dir}/radar_types_live.h" vendor/radar_types.h
 cp "${source_dir}/vendor.Makefile.supplier_tracker" vendor/Makefile
@@ -83,6 +86,7 @@ cp "${source_dir}/README_FASTBOOT_USB_FIX.md" \
     "${output_root}/README_烧录与串口.md"
 cp "${source_dir}/USB_SENDER_V2_TEST.md" "${output_root}/"
 cp "${source_dir}/SUPPLIER_TRACKER_EXPERIMENT.md" "${output_root}/"
+cp "${source_dir}/USB_COMMANDS.md" "${output_root}/"
 cp "/mnt/d/downloads/X2100_project-main/tools/monitor_x2100_points.ps1" \
     "${output_root}/"
 cat >"${output_root}/README_本版.txt" <<'EOF'
@@ -95,5 +99,6 @@ MT-4T4R 原厂航迹/预警库接入实验版：
    [EGO] valid=1 表示本帧应用补偿，valid=0 表示本帧未补偿。当前4TX分离/复数幅相校准仍为实验性假设。
 6. 之前出现的CPU保留指令异常未定位；本版不作为量产或道路预警程序。
 7. USB发送线程改为非阻塞512字节写入；连续约2秒无USB请求完成会打印[HOST-USB]超时，5秒后自动重试。若sent持续不增长，再拔插USB数据线并连接上位机。
+8. 本版将ASCII命令接到同一个USB CDC口，不重复初始化USB；已实现和明确拒绝的命令见USB_COMMANDS.md。MMC2已重新启用以供SD卡录制，但尚未实板验证。
 EOF
 echo "Built MT-4T4R supplier tracking/warning experiment in ${output_root}"

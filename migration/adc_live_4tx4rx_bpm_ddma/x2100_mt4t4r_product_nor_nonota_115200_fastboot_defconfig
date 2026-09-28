@@ -168,7 +168,7 @@ CONFIG_DMA:=y
 CONFIG_SPI:=y
 # CONFIG_SSLV is not set
 CONFIG_I2C:=y
-# CONFIG_MMC is not set
+CONFIG_MMC:=y
 CONFIG_RAMDISK:=y
 # CONFIG_PCM is not set
 # CONFIG_ADC is not set

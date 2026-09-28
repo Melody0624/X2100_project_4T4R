@@ -7,6 +7,7 @@
 #include <sys/errno.h>
 #include <os/freertos/include/FreeRTOS.h>
 #include <os/freertos/include/task.h>
+#include <os/freertos/include/semphr.h>
 #include <usb/gadget_serial.h>
 
 #include "motorcycle_output.h"
@@ -20,6 +21,8 @@
 #define MOTORCYCLE_TLV_TRACK_INFO           22u
 #define MOTORCYCLE_TLV_WARNING_INFO         24u
 #define MOTORCYCLE_TX_STACK                 4096u
+#define MOTORCYCLE_RX_STACK                 2048u
+#define MOTORCYCLE_COMMAND_BYTES           4096u
 #define MOTORCYCLE_ADC_USB_CHUNK_BYTES       16384u
 #define MOTORCYCLE_ADC_USB_TIMEOUT_MS        5000u
 #define MOTORCYCLE_ADC_USB_TIMEOUT_RETRIES   6u
@@ -152,6 +155,93 @@ static uint32_t consumed_sequence;
 static struct motorcycle_output_stats tx_stats;
 static volatile int usb_connected;
 static volatile unsigned int tx_backoff_ms;
+static SemaphoreHandle_t usb_tx_lock;
+static char command_pending[MOTORCYCLE_COMMAND_BYTES];
+/* Keep the 4 KiB line buffer off the 2 KiB USB receive task stack. */
+static char command_rx_line[MOTORCYCLE_COMMAND_BYTES];
+static volatile int command_ready;
+static int motorcycle_send_complete(const uint8_t *packet,
+                                    uint16_t packet_length);
+
+/* A line is handed to the radar task, which owns RF and flash operations. */
+static void motorcycle_rx_task(void *arg)
+{
+    uint8_t input[64];
+    uint32_t length = 0;
+    int overflow = 0;
+    (void)arg;
+
+    while (1) {
+        int received = gadget_serial_read(input, sizeof(input), 1, 100);
+        if (received <= 0) {
+            if (received == -ENOLINK || received == -ENODEV) {
+                length = 0;
+                overflow = 0;
+            }
+            continue;
+        }
+        for (int i = 0; i < received; ++i) {
+            uint8_t ch = input[i];
+            if (ch == '\r' || ch == '\n') {
+                if (length && !overflow) {
+                    command_rx_line[length] = '\0';
+                    taskENTER_CRITICAL();
+                    if (!command_ready) {
+                        memcpy(command_pending, command_rx_line, length + 1u);
+                        command_ready = 1;
+                    }
+                    taskEXIT_CRITICAL();
+                }
+                length = 0;
+                overflow = 0;
+            } else if (ch >= 32u && ch < 127u && !overflow) {
+                if (length + 1u < sizeof(command_rx_line))
+                    command_rx_line[length++] = (char)ch;
+                else
+                    overflow = 1;
+            }
+        }
+    }
+}
+
+int motorcycle_output_take_command(char *line, uint32_t capacity)
+{
+    uint32_t length;
+    if (!line || !capacity)
+        return -1;
+    taskENTER_CRITICAL();
+    if (!command_ready) {
+        taskEXIT_CRITICAL();
+        return 0;
+    }
+    length = (uint32_t)strlen(command_pending);
+    if (length >= capacity) {
+        command_ready = 0;
+        taskEXIT_CRITICAL();
+        return -1;
+    }
+    memcpy(line, command_pending, length + 1u);
+    command_ready = 0;
+    taskEXIT_CRITICAL();
+    return 1;
+}
+
+int motorcycle_output_send_text(const char *message)
+{
+    size_t length;
+    int result;
+    if (!message || !usb_tx_lock || !motorcycle_output_is_connected())
+        return -ENOLINK;
+    length = strlen(message);
+    if (length > UINT16_MAX)
+        return -1;
+    if (xSemaphoreTake(usb_tx_lock, pdMS_TO_TICKS(1000)) != pdTRUE)
+        return -ETIMEDOUT;
+    result = motorcycle_send_complete((const uint8_t *)message,
+                                      (uint16_t)length);
+    xSemaphoreGive(usb_tx_lock);
+    return result == (int)length ? 0 : result;
+}
 
 static int motorcycle_send_complete(const uint8_t *packet,
                                     uint16_t packet_length)
@@ -315,7 +405,11 @@ static void motorcycle_tx_task(void *arg)
             taskEXIT_CRITICAL();
 
             if (packet_length != 0u) {
-                int written = motorcycle_send_complete(packet, packet_length);
+                int written = -ETIMEDOUT;
+                if (xSemaphoreTake(usb_tx_lock, pdMS_TO_TICKS(1000)) == pdTRUE) {
+                    written = motorcycle_send_complete(packet, packet_length);
+                    xSemaphoreGive(usb_tx_lock);
+                }
 
                 taskENTER_CRITICAL();
                 if (written == (int)packet_length)
@@ -341,7 +435,12 @@ static void motorcycle_tx_task(void *arg)
 
 int motorcycle_output_init(void)
 {
-    int result = gadget_serial_init(&motorcycle_usb_id,
+    int result;
+
+    usb_tx_lock = xSemaphoreCreateMutex();
+    if (!usb_tx_lock)
+        return -1;
+    result = gadget_serial_init(&motorcycle_usb_id,
                                     &motorcycle_usb_parameters,
                                     motorcycle_connect_callback,
                                     motorcycle_serial_callback);
@@ -350,6 +449,9 @@ int motorcycle_output_init(void)
         return result;
     if (thread_create("motorcycle_tx", MOTORCYCLE_TX_STACK,
                       motorcycle_tx_task, NULL) == NULL)
+        return -1;
+    if (thread_create("motorcycle_rx", MOTORCYCLE_RX_STACK,
+                      motorcycle_rx_task, NULL) == NULL)
         return -1;
     return 0;
 }
@@ -380,9 +482,15 @@ int motorcycle_output_publish_adc(uint32_t frame_id,
     taskENTER_CRITICAL();
     ++tx_stats.produced;
     taskEXIT_CRITICAL();
-    result = motorcycle_send_large(prefix, sizeof(prefix));
-    if (result == 0)
-        result = motorcycle_send_large((const uint8_t *)payload, payload_bytes);
+    if (xSemaphoreTake(usb_tx_lock, pdMS_TO_TICKS(1000)) != pdTRUE)
+        result = -ETIMEDOUT;
+    else {
+        result = motorcycle_send_large(prefix, sizeof(prefix));
+        if (result == 0)
+            result = motorcycle_send_large((const uint8_t *)payload,
+                                           payload_bytes);
+        xSemaphoreGive(usb_tx_lock);
+    }
     taskENTER_CRITICAL();
     if (result == 0)
         ++tx_stats.sent;

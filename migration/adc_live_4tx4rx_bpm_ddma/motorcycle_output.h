@@ -54,5 +54,8 @@ void motorcycle_output_publish_full(uint32_t frame_id,
                                     uint16_t track_count,
                                     const struct motorcycle_warning *warning);
 void motorcycle_output_get_stats(struct motorcycle_output_stats *stats);
+/* USB CDC command channel shares the same gadget as binary radar packets. */
+int motorcycle_output_take_command(char *line, uint32_t capacity);
+int motorcycle_output_send_text(const char *message);
 
 #endif

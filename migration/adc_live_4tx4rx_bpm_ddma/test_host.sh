@@ -26,6 +26,13 @@ gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_adc_capture_packet.c \
 "${test_dir}/test_adc_capture_packet${suffix}" | \
     tee "${test_dir}/adc_capture_packet${suffix}.log"
 
+gcc "${flags[@]}" -Wall -Wextra -Werror \
+    -I../../X2100_project-latest/firmware/x2100/freertos/vendor \
+    tests/test_radar_control.c radar_control.c adc_capture_packet.c \
+    -o "${test_dir}/test_radar_control${suffix}"
+"${test_dir}/test_radar_control${suffix}" | \
+    tee "${test_dir}/radar_control${suffix}.log"
+
 for mirror in 0 1; do
     for bpm in 0 1; do
         for raw in 0 1; do
