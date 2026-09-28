@@ -33,7 +33,7 @@ for name in vendor.c complex_abs_f32.c complex_abs_f32.h motorcycle_output.c \
     radar_tracking.h radar_tracking.c radar_ego_motion.h radar_warning.h radar_warning.c \
     supplier_profile_options.h supplier_registers.inc radar_can_protocol.h \
     radar_can_protocol.c supplier_tracking_adapter.c radar_control.c \
-    radar_control.h; do
+    radar_control.h radar_calibration_store.c radar_calibration_store.h; do
     cp "${source_dir}/${name}" "vendor/${name}"
 done
 cp "/mnt/d/downloads/X2100_project-main/X2100_project-latest/firmware/x2100/freertos/vendor/config_manager.c" vendor/
@@ -100,5 +100,6 @@ MT-4T4R 原厂航迹/预警库接入实验版：
 6. 之前出现的CPU保留指令异常未定位；本版不作为量产或道路预警程序。
 7. USB发送线程改为非阻塞512字节写入；连续约2秒无USB请求完成会打印[HOST-USB]超时，5秒后自动重试。若sent持续不增长，再拔插USB数据线并连接上位机。
 8. 本版将ASCII命令接到同一个USB CDC口，不重复初始化USB；已实现和明确拒绝的命令见USB_COMMANDS.md。MMC2已重新启用以供SD卡录制，但尚未实板验证。
+9. angCalibMat/angFFT 读写使用独立CAL4 Flash块，读回验证后重启生效；主机测试通过，实板Flash读写和已知角度目标尚未验证。
 EOF
 echo "Built MT-4T4R supplier tracking/warning experiment in ${output_root}"

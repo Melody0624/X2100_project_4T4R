@@ -1417,22 +1417,12 @@ static int angle_estimation_and_validate(
                         (float)(AZIM_NUM_VIRTUAL_ANTS + 1u);
             angle_window[n] = 0.5f * (1.0f - cosf(arg));
         }
-        for (unsigned int bin = 0; bin < AZIM_FFT_SIZE; ++bin) {
-            int signed_bin = bin < AZIM_FFT_SIZE / 2u ?
-                             (int)bin : (int)bin - (int)AZIM_FFT_SIZE;
-            float sine = (float)signed_bin /
-                         ((float)AZIM_FFT_SIZE * radar_4tx4rx_spacing_wavelengths());
-            if (sine > 1.0f)
-                sine = 1.0f;
-            if (sine < -1.0f)
-                sine = -1.0f;
-            angle_axis[bin] = asinf(sine) * (180.0f / RADAR_PI);
-        }
+        radar_4tx4rx_get_angle_axis(angle_axis);
         angle_tables_initialized = 1;
     }
 
     printf("[ANGLE] 4TXx4RX virtual array + Hanning + 128-point FFT\n");
-    printf("[ANGLE] document 1.960mm geometry; confirmed chip routing, identity calibration\n");
+    printf("[ANGLE] document 1.960mm geometry; confirmed chip routing, calibration from config or identity\n");
     printf("[ANGLE] Hanning:");
     for (unsigned int n = 0; n < AZIM_NUM_VIRTUAL_ANTS; ++n)
         printf(" %.6f", angle_window[n]);
@@ -1443,8 +1433,9 @@ static int angle_estimation_and_validate(
     if (replay_validate_frame) {
         if (absolute_float(angle_window[0] - 0.116977781f) > 0.000002f ||
             absolute_float(angle_window[3] - 0.969846368f) > 0.000002f ||
-            absolute_float(angle_axis[1] + 0.895282987f) > 0.00002f ||
-            absolute_float(angle_axis[64] - 90.0f) > 0.00002f) {
+            (!radar_4tx4rx_has_angle_axis_override() &&
+             (absolute_float(angle_axis[1] + 0.895282987f) > 0.00002f ||
+              absolute_float(angle_axis[64] - 90.0f) > 0.00002f))) {
             passed = 0;
         }
     }

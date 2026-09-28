@@ -71,15 +71,17 @@ const char *radar_waveform_error(const struct radar_waveform *w)
 
 /* Identity values prevent unknown board calibration from corrupting data.
  * A production build must load 16 measured complex coefficients instead. */
-static const float calibration_real[RADAR_NUM_VIRTUAL_ANTS] = {
+static float calibration_real[RADAR_NUM_VIRTUAL_ANTS] = {
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
 };
 
-static const float calibration_imag[RADAR_NUM_VIRTUAL_ANTS] = {
+static float calibration_imag[RADAR_NUM_VIRTUAL_ANTS] = {
     0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
 };
+static float custom_angle_axis[128];
+static int has_custom_angle_axis;
 
 int radar_4tx4rx_profile_validate(void)
 {
@@ -153,7 +155,7 @@ void radar_4tx4rx_profile_log(void)
            velocity_resolution, sampling_velocity_limit);
     printf("[DDMA4] common BPM + DDMA; ambiguous/contaminated peaks are rejected\n");
     printf("[ARRAY] document geometry: 16-element ULA signed d=-1.960 mm d/lambda=%.7f\n", radar_4tx4rx_spacing_wavelengths());
-    printf("[ARRAY] right-to-left TX1..4/RX1..4 routing user-confirmed; identity amplitude/phase calibration\n");
+    printf("[ARRAY] right-to-left TX1..4/RX1..4 routing user-confirmed; Flash calibration loaded at control init if valid\n");
 #if RADAR_CAPTURE_ONLY
     printf("[DDMA4] algorithm decoding disabled in raw-capture build\n");
     printf("[DDMA4] raw ADC output does not require array calibration\n");
@@ -191,6 +193,41 @@ void radar_4tx4rx_get_calibration(unsigned int virtual_index,
         virtual_index = 0u;
     *real = calibration_real[virtual_index];
     *imag = calibration_imag[virtual_index];
+}
+
+void radar_4tx4rx_set_calibration(const float values[32])
+{
+    for (unsigned int i = 0; i < RADAR_NUM_VIRTUAL_ANTS; ++i) {
+        calibration_real[i] = values[2u * i];
+        calibration_imag[i] = values[2u * i + 1u];
+    }
+}
+
+void radar_4tx4rx_get_angle_axis(float values[128])
+{
+    if (has_custom_angle_axis) {
+        for (unsigned int i = 0; i < 128u; ++i) values[i] = custom_angle_axis[i];
+        return;
+    }
+    for (unsigned int bin = 0; bin < 128u; ++bin) {
+        int signed_bin = bin < 64u ? (int)bin : (int)bin - 128;
+        float sine = (float)signed_bin /
+                     (128.0f * radar_4tx4rx_spacing_wavelengths());
+        if (sine > 1.0f) sine = 1.0f;
+        if (sine < -1.0f) sine = -1.0f;
+        values[bin] = asinf(sine) * (180.0f / 3.14159265358979323846f);
+    }
+}
+
+void radar_4tx4rx_set_angle_axis(const float values[128])
+{
+    for (unsigned int i = 0; i < 128u; ++i) custom_angle_axis[i] = values[i];
+    has_custom_angle_axis = 1;
+}
+
+int radar_4tx4rx_has_angle_axis_override(void)
+{
+    return has_custom_angle_axis;
 }
 
 float radar_4tx4rx_chirp_code(unsigned int chirp, float legacy_bpm_code)

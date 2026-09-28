@@ -2,12 +2,16 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <driver/sfc_nor.h>
 
 #include "config_manager.h"
 #include "radar_control.h"
+#include "radar_4tx4rx_profile.h"
 
 static char command[4096];
-static char response[256];
+static char response[4096];
+static uint8_t flash_tail[4096];
+static const struct storage_info flash_info = { .erasesize = 4096u };
 static int32_t saved_max = -1;
 static uint8_t saved_raw;
 static int flash_magic_valid = 1;
@@ -22,6 +26,8 @@ int sfc_nor_flash_read(uint32_t offset, uint32_t length, uint8_t *buffer)
     if (flash_scan_read_failure && offset == 0x1FFF00u)
         return -1;
     memset(buffer, 0xFF, length);
+    if (offset >= 0x1FF000u && offset + length <= 0x200000u)
+        memcpy(buffer, flash_tail + offset - 0x1FF000u, length);
     if (offset == 0x1DB000u && flash_magic_valid) {
         const uint32_t magic = 0x52414456u;
         memcpy(buffer, &magic, sizeof(magic));
@@ -36,12 +42,25 @@ int sfc_nor_flash_write(uint32_t offset, uint32_t length,
                         const uint8_t *buffer)
 {
     const uint32_t magic = 0x52414456u;
-    assert(offset == 0x1DB000u && length == 4u &&
-           memcmp(buffer, &magic, sizeof(magic)) == 0);
-    flash_magic_valid = 1;
-    ++magic_writes;
+    if (offset == 0x1DB000u) {
+        assert(length == 4u && memcmp(buffer, &magic, sizeof(magic)) == 0);
+        flash_magic_valid = 1;
+        ++magic_writes;
+    } else {
+        assert(offset >= 0x1FF000u && offset + length <= 0x200000u);
+        memcpy(flash_tail + offset - 0x1FF000u, buffer, length);
+    }
     return (int)length;
 }
+
+int sfc_nor_flash_erase(uint32_t offset, uint32_t length)
+{
+    assert(offset == 0x1FF000u && length == sizeof(flash_tail));
+    memset(flash_tail, 0xFF, sizeof(flash_tail));
+    return 0;
+}
+
+const struct storage_info *sfc_nor_flash_info(void) { return &flash_info; }
 
 int param_get(ParamID id, void *buffer, uint32_t length)
 {
@@ -109,6 +128,7 @@ static void send(const char *line)
 
 int main(void)
 {
+    memset(flash_tail, 0xFF, sizeof(flash_tail));
     flash_magic_valid = 0;
     flash_blank = 0;
     radar_control_init();
@@ -157,6 +177,52 @@ int main(void)
     assert(strstr(response, "ERR OTA unavailable"));
     send("SetDumpFileName ../escape");
     assert(strstr(response, "ERR usage"));
-    puts("RADAR_CONTROL=PASS frame-limit/raw-switch/flash-guard/RF-write/OTA-reject");
+
+    send("angCalibMat read");
+    assert(strstr(response, "source=default count=32 1 0 1 0"));
+    send("angFFT read");
+    assert(strstr(response, "source=default count=128"));
+    send("angCalibMat write 1 0");
+    assert(strstr(response, "requires 32 floats"));
+
+    {
+        char line[4096];
+        size_t used = (size_t)snprintf(line, sizeof(line), "angCalibMat write");
+        flash_tail[0] = 0x5Au; /* Legacy data in the shared erase sector. */
+        for (unsigned int i = 0; i < 32u; ++i)
+            used += (size_t)snprintf(line + used, sizeof(line) - used,
+                                     " %s", i == 2u ? "0.8" : i % 2u ? "0" : "1");
+        send(line);
+        assert(strstr(response, "OK angCalibMat saved") && flash_tail[0] == 0x5Au);
+        send("angCalibMat read");
+        assert(strstr(response, "source=flash count=32 1 0 0.8 0"));
+
+        used = (size_t)snprintf(line, sizeof(line), "angFFT write");
+        for (unsigned int i = 0; i < 128u; ++i)
+            used += (size_t)snprintf(line + used, sizeof(line) - used,
+                                     " %d", i < 64u ? -(int)i : 128 - (int)i);
+        send(line);
+        assert(strstr(response, "OK angFFT saved") && flash_tail[0] == 0x5Au);
+        send("angFFT read");
+        assert(strstr(response, "source=flash count=128 0 -1 -2"));
+        {
+            uint8_t original = flash_tail[0xC20u];
+            flash_tail[0xC20u] ^= 1u;
+            send("angFFT read");
+            assert(strstr(response, "ERR 4T4R calibration Flash unreadable"));
+            send(line);
+            assert(strstr(response, "ERR 4T4R calibration Flash write/verify failed"));
+            flash_tail[0xC20u] = original;
+        }
+        radar_control_init();
+        {
+            float real, imag, axis[128];
+            radar_4tx4rx_get_calibration(1u, &real, &imag);
+            assert(real > 0.79f && real < 0.81f && imag == 0.0f);
+            radar_4tx4rx_get_angle_axis(axis);
+            assert(axis[1] == -1.0f && axis[127] == 1.0f);
+        }
+    }
+    puts("RADAR_CONTROL=PASS frame/raw/calibration-Flash/RF-write/OTA-reject");
     return 0;
 }

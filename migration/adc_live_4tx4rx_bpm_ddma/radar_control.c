@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,8 @@
 #include "cheetah/cheetah.h"
 #include "config_manager.h"
 #include "motorcycle_output.h"
+#include "radar_4tx4rx_profile.h"
+#include "radar_calibration_store.h"
 #include "radar_control.h"
 
 #define RADAR_CONFIG_FLASH_OFFSET 0x1DB000u
@@ -24,6 +27,9 @@ static int32_t target_angle = 666;
 static int sd_fd = -1;
 static uint32_t sd_frames;
 static char control_line[4096];
+static char calibration_response[4096];
+static float calibration_values[RADAR_CALIB_COMPLEX_FLOATS];
+static float calibration_axis[RADAR_CALIB_AXIS_FLOATS];
 
 /* The config partition can be initialized only when every byte is erased.
  * A missing magic word alone does not prove the board has no calibration. */
@@ -82,7 +88,40 @@ int radar_control_save_adc(uint32_t frame_id, const void *payload,
 static void reply(const char *message)
 {
     motorcycle_output_send_text(message);
-    printf("[CMD] %s", message);
+    if (strlen(message) > 160u)
+        printf("[CMD] sent %lu-byte calibration response\n",
+               (unsigned long)strlen(message));
+    else
+        printf("[CMD] %s", message);
+}
+
+static int parse_float_value(const char *text, float *value)
+{
+    char *end;
+    float parsed;
+    if (!text || !*text) return -1;
+    parsed = strtof(text, &end);
+    if (*end || !isfinite(parsed)) return -1;
+    *value = parsed;
+    return 0;
+}
+
+static int initialize_blank_config(void)
+{
+    uint32_t magic_words[64] __attribute__((aligned(64)));
+    uint32_t verified = 0;
+    int erased;
+    if (flash_config_valid) return 0;
+    erased = config_partition_erased();
+    if (erased != 1) return erased < 0 ? -1 : -2;
+    magic_words[0] = RADAR_CONFIG_MAGIC;
+    if (sfc_nor_flash_write(RADAR_CONFIG_FLASH_OFFSET, sizeof(magic_words[0]),
+                            (const uint8_t *)magic_words) != sizeof(magic_words[0]) ||
+        sfc_nor_flash_read(RADAR_CONFIG_FLASH_OFFSET, sizeof(verified),
+                           (uint8_t *)&verified) != sizeof(verified) ||
+        verified != RADAR_CONFIG_MAGIC) return -3;
+    flash_config_valid = 1;
+    return 0;
 }
 
 static int parse_int(const char *text, int32_t *value)
@@ -118,6 +157,9 @@ void radar_control_init(void)
     raw_enabled = 0;
     if (read_result == sizeof(magic) &&
         magic == RADAR_CONFIG_MAGIC) {
+        unsigned int flags = 0;
+        int calibration_state = radar_calibration_load(calibration_values,
+                                                       calibration_axis, &flags);
         int32_t saved_frames;
         uint8_t saved_raw;
         flash_config_valid = 1;
@@ -127,6 +169,17 @@ void radar_control_init(void)
         if (param_get(PARAM_OUT_RAW_DATA_FLG, &saved_raw,
                       sizeof(saved_raw)) == 0 && saved_raw <= 1u)
             raw_enabled = saved_raw;
+        if (calibration_state == 1) {
+            if (flags & 1u)
+                radar_4tx4rx_set_calibration(calibration_values);
+            if (flags & 2u)
+                radar_4tx4rx_set_angle_axis(calibration_axis);
+        }
+        printf("[CAL4] flash=%s matrix=%s angle_axis=%s\n",
+               calibration_state == 1 ? "valid" :
+               calibration_state == 0 ? "erased" : "invalid",
+               (calibration_state == 1 && (flags & 1u)) ? "saved" : "identity",
+               (calibration_state == 1 && (flags & 2u)) ? "saved" : "geometry");
     }
     printf("[CMD] config=%s flash_read=%d magic=0x%08lX frames=%ld output=%s\n",
            flash_config_valid ? "valid" : "unavailable",
@@ -358,9 +411,78 @@ static void process_command(char *line)
         reply("ERR OTA unavailable: current NOR image has no OTA partition\r\n");
         return;
     }
-    if (strcmp(argv[0], "angCalibMat") == 0 ||
-        strcmp(argv[0], "angFFT") == 0 ||
-        strcmp(argv[0], "uds") == 0) {
+    if (strcmp(argv[0], "angCalibMat") == 0 || strcmp(argv[0], "angFFT") == 0) {
+        unsigned int flag = strcmp(argv[0], "angCalibMat") == 0 ? 1u : 2u;
+        unsigned int count = flag == 1u ? RADAR_CALIB_COMPLEX_FLOATS :
+                                           RADAR_CALIB_AXIS_FLOATS;
+        const char *name = argv[0];
+        if (argc == 2 && strcmp(argv[1], "read") == 0) {
+            unsigned int saved_flags = 0;
+            int state = radar_calibration_load(calibration_values,
+                                               calibration_axis, &saved_flags);
+            float *data = flag == 1u ? calibration_values : calibration_axis;
+            size_t used;
+            if (state < 0) {
+                reply("ERR 4T4R calibration Flash unreadable or invalid\r\n");
+                return;
+            }
+            if (state == 0 || !(saved_flags & flag)) {
+                if (flag == 1u) {
+                    for (unsigned int i = 0; i < count; ++i)
+                        data[i] = i % 2u ? 0.0f : 1.0f;
+                } else radar_4tx4rx_get_angle_axis(data);
+            }
+            used = (size_t)snprintf(calibration_response,
+                                    sizeof(calibration_response),
+                                    "%s source=%s count=%u",
+                                    name, (state == 1 && (saved_flags & flag)) ?
+                                    "flash" : "default", count);
+            for (unsigned int i = 0; i < count && used < sizeof(calibration_response); ++i) {
+                int written = snprintf(calibration_response + used,
+                                       sizeof(calibration_response) - used,
+                                       " %.7g", data[i]);
+                if (written < 0 || (size_t)written >= sizeof(calibration_response) - used) {
+                    reply("ERR calibration response too long\r\n");
+                    return;
+                }
+                used += (size_t)written;
+            }
+            strcat(calibration_response, "\r\n");
+            reply(calibration_response);
+            return;
+        }
+        if (argc >= 2 && strcmp(argv[1], "write") == 0) {
+            float *data = flag == 1u ? calibration_values : calibration_axis;
+            if (argc != count + 2u) {
+                reply(flag == 1u ?
+                      "ERR angCalibMat write requires 32 floats (real imag x16)\r\n" :
+                      "ERR angFFT write requires 128 angle values in degrees\r\n");
+                return;
+            }
+            for (unsigned int i = 0; i < count; ++i)
+                if (parse_float_value(argv[i + 2u], &data[i])) {
+                    reply("ERR calibration values must be finite floats\r\n");
+                    return;
+                }
+            if (!flash_config_valid && initialize_blank_config() != 0) {
+                reply("ERR Flash config invalid or not blank; no calibration write\r\n");
+                return;
+            }
+            if (radar_calibration_save(data, flag) != 0) {
+                reply("ERR 4T4R calibration Flash write/verify failed\r\n");
+                return;
+            }
+            reply(flag == 1u ?
+                  "OK angCalibMat saved (16 complex channels); reboot to take effect\r\n" :
+                  "OK angFFT saved (128 angle bins); reboot to take effect\r\n");
+            return;
+        }
+        reply(flag == 1u ?
+              "ERR usage: angCalibMat read|write <32 floats>\r\n" :
+              "ERR usage: angFFT read|write <128 floats>\r\n");
+        return;
+    }
+    if (strcmp(argv[0], "uds") == 0) {
         reply("ERR command not yet bound to a verified 4T4R backend\r\n");
         return;
     }

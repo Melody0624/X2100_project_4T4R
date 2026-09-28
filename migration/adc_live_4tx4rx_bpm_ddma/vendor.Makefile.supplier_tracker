@@ -27,6 +27,7 @@ src-y += radar_diagnostics.c
 src-y += supplier_tracking_adapter.c
 ifeq ($(RADAR_BUILD_EXPERIMENTAL_LIVE),1)
 src-y += radar_control.c
+src-y += radar_calibration_store.c
 src-y += config_manager.c
 endif
 src-y += motor_cycle_demo/src/general_functions.c

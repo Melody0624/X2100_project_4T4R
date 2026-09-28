@@ -39,6 +39,10 @@ unsigned int radar_4tx4rx_tx_subband(unsigned int anchor_subband,
 void radar_4tx4rx_get_calibration(unsigned int virtual_index,
                                   float *real,
                                   float *imag);
+void radar_4tx4rx_set_calibration(const float values[32]);
+void radar_4tx4rx_get_angle_axis(float values[128]);
+void radar_4tx4rx_set_angle_axis(const float values[128]);
+int radar_4tx4rx_has_angle_axis_override(void);
 float radar_4tx4rx_chirp_code(unsigned int chirp, float legacy_bpm_code);
 unsigned int radar_4tx4rx_tx_phase_word(unsigned int chirp,
                                         unsigned int tx,

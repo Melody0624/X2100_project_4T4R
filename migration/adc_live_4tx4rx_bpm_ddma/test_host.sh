@@ -28,7 +28,8 @@ gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_adc_capture_packet.c \
 
 gcc "${flags[@]}" -Wall -Wextra -Werror \
     -I../../X2100_project-latest/firmware/x2100/freertos/vendor \
-    tests/test_radar_control.c radar_control.c adc_capture_packet.c \
+    tests/test_radar_control.c radar_control.c radar_calibration_store.c \
+    radar_4tx4rx_profile.c adc_capture_packet.c -lm \
     -o "${test_dir}/test_radar_control${suffix}"
 "${test_dir}/test_radar_control${suffix}" | \
     tee "${test_dir}/radar_control${suffix}.log"
