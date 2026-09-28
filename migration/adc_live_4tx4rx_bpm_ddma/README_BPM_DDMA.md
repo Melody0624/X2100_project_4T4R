@@ -69,8 +69,7 @@ MATLAB 生成代码。TI 文档仅用于核对 DDMA 通用原理。
 字段。上位机 wire layout 保持兼容；当前产品联调构建的 CDC line coding 为
 460800，USB 数据实际通过 bulk 传输。
 
-2026-09-23：实际TX/RX坐标与用户确认的从左到右芯片通道编号已接入，
-形成间距1.96 mm的16通道ULA，角度轴按实际间距与波长计算。见ANTENNA_GEOMETRY.md。
+2026-09-28：用户更正TX/RX编号为从右到左各1～4号；据此形成物理间距1.96 mm、按通道顺序有符号间距为 -1.96 mm 的16通道ULA，角度轴按有符号间距与波长计算。见ANTENNA_GEOMETRY.md。
 幅相校准仍为1+0j，DDMA子带对应关系仍待验证。合成角度误差只验证数学实现，
 不代表新板实测精度；ARRAY_CALIBRATION_READY仍为0。
 

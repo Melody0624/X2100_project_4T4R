@@ -28,7 +28,7 @@ const char *radar_waveform_error(const struct radar_waveform *waveform);
 
 int radar_4tx4rx_profile_validate(void);
 /* Document coordinates in metres, TX+RX virtual phase centre. Channel IDs
- * are user-confirmed left-to-right on 2026-09-23. */
+ * are user-confirmed right-to-left on 2026-09-28. */
 float radar_4tx4rx_virtual_position_m(unsigned int tx, unsigned int rx);
 float radar_4tx4rx_spacing_wavelengths(void);
 void radar_4tx4rx_profile_log(void);

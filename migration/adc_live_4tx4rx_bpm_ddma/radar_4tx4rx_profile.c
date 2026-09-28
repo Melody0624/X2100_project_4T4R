@@ -16,11 +16,12 @@ static const uint8_t virtual_channel_map[RADAR_NUM_TX][RADAR_NUM_RX] = {
 
 /* Source: user-provided 天线相位中心坐标.docx, mm converted to m.
  * All second coordinates are zero. Document lists physical left-to-right
- * positions. User confirmed chip RX0..3 / TX0..3 left-to-right on 2026-09-23.
- * The sum coarray is uniform with 1.96 mm spacing; no sorting is needed under
+ * positions. User corrected the channel labels on 2026-09-28: TX1..4 and
+ * RX1..4 run right-to-left (code indices TX0..3 and RX0..3 respectively).
+ * The sum coarray is uniform with -1.96 mm signed spacing; no sorting is needed under
  * that assignment. Removing its common origin changes no beam power. */
-static const float rx_position_m[4] = {0.0f, 0.00196f, 0.00392f, 0.00588f};
-static const float tx_position_m[4] = {0.0078412f, 0.0156812f, 0.0235212f, 0.0313612f};
+static const float rx_position_m[4] = {0.00588f, 0.00392f, 0.00196f, 0.0f};
+static const float tx_position_m[4] = {0.0313612f, 0.0235212f, 0.0156812f, 0.0078412f};
 
 float radar_4tx4rx_virtual_position_m(unsigned int tx, unsigned int rx)
 {
@@ -111,7 +112,7 @@ int radar_4tx4rx_profile_validate(void)
             uint32_t bit;
 
             /* FFT angle processing is valid only for this uniform coarray. */
-            float expected = tx_position_m[0] + index *
+            float expected = radar_4tx4rx_virtual_position_m(0, 0) + index *
                              (rx_position_m[1] - rx_position_m[0]);
             if (fabsf(radar_4tx4rx_virtual_position_m(tx, rx) - expected) > 1e-7f)
                 return -1;
@@ -151,8 +152,8 @@ void radar_4tx4rx_profile_log(void)
     printf("[DDMA4] Doppler bin=%.3f m/s sampling interval=+/-%.1f m/s (NOT a validated DDMA range)\n",
            velocity_resolution, sampling_velocity_limit);
     printf("[DDMA4] common BPM + DDMA; ambiguous/contaminated peaks are rejected\n");
-    printf("[ARRAY] document geometry: 16-element ULA d=1.960 mm d/lambda=%.7f\n", radar_4tx4rx_spacing_wavelengths());
-    printf("[ARRAY] left-to-right chip routing user-confirmed; identity amplitude/phase calibration\n");
+    printf("[ARRAY] document geometry: 16-element ULA signed d=-1.960 mm d/lambda=%.7f\n", radar_4tx4rx_spacing_wavelengths());
+    printf("[ARRAY] right-to-left TX1..4/RX1..4 routing user-confirmed; identity amplitude/phase calibration\n");
 #if RADAR_CAPTURE_ONLY
     printf("[DDMA4] algorithm decoding disabled in raw-capture build\n");
     printf("[DDMA4] raw ADC output does not require array calibration\n");

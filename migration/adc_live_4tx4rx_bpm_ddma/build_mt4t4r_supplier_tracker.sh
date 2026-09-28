@@ -2,8 +2,8 @@
 set -euo pipefail
 source_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 original_sdk=/home/melody/Manhattan_Project/freertos
-build_sdk=/home/melody/Manhattan_Project/freertos_mt4t4r_supplier_ego_20260924
-output_root=/mnt/d/downloads/X2100_project-main/artifacts/mt4t4r_supplier_ego_20260924
+build_sdk=${BUILD_SDK:-/home/melody/Manhattan_Project/freertos_mt4t4r_supplier_ego_20260924}
+output_root=${OUTPUT_ROOT:-/mnt/d/downloads/X2100_project-main/artifacts/mt4t4r_supplier_ego_20260924}
 tool_prefix=/home/melody/Manhattan_Project/tools/toolchains/mips-xburst2-newlib430/bin/mips-sde-elf
 
 bash "${source_dir}/test_host.sh"

@@ -1440,8 +1440,8 @@ static int angle_estimation_and_validate(
     if (replay_validate_frame) {
         if (absolute_float(angle_window[0] - 0.116977781f) > 0.000002f ||
             absolute_float(angle_window[3] - 0.969846368f) > 0.000002f ||
-            absolute_float(angle_axis[1] - 0.895282987f) > 0.00002f ||
-            absolute_float(angle_axis[64] + 90.0f) > 0.00002f) {
+            absolute_float(angle_axis[1] + 0.895282987f) > 0.00002f ||
+            absolute_float(angle_axis[64] - 90.0f) > 0.00002f) {
             passed = 0;
         }
     }

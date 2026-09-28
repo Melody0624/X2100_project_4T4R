@@ -45,9 +45,9 @@ int radar_synthetic_frame(unsigned char *payload, size_t length,
         float ci[RADAR_SYNTHETIC_MAX_TARGETS][RADAR_NUM_RX] = {{0}};
         float common = (float)bpm_code[(chirp + RADAR_BPM_START + bpm_offset % RADAR_BPM_LENGTH) % RADAR_BPM_LENGTH];
         for (unsigned int t = 0; t < count; ++t) {
-            /* Independent documented coarray: relative TX centres 0/7.84/
-             * 15.68/23.52 mm, RX centres 0/1.96/3.92/5.88 mm. */
-            float spatial = 2.0f * SYN_PI * 0.00196f *
+            /* Channel indices run right-to-left, giving -1.96 mm signed
+             * spacing in the TX-major virtual array. */
+            float spatial = -2.0f * SYN_PI * 0.00196f *
                 RADAR_CENTER_FREQUENCY_HZ / 299792458.0f *
                 sinf(targets[t].azimuth_deg * SYN_PI / 180.0f);
             for (unsigned int rx = 0; rx < RADAR_NUM_RX; ++rx) {
