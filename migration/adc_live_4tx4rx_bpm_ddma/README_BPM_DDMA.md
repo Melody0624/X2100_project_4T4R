@@ -1,5 +1,9 @@
 # X2100 4TX4RX：公共 BPM + DDMA 软件候选 v3
 
+2026-09-29 的 2T4R 规则对比实验改为宽松 DDMA 候选输出、256 点上限、
+有效 Flash 射频表优先；下文关于拒绝不确定峰及 16 点上限描述的是历史 v2 行为。
+本版使用方法和限制见 [README_2T4R_RULES_EXPERIMENT.md](README_2T4R_RULES_EXPERIMENT.md)。
+
 CAN 协议软件层见 [CAN_PROTOCOL.md](CAN_PROTOCOL.md)。当前构建输出为
 `artifacts/bpm_ddma_4tx4rx_can_20260910`，CAN 实际传输尚未绑定，USB 输出保留。
 

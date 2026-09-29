@@ -49,6 +49,17 @@ int main(void)
     assert(radar_rf_execute(invalid,2,mock_row,&m,&bad) < 0 && m.calls == 0);
     assert(radar_rf_validate(NULL,1,&bad) < 0);
     assert(radar_rf_validate(t,0,&bad) < 0);
+    {
+        struct reg_line flash[4];
+        memset(flash, 0xff, sizeof(flash));
+        flash[0] = t[0]; flash[1] = t[1];
+        assert(radar_rf_flash_rows(flash, sizeof(flash), &bad) == 2);
+        flash[1].valLen = 65;
+        assert(radar_rf_flash_rows(flash, sizeof(flash), &bad) == 0 && bad == 1);
+        memset(flash, 0xff, sizeof(flash));
+        assert(radar_rf_flash_rows(flash, sizeof(flash), &bad) == 0);
+        assert(radar_rf_flash_rows(flash, sizeof(flash[0]) - 1, &bad) == 0);
+    }
     printf("RF PASS rows=%u mirror=%d bpm=%d raw_output=%d failure_cases=%u; hardware NOT tested\n",
            (unsigned)n,SUPPLIER_IS_MIRROR,SUPPLIER_USE_BPM,SUPPLIER_UART_ADC_SEND,(unsigned)n);
     return 0;

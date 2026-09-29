@@ -135,6 +135,8 @@ typedef char motorcycle_track_must_be_18_bytes[
     sizeof(struct motorcycle_track_wire) == 18 ? 1 : -1];
 typedef char motorcycle_warning_must_be_248_bytes[
     sizeof(struct motorcycle_warning_wire) == 248 ? 1 : -1];
+typedef char motorcycle_packet_must_fit_u16[
+    MOTORCYCLE_PACKET_MAX <= 0xffffu ? 1 : -1];
 
 static const struct gadget_id motorcycle_usb_id = {
     .vendor_id = 0x0525,
@@ -149,6 +151,8 @@ static const struct usb_cdc_serial_param motorcycle_usb_parameters = {
 };
 
 static uint8_t tx_slots[2][MOTORCYCLE_PACKET_MAX];
+static uint8_t tx_packet[MOTORCYCLE_PACKET_MAX];
+static uint8_t publish_packet[MOTORCYCLE_PACKET_MAX];
 static uint16_t tx_lengths[2];
 static uint32_t tx_slot_sequence[2];
 static uint32_t produced_sequence;
@@ -280,7 +284,6 @@ static void motorcycle_serial_callback(struct usb_cdc_serial_param *parameters)
 
 static void motorcycle_tx_task(void *arg)
 {
-    uint8_t packet[MOTORCYCLE_PACKET_MAX];
 
     (void)arg;
     while (1) {
@@ -296,13 +299,13 @@ static void motorcycle_tx_task(void *arg)
             if (sequence != consumed_sequence &&
                 tx_slot_sequence[slot] == sequence) {
                 packet_length = tx_lengths[slot];
-                memcpy(packet, tx_slots[slot], packet_length);
+                memcpy(tx_packet, tx_slots[slot], packet_length);
                 consumed_sequence = sequence;
             }
             taskEXIT_CRITICAL();
 
             if (packet_length != 0u) {
-                int written = motorcycle_send_complete(packet, packet_length);
+                int written = motorcycle_send_complete(tx_packet, packet_length);
 
                 taskENTER_CRITICAL();
                 if (written == (int)packet_length)
@@ -390,13 +393,12 @@ void motorcycle_output_publish_full(uint32_t frame_id,
                                     uint16_t track_count,
                                     const struct motorcycle_warning *warning)
 {
-    uint8_t packet[MOTORCYCLE_PACKET_MAX];
     struct motorcycle_header header;
     struct motorcycle_tlv_header tlv;
     struct motorcycle_detection_header detection_header;
     struct motorcycle_track_header track_header;
     struct motorcycle_warning_wire warning_wire;
-    uint8_t *cursor = packet;
+    uint8_t *cursor = publish_packet;
     uint32_t packet_length;
     uint32_t sequence;
     unsigned int slot;
@@ -516,13 +518,13 @@ void motorcycle_output_publish_full(uint32_t frame_id,
     memcpy(cursor, &warning_wire, sizeof(warning_wire));
     cursor += sizeof(warning_wire);
 
-    packet_length = (uint32_t)(cursor - packet);
+    packet_length = (uint32_t)(cursor - publish_packet);
     taskENTER_CRITICAL();
     if (produced_sequence != consumed_sequence)
         ++tx_stats.dropped;
     sequence = produced_sequence + 1u;
     slot = sequence & 1u;
-    memcpy(tx_slots[slot], packet, packet_length);
+    memcpy(tx_slots[slot], publish_packet, packet_length);
     tx_lengths[slot] = (uint16_t)packet_length;
     tx_slot_sequence[slot] = sequence;
     produced_sequence = sequence;

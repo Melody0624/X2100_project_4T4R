@@ -30,6 +30,28 @@ int radar_rf_validate(const struct reg_line *table, size_t count, size_t *bad_ro
     return 0;
 }
 
+size_t radar_rf_flash_rows(const struct reg_line *table, size_t bytes, size_t *bad_row)
+{
+    size_t count = 0, capacity, i;
+    const unsigned char *tail;
+    if (bad_row) *bad_row = (size_t)-1;
+    if (!table || bytes < 2u * sizeof(*table)) return 0;
+    capacity = bytes / sizeof(*table);
+    while (count < capacity &&
+           !(table[count].chipIdx == 0xffffu && table[count].addr == -1))
+        ++count;
+    /* Require an erased terminator; never execute a full or partial table. */
+    if (count == 0 || count == capacity)
+        return 0;
+    tail = (const unsigned char *)&table[count];
+    for (i = 0; i < sizeof(*table); ++i)
+        if (tail[i] != 0xffu)
+            return 0;
+    if (radar_rf_validate(table, count, bad_row) < 0)
+        return 0;
+    return count;
+}
+
 int radar_rf_execute(const struct reg_line *table, size_t count,
                      radar_rf_row_fn execute, void *context, size_t *bad_row)
 {

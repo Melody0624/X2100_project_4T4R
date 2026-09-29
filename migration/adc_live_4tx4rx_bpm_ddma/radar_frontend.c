@@ -620,9 +620,47 @@ static struct reg_line cheetah_default_config[] = {
 
 #include "radar_4tx4rx_profile.h"
 #include "radar_rf_profile.h"
+#if RADAR_EXPERIMENTAL_LIVE
+#include <driver/sfc_nor.h>
+#include "config_manager.h"
+#endif
 
 static struct camera_device *radar_camera;
 static const struct camera_info *radar_camera_info;
+#if RADAR_EXPERIMENTAL_LIVE
+#define RF_CONFIG_FLASH_OFFSET 0x1DB000u
+#define RF_CONFIG_MAGIC 0x52414456u
+static union {
+    struct reg_line alignment;
+    unsigned char bytes[MAX_CHEETAH_CFG_SIZE];
+} flash_rf_storage;
+static size_t flash_rf_rows;
+
+static void radar_rf_select_flash_profile(void)
+{
+    uint32_t magic = 0;
+    size_t bad_row = (size_t)-1;
+    const struct reg_line *rows = (const struct reg_line *)flash_rf_storage.bytes;
+    flash_rf_rows = 0;
+    if (sfc_nor_flash_read(RF_CONFIG_FLASH_OFFSET, sizeof(magic),
+                           (uint8_t *)&magic) == sizeof(magic) &&
+        magic == RF_CONFIG_MAGIC &&
+        param_get(PARAM_CHEETAH_DEFAULT_CFG, flash_rf_storage.bytes,
+                  sizeof(flash_rf_storage.bytes)) == 0) {
+        flash_rf_rows = radar_rf_flash_rows(rows,
+                                            sizeof(flash_rf_storage.bytes),
+                                            &bad_row);
+        if (flash_rf_rows < 50u || rows[0].addr != 0x2003)
+            flash_rf_rows = 0;
+    }
+    if (flash_rf_rows)
+        printf("[RF] source=flash rows=%u (software 4TX decoding remains experimental)\n",
+               (unsigned int)flash_rf_rows);
+    else
+        printf("[RF] source=builtin rows=%u (Flash absent/invalid, bad_row=%u)\n",
+               radar_rf_table_rows(), (unsigned int)bad_row);
+}
+#endif
 
 static int capture_hardware_row(const struct reg_line *row, void *context)
 {
@@ -635,6 +673,12 @@ static int radar_rf_apply_capture_profile(void)
 {
     size_t count, bad;
     const struct reg_line *table = radar_rf_table(&count);
+#if RADAR_EXPERIMENTAL_LIVE
+    if (flash_rf_rows) {
+        table = (const struct reg_line *)flash_rf_storage.bytes;
+        count = flash_rf_rows;
+    }
+#endif
     int ret = radar_rf_execute(table, count, capture_hardware_row, 0, &bad);
     if (ret < 0)
         printf("[RF-CAPTURE] table failure row=%u\n", (unsigned int)bad);
@@ -647,6 +691,11 @@ int radar_frontend_init(void)
 
     printf("[RF] supplier=cheetah_128_512 rows=%u structure_ok=%d verified=%d\n",
            radar_rf_table_rows(), radar_rf_table_valid(), radar_rf_profile_ready());
+#if RADAR_EXPERIMENTAL_LIVE
+    radar_rf_select_flash_profile();
+    printf("[EXPERIMENTAL] permissive DDMA candidate output; max detections=%u\n",
+           RADAR_MAX_DETECTIONS);
+#endif
 #if RADAR_CAPTURE_ONLY || RADAR_EXPERIMENTAL_LIVE
     if (!RADAR_CAPTURE_FRONTEND_READY || !radar_rf_table_valid()) {
         printf("[ADC-IN] BLOCKED: MT-4T4R supplier table confirmation missing; no RF writes\n");

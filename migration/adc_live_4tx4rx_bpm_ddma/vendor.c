@@ -1216,7 +1216,7 @@ static int postprocess_and_validate(const struct point_result *raw_points,
                                     struct motorcycle_detection *output,
                                     uint16_t *output_count)
 {
-    struct point_result points[LIVE_MAX_DETECTIONS];
+    static struct point_result points[LIVE_MAX_DETECTIONS];
     unsigned int valid_count = 0;
     unsigned int rejected_count = 0;
     unsigned int angle_count = 0;
@@ -1228,8 +1228,8 @@ static int postprocess_and_validate(const struct point_result *raw_points,
     float cosine = cosf(install_angle);
     float sine = sinf(install_angle);
     float ego_vx = 0.0f, ego_vy = 0.0f;
-    float ego_angles[LIVE_MAX_DETECTIONS];
-    float ego_velocities[LIVE_MAX_DETECTIONS];
+    static float ego_angles[LIVE_MAX_DETECTIONS];
+    static float ego_velocities[LIVE_MAX_DETECTIONS];
     unsigned int ego_count = 0u;
     int ego_valid;
     int passed = 1;
@@ -1391,8 +1391,8 @@ static int angle_estimation_and_validate(
 {
     static ne10_fft_r2c_cfg_float32_t cfg;
     static int angle_tables_initialized;
-    struct point_result points[LIVE_MAX_DETECTIONS] = {{0}};
-    struct motorcycle_detection output_points[LIVE_MAX_DETECTIONS] = {{0}};
+    static struct point_result points[LIVE_MAX_DETECTIONS];
+    static struct motorcycle_detection output_points[LIVE_MAX_DETECTIONS];
     uint16_t output_point_count = 0u;
     float range_resolution = firmware_range_resolution();
     float doppler_resolution = firmware_doppler_resolution();
@@ -1403,6 +1403,8 @@ static int angle_estimation_and_validate(
         printf("[ANGLE] too many detections=%u\n", num_detections);
         return 0;
     }
+    memset(points, 0, sizeof(points));
+    memset(output_points, 0, sizeof(output_points));
 
     if (cfg == NULL)
         cfg = ne10_fft_alloc_r2c_float32((ne10_int32_t)AZIM_FFT_SIZE);
@@ -1623,7 +1625,7 @@ static int cfar_2d_and_validate(const float *rd_map_db,
                                 const ne10_fft_cpx_float32_t *doppler_cube)
 {
     static struct cfar_cell *cells;
-    struct angle_detection angle_detections[LIVE_MAX_DETECTIONS];
+    static struct angle_detection angle_detections[LIVE_MAX_DETECTIONS];
     unsigned char active_lines[DDMA_BINS_PER_SUBBAND] = {0};
     unsigned int doppler_detection_count = 0;
     unsigned int range_detection_count = 0;
@@ -1869,12 +1871,6 @@ static int cfar_2d_and_validate(const float *rd_map_db,
                 unsigned int index = doppler * RANGE_FFT_BINS + range;
                 if (cells[index].doppler_detection &&
                     cells[index].range_detection) {
-                    if (ddma_results[index].status != DDMA_RESOLVED) {
-                        ++pipeline_stats.rejected_peaks;
-                        pipeline_stats.last_rejected_candidates =
-                            ddma_results[index].candidates;
-                        continue;
-                    }
                     float snr = rd_map_db[index] -
                                 cells[index].doppler_threshold +
                                 CFAR_DOPPLER_THRESHOLD_DB;
@@ -1895,9 +1891,8 @@ static int cfar_2d_and_validate(const float *rd_map_db,
                                 fmaxf(-0.5f, fminf(0.5f, delta));
                         }
                     }
-                    /* Only reconstruct a velocity after the hypothesis and
-                     * empty-band tests above.  The sampled +/-37.7 m/s span
-                     * alone is NOT evidence of reliable DDMA disambiguation. */
+                    /* Comparison mode follows the original permissive 2T4R
+                     * selection. Ambiguous 4TX velocities are provisional. */
                     if (raw_doppler >= DOPPLER_FFT_SIZE / 2u) {
                         decoded_doppler -= (int)DOPPLER_FFT_SIZE;
                     }
