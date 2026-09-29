@@ -40,6 +40,7 @@ extern "C" {
 #define BOARD_LONG_STRIP_ID_X2100_8 8       /* 长条板 x2100-8# */
 #define BOARD_LONG_STRIP_ID_X2100_9 9       /* 长条板 x2100-9# */
 #define BOARD_LONG_STRIP_ID_X2100_10 10     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_MT4T4R_TX01 100 /* MT-4T4R-01, TX0/TX1 only */
 
 
 /* [!] 在此选择当前板型 */
@@ -63,7 +64,7 @@ extern "C" {
 
 /* ----- 长条板（以 x2100-<编号#> 区分） ----- */
 #if BOARD_TYPE == BOARD_TYPE_LONG_STRIP
-#define BOARD_ID_LONG_STRIP BOARD_LONG_STRIP_ID_X2100_5 /* 选择 x2100-8#，可改为 9, 10... */
+#define BOARD_ID_LONG_STRIP BOARD_LONG_STRIP_ID_MT4T4R_TX01
 #endif
 
 /* ================================================================

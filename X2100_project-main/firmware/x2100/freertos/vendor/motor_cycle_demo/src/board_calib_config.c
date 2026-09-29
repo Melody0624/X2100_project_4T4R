@@ -223,6 +223,20 @@ fft_cpx_f32 angCalibMat[8] = {
         { 0.198699441132030f, -0.191422689243312f },
         { -0.233993471616157f, 0.090373767318885f },
     };
+#elif (BOARD_ID_LONG_STRIP == BOARD_LONG_STRIP_ID_MT4T4R_TX01)
+    /* Record_20260929_191557_adc.dat: broadside reflector, range bin 6,
+     * DDMA bins 0/32, TX-major RX0..RX3.  Last 26 frames held out.
+     * This is board-specific; valid nonzero Flash calibration overrides it. */
+    fft_cpx_f32 angCalibMat[8] = {
+        { 1.000000000f,  0.000000000f },
+        {-1.199234011f,  0.340254707f },
+        {-0.481210837f, -0.991088858f },
+        { 0.914202506f,  0.373536156f },
+        { 0.413992762f,  1.169006471f },
+        {-0.884424258f, -1.231215617f },
+        { 0.929755741f, -1.007362464f },
+        {-0.094489032f,  1.232396857f },
+    };
 #endif
 
 #else
@@ -599,7 +613,7 @@ fft_cpx_f32 angCalibMat_back[8];
 	 -7.178303343092f,	 -6.532454428502f,	 -5.649002176237f,	 -4.536205515971f,
 	 -3.568716642116f,	 -1.938673314171f,	 -1.324518704342f,	 -0.743485481261f,
 };
-#elif (BOARD_ID_LONG_STRIP == 5)
+#elif (BOARD_ID_LONG_STRIP == 5) || (BOARD_ID_LONG_STRIP == BOARD_LONG_STRIP_ID_MT4T4R_TX01)
     float angFFT_interp[128] = {
         0.000000000000f,	 0.451913973178f,	 1.000000000000f,	 2.000000000000f,
         4.000000000000f,	 5.000000000000f,	 6.000000000000f,	 7.000000000000f,
