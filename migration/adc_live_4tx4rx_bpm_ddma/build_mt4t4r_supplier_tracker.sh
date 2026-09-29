@@ -102,5 +102,6 @@ MT-4T4R 原厂航迹/预警库接入实验版：
 8. 本版将ASCII命令接到同一个USB CDC口，不重复初始化USB；已实现和明确拒绝的命令见USB_COMMANDS.md。MMC2已重新启用以供SD卡录制，但尚未实板验证。
 9. angCalibMat/angFFT 读写使用独立CAL4 Flash块，读回验证后重启生效；主机测试通过，实板Flash读写和已知角度目标尚未验证。
 10. 实验版源码内置Record_20260928_202805_adc.dat的0度角反16通道幅相候选系数。Flash angCalibMat全0或未配置时使用源码值；有效非零Flash矩阵优先。该系数仅在当前场景的留出帧上验证了内部稳定性，不代表全角度或跨板精度。
+11. 修复厂家跟踪库安装角转换开关未开启的问题。启动应显示 output rotation enabled=1 install_angle=180 deg；航迹位置、速度和航向由厂家库统一转到输出坐标，后向目标的点云和航迹X应同为负。仍需实板验证。
 EOF
 echo "Built MT-4T4R supplier tracking/warning experiment in ${output_root}"

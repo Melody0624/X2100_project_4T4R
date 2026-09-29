@@ -17,6 +17,10 @@ if [[ ${SANITIZE:-0} == 1 ]]; then
     # directly rather than recurse in this WSL host's ASan signal reporter.
     export ASAN_OPTIONS=${ASAN_OPTIONS:-abort_on_error=1:handle_segv=0}
 fi
+gcc "${flags[@]}" -ffunction-sections -fdata-sections -Wl,--gc-sections \
+    -I../../X2100_project-latest/firmware/x2100/freertos/vendor \
+    tests/test_supplier_mounting.c -lm -o "${test_dir}/test_supplier_mounting${suffix}"
+"${test_dir}/test_supplier_mounting${suffix}" | tee "${test_dir}/supplier_mounting${suffix}.log"
 gcc "${flags[@]}" -Wall -Wextra -Werror tests/test_can_protocol.c radar_can_protocol.c \
     -o "${test_dir}/test_can_protocol${suffix}"
 "${test_dir}/test_can_protocol${suffix}" | tee "${test_dir}/can_protocol${suffix}.log"

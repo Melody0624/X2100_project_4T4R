@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #include "radar_tracking.h"
 #include "radar_warning.h"
@@ -13,6 +14,15 @@
 #include "motor_cycle_demo/inc/radar_functions.h"
 #include "motor_cycle_demo/inc/algorithm_functions.h"
 #include "motor_cycle_demo/inc/ego_vlc_estimation.h"
+
+/* Verified against the supplied MIPS track_output disassembly: the flag at
+ * ctx+92 selects RCS copy versus rotation using the angle at ctx+96. */
+#if UINTPTR_MAX == UINT32_MAX
+typedef char supplier_mount_flag_abi[
+    offsetof(GlbCtx, radarInfo.isCompInstallAng) == 92u ? 1 : -1];
+typedef char supplier_mount_angle_abi[
+    offsetof(GlbCtx, radarInfo.installAngComp_deg) == 96u ? 1 : -1];
+#endif
 
 MemoryPool g_memoryPool[MAXPOOLNUM];
 const float th_vcsStatic = 1.0f;
@@ -120,6 +130,9 @@ void radar_tracking_reset(void)
     supplier_ctx->wave_params.dopRes = 0.588770330f;
     supplier_ctx->wave_params.maxUmAmbVlc =
         supplier_ctx->wave_params.dopRes * 64.0f;
+    /* Enable the library's position/velocity/heading output rotation, as in
+     * the 2T4R setup. An angle alone leaves track_output in RCS. */
+    supplier_ctx->radarInfo.isCompInstallAng = true;
     supplier_ctx->radarInfo.installAngComp_deg = 180.0f;
     supplier_ctx->radarInfo.longOffset = 0.5f;
     supplier_ctx->radarInfo.isDetVlcPreCompensated = true;
@@ -127,6 +140,7 @@ void radar_tracking_reset(void)
     for (int i = 0; i < MAX_TRACKS; ++i)
         supplier_ctx->trackIDManager.trackIDList[i] = i;
     printf("[SUPPLIER-TRACK] original tracking+warning libraries active; 4T4R interface experimental\n");
+    printf("[SUPPLIER-TRACK] output rotation enabled=1 install_angle=180 deg (position, velocity, heading)\n");
 }
 
 int radar_ego_estimate(const float *azimuth_deg, const float *raw_radial_mps,
