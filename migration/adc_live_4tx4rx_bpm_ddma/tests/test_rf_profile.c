@@ -60,6 +60,18 @@ int main(void)
         assert(radar_rf_flash_rows(flash, sizeof(flash), &bad) == 0);
         assert(radar_rf_flash_rows(flash, sizeof(flash[0]) - 1, &bad) == 0);
     }
+    {
+        static struct reg_line flash[128];
+        assert(n < sizeof(flash) / sizeof(flash[0]));
+        memcpy(flash, t, n * sizeof(*t));
+        assert(radar_rf_matches_builtin(flash, n));
+        /* A syntactically valid old/altered table must not drive 4TX RF. */
+        assert(radar_rf_validate(flash, n - 1, &bad) == 0);
+        assert(!radar_rf_matches_builtin(flash, n - 1));
+        flash[0].value[0] ^= 1u;
+        assert(radar_rf_validate(flash, n, &bad) == 0);
+        assert(!radar_rf_matches_builtin(flash, n));
+    }
     printf("RF PASS rows=%u mirror=%d bpm=%d raw_output=%d failure_cases=%u; hardware NOT tested\n",
            (unsigned)n,SUPPLIER_IS_MIRROR,SUPPLIER_USE_BPM,SUPPLIER_UART_ADC_SEND,(unsigned)n);
     return 0;

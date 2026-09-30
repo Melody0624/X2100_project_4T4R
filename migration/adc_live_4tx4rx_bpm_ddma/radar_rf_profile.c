@@ -2,6 +2,7 @@
 
 #include "supplier_profile_options.h"
 #include "supplier_registers.inc"
+#include <string.h>
 
 const struct reg_line *radar_rf_table(size_t *count)
 {
@@ -50,6 +51,23 @@ size_t radar_rf_flash_rows(const struct reg_line *table, size_t bytes, size_t *b
     if (radar_rf_validate(table, count, bad_row) < 0)
         return 0;
     return count;
+}
+
+int radar_rf_matches_builtin(const struct reg_line *table, size_t count)
+{
+    size_t expected_count, i;
+    const struct reg_line *expected = radar_rf_table(&expected_count);
+    if (count != expected_count || radar_rf_validate(table, count, 0) < 0)
+        return 0;
+    for (i = 0; i < count; ++i) {
+        if (table[i].chipIdx != expected[i].chipIdx ||
+            table[i].addr != expected[i].addr ||
+            table[i].valLen != expected[i].valLen ||
+            memcmp(table[i].value, expected[i].value,
+                   table[i].valLen * sizeof(table[i].value[0])) != 0)
+            return 0;
+    }
+    return 1;
 }
 
 int radar_rf_execute(const struct reg_line *table, size_t count,

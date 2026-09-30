@@ -106,7 +106,7 @@ static int parse_float_value(const char *text, float *value)
     return 0;
 }
 
-static int initialize_blank_config(void)
+int radar_control_initialize_blank_config(void)
 {
     uint32_t magic_words[64] __attribute__((aligned(64)));
     uint32_t verified = 0;
@@ -470,7 +470,7 @@ static void process_command(char *line)
                     reply("ERR calibration values must be finite floats\r\n");
                     return;
                 }
-            if (!flash_config_valid && initialize_blank_config() != 0) {
+            if (!flash_config_valid && radar_control_initialize_blank_config() != 0) {
                 reply("ERR Flash config invalid or not blank; no calibration write\r\n");
                 return;
             }

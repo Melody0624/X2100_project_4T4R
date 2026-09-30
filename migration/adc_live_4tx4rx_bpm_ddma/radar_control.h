@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 void radar_control_init(void);
+/* Seed RADV magic only when the entire config partition is erased. */
+int radar_control_initialize_blank_config(void);
 void radar_control_poll(void);
 int radar_control_running(void);
 int radar_control_raw_enabled(void);

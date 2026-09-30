@@ -87,6 +87,7 @@ cp "${source_dir}/README_FASTBOOT_USB_FIX.md" \
 cp "${source_dir}/USB_SENDER_V2_TEST.md" "${output_root}/"
 cp "${source_dir}/SUPPLIER_TRACKER_EXPERIMENT.md" "${output_root}/"
 cp "${source_dir}/USB_COMMANDS.md" "${output_root}/"
+cp "${source_dir}/README_2T4R_RULES_EXPERIMENT.md" "${output_root}/"
 cp "/mnt/d/downloads/X2100_project-main/tools/monitor_x2100_points.ps1" \
     "${output_root}/"
 cat >"${output_root}/README_本版.txt" <<'EOF'
@@ -103,5 +104,6 @@ MT-4T4R 原厂航迹/预警库接入实验版：
 9. angCalibMat/angFFT 读写使用独立CAL4 Flash块，读回验证后重启生效；主机测试通过，实板Flash读写和已知角度目标尚未验证。
 10. 实验版源码内置Record_20260928_202805_adc.dat的0度角反16通道幅相候选系数。Flash angCalibMat全0或未配置时使用源码值；有效非零Flash矩阵优先。该系数仅在当前场景的留出帧上验证了内部稳定性，不代表全角度或跨板精度。
 11. 修复厂家跟踪库安装角转换开关未开启的问题。启动应显示 output rotation enabled=1 install_angle=180 deg；航迹位置、速度和航向由厂家库统一转到输出坐标，后向目标的点云和航迹X应同为负。仍需实板验证。
+12. 启动时核对Flash射频表：与固件内置4T4R表不同时更新射频表字段并读回验证；相同时不重复擦写。细节见 README_2T4R_RULES_EXPERIMENT.md。
 EOF
 echo "Built MT-4T4R supplier tracking/warning experiment in ${output_root}"

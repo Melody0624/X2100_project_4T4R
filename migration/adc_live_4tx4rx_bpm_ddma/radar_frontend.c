@@ -621,8 +621,10 @@ static struct reg_line cheetah_default_config[] = {
 #include "radar_4tx4rx_profile.h"
 #include "radar_rf_profile.h"
 #if RADAR_EXPERIMENTAL_LIVE
+#include <string.h>
 #include <driver/sfc_nor.h>
 #include "config_manager.h"
+#include "radar_control.h"
 #endif
 
 static struct camera_device *radar_camera;
@@ -636,29 +638,69 @@ static union {
 } flash_rf_storage;
 static size_t flash_rf_rows;
 
-static void radar_rf_select_flash_profile(void)
+static int radar_rf_flash_field_erased(void)
+{
+    size_t i;
+    for (i = 0; i < sizeof(flash_rf_storage.bytes); ++i)
+        if (flash_rf_storage.bytes[i] != 0xffu)
+            return 0;
+    return 1;
+}
+
+static void radar_rf_sync_flash_profile(void)
 {
     uint32_t magic = 0;
+    int magic_read;
     size_t bad_row = (size_t)-1;
+    size_t parsed_rows = 0;
+    size_t builtin_rows = 0;
     const struct reg_line *rows = (const struct reg_line *)flash_rf_storage.bytes;
+    const struct reg_line *builtin = radar_rf_table(&builtin_rows);
     flash_rf_rows = 0;
-    if (sfc_nor_flash_read(RF_CONFIG_FLASH_OFFSET, sizeof(magic),
-                           (uint8_t *)&magic) == sizeof(magic) &&
-        magic == RF_CONFIG_MAGIC &&
+    magic_read = sfc_nor_flash_read(RF_CONFIG_FLASH_OFFSET, sizeof(magic),
+                                    (uint8_t *)&magic);
+    if (magic_read == sizeof(magic) && magic == 0xffffffffu &&
+        radar_control_initialize_blank_config() == 0)
+        magic = RF_CONFIG_MAGIC;
+    if (magic_read != sizeof(magic) || magic != RF_CONFIG_MAGIC ||
         param_get(PARAM_CHEETAH_DEFAULT_CFG, flash_rf_storage.bytes,
-                  sizeof(flash_rf_storage.bytes)) == 0) {
-        flash_rf_rows = radar_rf_flash_rows(rows,
-                                            sizeof(flash_rf_storage.bytes),
-                                            &bad_row);
-        if (flash_rf_rows < 50u || rows[0].addr != 0x2003)
-            flash_rf_rows = 0;
+                  sizeof(flash_rf_storage.bytes)) != 0) {
+        printf("[RF] source=builtin rows=%u reason=config_unavailable; Flash unchanged\n",
+               (unsigned int)builtin_rows);
+        return;
     }
-    if (flash_rf_rows)
-        printf("[RF] source=flash rows=%u (software 4TX decoding remains experimental)\n",
+    parsed_rows = radar_rf_flash_rows(rows, sizeof(flash_rf_storage.bytes),
+                                      &bad_row);
+    if (radar_rf_matches_builtin(rows, parsed_rows)) {
+        flash_rf_rows = parsed_rows;
+        printf("[RF] source=flash rows=%u sync=already_current\n",
                (unsigned int)flash_rf_rows);
-    else
-        printf("[RF] source=builtin rows=%u (Flash absent/invalid, bad_row=%u)\n",
-               radar_rf_table_rows(), (unsigned int)bad_row);
+        return;
+    }
+    if (!parsed_rows && !radar_rf_flash_field_erased()) {
+        printf("[RF] source=builtin rows=%u reason=invalid_flash_table bad_row=%u; Flash unchanged\n",
+               (unsigned int)builtin_rows, (unsigned int)bad_row);
+        return;
+    }
+
+    /* Update only the RF-table field. param_set preserves the other bytes
+     * in each affected NOR sector; never erase the whole config partition. */
+    memset(flash_rf_storage.bytes, 0xff, sizeof(flash_rf_storage.bytes));
+    memcpy(flash_rf_storage.bytes, builtin, builtin_rows * sizeof(*builtin));
+    if (param_set(PARAM_CHEETAH_DEFAULT_CFG, flash_rf_storage.bytes,
+                  sizeof(flash_rf_storage.bytes)) != 0 ||
+        param_get(PARAM_CHEETAH_DEFAULT_CFG, flash_rf_storage.bytes,
+                  sizeof(flash_rf_storage.bytes)) != 0 ||
+        radar_rf_flash_rows(rows, sizeof(flash_rf_storage.bytes), &bad_row) !=
+            builtin_rows ||
+        !radar_rf_matches_builtin(rows, builtin_rows)) {
+        printf("[RF] source=builtin rows=%u reason=flash_sync_or_verify_failed; check supply and backup\n",
+               (unsigned int)builtin_rows);
+        return;
+    }
+    flash_rf_rows = builtin_rows;
+    printf("[RF] source=flash rows=%u sync=updated_from_firmware old_rows=%u\n",
+           (unsigned int)flash_rf_rows, (unsigned int)parsed_rows);
 }
 #endif
 
@@ -692,7 +734,7 @@ int radar_frontend_init(void)
     printf("[RF] supplier=cheetah_128_512 rows=%u structure_ok=%d verified=%d\n",
            radar_rf_table_rows(), radar_rf_table_valid(), radar_rf_profile_ready());
 #if RADAR_EXPERIMENTAL_LIVE
-    radar_rf_select_flash_profile();
+    radar_rf_sync_flash_profile();
     printf("[EXPERIMENTAL] permissive DDMA candidate output; max detections=%u\n",
            RADAR_MAX_DETECTIONS);
 #endif
