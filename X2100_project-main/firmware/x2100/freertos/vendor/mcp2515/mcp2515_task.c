@@ -12,14 +12,15 @@
 #include "general_functions.h"
 #include "../config_manager.h"
 #include "../eol_cal/eol_calibration.h"
+#include "../InitPhaseCalib/InitPhaseCalib.h"
 #include "board.h"
 #include "radar_types.h"
 
 #define MCP2515_INT_GPIO GPIO_PB(27)
 
 //协议选择
-#define OUTPUT_PROTOCOL_CAN_ID_DEFAULT                     1       //默认协议
-#define OUTPUT_PROTOCOL_CAN_ID_EXCELLE                     0       //凯越协议  
+#define OUTPUT_PROTOCOL_CAN_ID_DEFAULT                     0       //默认协议
+#define OUTPUT_PROTOCOL_CAN_ID_EXCELLE                     1       //凯越协议  
 #define OUTPUT_PROTOCOL_CAN_ID_ZONSEN                      0       //宗申协议
 
 #if NEW_PROTOCOL_ENABLE
@@ -420,6 +421,100 @@ static void can_task(void *data)
                     }
                     printf("\n");
                     warn_test_handler(warn_byte);
+                }
+            } else if (rx_msg.id == DID_PHASE_CALIB_TARGET_PARA) {      // CAN ID 0x0130: 设置标靶信息
+                // payload: minRange(1B), minAng(1B), maxAng(1B)
+                uint8_t status = PHASE_CALIB_CAN_STATUS_FAIL;
+                if (rx_msg.dlc >= 3) {
+                    InitPhasePara_t local_para;
+                    local_para.Range     = (int8_t)rx_msg.data[0];
+                    local_para.minAng    = (int8_t)rx_msg.data[1];
+                    local_para.maxAng    = (int8_t)rx_msg.data[2];
+                    local_para.AngStep   = 1;
+                    local_para.commChannel = INIT_PHASE_COMM_CAN;
+                    InitPhaseCalibSetCommChannel(INIT_PHASE_COMM_CAN);
+                    SetTargetPara(&local_para);
+                    status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                    printf("[CAN CALIB] 0x0130 setTargetPara OK: Range=%d, minAng=%d, maxAng=%d\n",
+                           local_para.Range, local_para.minAng, local_para.maxAng);
+                } else {
+                    printf("[CAN CALIB] 0x0130 FAIL: dlc=%d < 3\n", rx_msg.dlc);
+                }
+                // 响应 CAN ID 0x0131: 1字节状态 (0x01=成功, 0x00=失败)
+                {
+                    struct can_message tx_msg;
+                    memset(&tx_msg, 0, sizeof(tx_msg));
+                    tx_msg.id = DID_PHASE_CALIB_TARGET_PARA + 1; // 0x0131
+                    tx_msg.extended = 0;
+                    tx_msg.dlc = 1;
+                    tx_msg.data[0] = status;
+                    mutex_lock(&can_mutex);
+                    mcp2515_send(g_mcp2515_dev, &tx_msg);
+                    mutex_unlock(&can_mutex);
+                    printf("[CAN CALIB] TX resp ID=0x%03X: status=%02X\n", tx_msg.id, status);
+                }
+            } else if (rx_msg.id == DID_PHASE_CALIB_SET_ANGLE) {         // CAN ID 0x0133: 设置转台角度
+                // payload: 2字节 (小端 uint16_t), 666=无效, -90~90有效
+                uint8_t status = PHASE_CALIB_CAN_STATUS_FAIL;
+                if (rx_msg.dlc >= 2) {
+                    uint16_t raw = (uint16_t)(rx_msg.data[0] | (rx_msg.data[1] << 8));
+                    if (raw == 666) {
+                        SetTargetAngle(666);
+                        printf("[CAN CALIB] 0x0133 setAngle OK: invalid(666)\n");
+                    } else {
+                        int32_t angle = (int32_t)(int16_t)raw;
+                        SetTargetAngle(angle);
+                        printf("[CAN CALIB] 0x0133 setAngle OK: angle=%d\n", angle);
+                    }
+                    InitPhaseCalibSetCommChannel(INIT_PHASE_COMM_CAN);
+                    status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                } else {
+                    printf("[CAN CALIB] 0x0133 FAIL: dlc=%d < 2\n", rx_msg.dlc);
+                }
+                // 响应 CAN ID 0x0134: 1字节状态
+                {
+                    struct can_message tx_msg;
+                    memset(&tx_msg, 0, sizeof(tx_msg));
+                    tx_msg.id = DID_PHASE_CALIB_SET_ANGLE + 1;   // 0x0134
+                    tx_msg.extended = 0;
+                    tx_msg.dlc = 1;
+                    tx_msg.data[0] = status;
+                    mutex_lock(&can_mutex);
+                    mcp2515_send(g_mcp2515_dev, &tx_msg);
+                    mutex_unlock(&can_mutex);
+                    printf("[CAN CALIB] TX resp ID=0x%03X: status=%02X\n", tx_msg.id, status);
+                }
+            } else if (rx_msg.id == DID_PHASE_CALIB_START) {              // CAN ID 0x0135: 启动/停止校准
+                // payload: 1字节 (0=停止, 1=启动)
+                uint8_t status = PHASE_CALIB_CAN_STATUS_FAIL;
+                if (rx_msg.dlc >= 1) {
+                    uint8_t cmd = rx_msg.data[0];
+                    InitPhaseStep_n step;
+                    if (cmd == 0) {
+                        step = INIT_PHASE_STEP_IDLE;
+                    } else {
+                        step = INIT_PHASE_STEP_START;
+                    }
+                    InitPhaseCalibSetCommChannel(INIT_PHASE_COMM_CAN);
+                    SetInitPhaseStepFlg(step);
+                    status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                    printf("[CAN CALIB] 0x0135 startPhaseCalib OK: cmd=%d -> state=%d\n",
+                           cmd, step);
+                } else {
+                    printf("[CAN CALIB] 0x0135 FAIL: dlc=%d < 1\n", rx_msg.dlc);
+                }
+                // 响应 CAN ID 0x0136: 1字节状态
+                {
+                    struct can_message tx_msg;
+                    memset(&tx_msg, 0, sizeof(tx_msg));
+                    tx_msg.id = DID_PHASE_CALIB_START + 1;       // 0x0136
+                    tx_msg.extended = 0;
+                    tx_msg.dlc = 1;
+                    tx_msg.data[0] = status;
+                    mutex_lock(&can_mutex);
+                    mcp2515_send(g_mcp2515_dev, &tx_msg);
+                    mutex_unlock(&can_mutex);
+                    printf("[CAN CALIB] TX resp ID=0x%03X: status=%02X\n", tx_msg.id, status);
                 }
             } else {
                 printf("CAN message received: ID=0x%X, DLC=%d, Data=", rx_msg.id, rx_msg.dlc);

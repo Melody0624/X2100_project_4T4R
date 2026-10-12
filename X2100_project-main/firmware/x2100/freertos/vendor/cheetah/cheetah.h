@@ -19,7 +19,7 @@
 
 #define CHEETAH_CHECK 		1
 
-#define CMD_READ     		0xc
+#define CMD_READ     		0x6
 #define CMD_WRITE    		0x9
 #define CMD_SINGLE   		0x1
 #define CMD_BURST   		0x2
@@ -63,9 +63,12 @@ int cheetah_reg_write_single(int devidx, uint16_t addr, uint32_t val, int check)
 int cheetah_reg_read_burst(int devidx, uint16_t addr, uint32_t *pdata, uint16_t cnt, int check);
 int cheetah_reg_write_burst(int devidx, uint16_t addr, uint32_t *pdata, uint16_t cnt, int check);
 void cheetah_start(void);
+int cheetah_start_checked(void);
 void cheetah_stop(void);
+void cheetah_stop_for_reconfig(void);
 void cheetah_reset(void);
 void reset_ram(int devidx);
+int set_regs_to_target_checked(struct reg_line *regscfg, int count);
 void set_regs_to_target(struct reg_line *regscfg, int count);
 
 #endif /* CHEETAH_H */

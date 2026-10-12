@@ -208,12 +208,21 @@ static void init_dma_addr(int index)
     struct frame_data *frm;
 
     frm = get_free_frm(index);
+    if (!frm) {
+        printf("vic%d: no free frame for DMA buffer 0\n", index);
+        drv->t[0] = NULL;
+        drv->t[1] = NULL;
+        return;
+    }
     drv->t[0] = frm;
     set_dma_addr(index, frm, 0);
 
     frm = get_free_frm(index);
-    if (!frm)
+    if (!frm) {
+        printf("vic%d: no free frame for DMA buffer 1; falling back to buffer 0\n",
+               index);
         frm = drv->t[0];
+    }
 
     drv->t[1] = frm;
     set_dma_addr(index, frm, 1);
@@ -386,6 +395,13 @@ static void vic_free_mem(int index)
     free(drv->frames);
     drv->mem = NULL;
     drv->frames = NULL;
+    drv->t[0] = NULL;
+    drv->t[1] = NULL;
+    drv->mem_cnt = 0;
+    drv->frm_size = 0;
+    drv->dma_index = 0;
+    drv->frame_counter = 0;
+    drv->wait_timeout = 0;
 }
 
 
@@ -395,6 +411,8 @@ static int vic_mem_stream_on(int index, struct sensor_attr *attr)
     int ret = 0;
 
     init_dma_addr(index);
+    if (!drv->t[0] || !drv->t[1])
+        return -ENOMEM;
 
     ret = vic_stream_on(index, attr);
     if (ret) {
@@ -520,15 +538,21 @@ static int vic_mem_get_frame(int index, struct frame_data **frame, unsigned int 
     if (!frm && timeout_ms) {
         ret = critical_thread_cond_wait_timeout(&drv->cond, timeout_ms);
         if (ret) {
-            if (camera->is_stream_on)
+            if (camera->is_stream_on && !drv->wait_timeout) {
                 drv->wait_timeout = 1;
+                printf("[CSI_RESTART] first frame timeout: dumping CSI/VIC state\n");
+                mipi_csi_dphy_dump_reg(index);
+                vic_dump_reg(index);
+            }
+            printf("camera: wait frame time out (ret=%d). Debug stats: frm_done=%u, err_cnt=%u, ovf_cnt=%u, frd_cnt=%u\n",
+                   ret, drv->vic_frm_done, drv->vic_fre_c,
+                   drv->vic_frov_c, drv->vic_frd_c);
             goto unlock;
         }
 
         frm = get_usable_frm(index);
         if (ret <= 0 && !frm) {
             ret = -ETIMEDOUT;
-            printf("camera: wait frame time out\n");
         }
     }
 
@@ -889,8 +913,8 @@ static int sensor_attribute_check_init(int index, struct sensor_attr *sensor)
     int ret = -EINVAL;
 
     error_if(!sensor->device_name);
-    error_if(sensor->sensor_info.width < 64 || sensor->sensor_info.width >= 3840);
-    error_if(sensor->sensor_info.height < 64 || sensor->sensor_info.height >= 2560);
+    error_if(sensor->sensor_info.width < 16 || sensor->sensor_info.width >= 3840);
+    error_if(sensor->sensor_info.height < 16 || sensor->sensor_info.height >= 2560);
     error_if(!sensor->ops.power_on);
     error_if(!sensor->ops.power_off);
     error_if(!sensor->ops.stream_on);

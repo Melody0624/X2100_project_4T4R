@@ -30,6 +30,7 @@ typedef struct {
     int *result;            // 发送结果指针
     uint32_t timeout_ms;    // 本次发送超时
     uint8_t need_free;      // 是否需要释放资源
+    volatile int *done_flag; // 发送完成标志指针（non-NULL 时，发送线程完成后置 1）
 } net_send_item_t;
 
 /**
@@ -68,10 +69,12 @@ int net_client_send_async(const uint8_t *data, uint32_t len, uint32_t frameID, u
  * @param data        数据指针
  * @param len         数据长度
  * @param timeout_ms  等待队列可用的超时时间(毫秒)，0表示立即返回
+ * @param done_flag   发送完成标志指针（可为NULL），发送线程完成后置为1
  * @return >=0 表示成功入队(不等于已发送), <0 错误码
- * @note 调用者无需等待发送完成，如需确认结果请使用 net_client_send_sync
+ * @note 调用者通过轮询 done_flag == 1 确认发送完成，在此之前不得复用 data 缓冲区
  */
-int net_client_send_async_nocopy(const uint8_t *data, uint32_t len, uint32_t timeout_ms);
+int net_client_send_async_nocopy(const uint8_t *data, uint32_t len, uint32_t timeout_ms,
+                                 volatile int *done_flag);
 
 /**
  * @brief 同步发送数据（阻塞直到发送完成或超时）

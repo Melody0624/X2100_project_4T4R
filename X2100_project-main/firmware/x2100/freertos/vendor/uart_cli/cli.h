@@ -194,13 +194,16 @@ void* cli_task(void *args);
 void cli_wait_regs_cfg_ok(void);
 void cli_get_server_ip(char **ip, int *port);
 void cli_wirte(const char *format, ...);
-void CliSiganlProcess(uint8_t *data, uint32_t len);
+void CliSiganlProcess(uint8_t *data, uint32_t len, int channel);
 extern int sensor_stop_flag;
 extern int link_freq_idx;
+
+#if USE_SAVE_ANGLE
+int32_t setAngle(int32_t argc, char *argv[]);
+#endif
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* CLI_H */
-

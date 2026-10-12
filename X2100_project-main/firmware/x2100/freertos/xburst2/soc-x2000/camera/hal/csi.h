@@ -75,6 +75,7 @@ typedef enum {
 
 int mipi_csi_phy_stop(int index);
 int mipi_csi_phy_initialization(int index, struct mipi_csi_bus *mipi_info);
+void mipi_csi_dphy_dump_reg(int index);
 
 
 #endif /* __X2000_MIPI_CSI_H__ */

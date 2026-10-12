@@ -16,7 +16,7 @@
 
 size_t get_adc_total_size(GlbCtx* ctx)
 {
-	return ctx->wave_params.numChirps * (sizeof(CheetahChirpHeadInfo) + (sizeof(uint16_t) * ctx->basic_params.numRxs * ctx->wave_params.adcLen) + CHIRP_END_BYTES);
+	return ctx->waveParams.numChirps[0] * (sizeof(CheetahChirpHeadInfo) + (sizeof(uint16_t) * ctx->basicParams.numRxs[0] * ctx->waveParams.adcLen[0]) + CHIRP_END_BYTES);
 }
 
 #if 0
@@ -25,11 +25,11 @@ int get_adc_from_dat_file(GlbCtx* ctx, FILE* fid, bool isSkipFrm) {
 	// 临时变量
 	int sfIdx = 0;
 	int cntSubFrame = 0;
-	int adcLen = ctx->wave_params.adcLen;
-	int numChirps = ctx->wave_params.numChirps;
-	int numRxs = ctx->basic_params.numRxs;
-	int numRXPerMMIC = ctx->basic_params.numRXPerMMIC;
-	int numSubFrms = ctx->wave_params.numSubFrms;
+	int adcLen = ctx->waveParams.adcLen[0];
+	int numChirps = ctx->waveParams.numChirps[0];
+	int numRxs = ctx->basicParams.numRxs[0];
+	int numRXPerMMIC = ctx->basicParams.numRXPerMMIC;
+	int numSubFrms = ctx->waveParams.numSubFrms;
 
 	// 分配内存（如果尚未分配）
 	size_t totalSamples = adcLen * numChirps * numRxs;
@@ -164,19 +164,19 @@ int get_adc_from_dat_file(GlbCtx* ctx, FILE* fid, bool isSkipFrm) {
 		if (IS_CRT) {
 			// 有速度解模糊 (CRT)
 			if (sfIdx <= numSubFrms) {
-				ctx->wave_params.frame_class = 1;
+				ctx->waveParams.frame_class = 1;
 			}
 			else {
-				ctx->wave_params.frame_class = 2;
+				ctx->waveParams.frame_class = 2;
 			}
 		}
 		else {
 			// 无速度解模糊 (CRT)
-			ctx->wave_params.frame_class = 1;
+			ctx->waveParams.frame_class = 1;
 		}
 
 		// 最大不模糊速度计算
-		ctx->wave_params.maxUmAmbVlc = ctx->wave_params.wavelength / 4.0f / ctx->wave_params.chirp_period;
+		ctx->waveParams.maxUmAmbVlc[0] = ctx->waveParams.wavelength[0] / 4.0f / ctx->waveParams.chirp_period[0];
 	}
 
 	return 0;
@@ -189,11 +189,11 @@ int extract_ADCData_from_buffer(GlbCtx* ctx, void* pFrameBuf)
     // 临时变量
     int sfIdx = 0;
     int cntSubFrame = 0;
-    int adcLen = ctx->wave_params.adcLen;
-    int numChirps = ctx->wave_params.numChirps;
-    int numRxs = ctx->basic_params.numRxs;
-    int numRXPerMMIC = ctx->basic_params.numRXPerMMIC;
-    int numSubFrms = ctx->wave_params.numSubFrms;
+    int adcLen = ctx->waveParams.adcLen[0];
+    int numChirps = ctx->waveParams.numChirps[0];
+    int numRxs = ctx->basicParams.numRxs[0];
+    int numRXPerMMIC = ctx->basicParams.numRXPerMMIC;
+    int numSubFrms = ctx->waveParams.numSubFrms;
 
 	(void)cntSubFrame;
 
@@ -240,7 +240,11 @@ int extract_ADCData_from_buffer(GlbCtx* ctx, void* pFrameBuf)
             for (int adcIdx = 0; adcIdx < adcLen; adcIdx++)
             {
 				size_t srcoff = adcIdx * numRXPerMMIC + rxIdx;
+#if (ZU3_FORMAT_DATA_REPLAY == 0)
                 ctx->adcData.sf1[baseIdx + adcIdx] = (float)(pAdcSamp[srcoff] >> 4) - 2048.0f;
+#elif (ZU3_FORMAT_DATA_REPLAY == 1)
+                ctx->adcData.sf1[baseIdx + adcIdx] = (float)(pAdcSamp[srcoff] - 2048.0f);
+#endif
 			}
 		}
 	}
@@ -250,17 +254,17 @@ int extract_ADCData_from_buffer(GlbCtx* ctx, void* pFrameBuf)
     if (IS_CRT) {
         // 有速度解模糊 (CRT)
         if (sfIdx <= numSubFrms) {
-            ctx->wave_params.frame_class = 1;
+            ctx->waveParams.frame_class = 1;
         } else {
-            ctx->wave_params.frame_class = 2;
+            ctx->waveParams.frame_class = 2;
         }
     } else {
         // 无速度解模糊 (CRT)
-        ctx->wave_params.frame_class = 1;
+        ctx->waveParams.frame_class = 1;
     }
 
     // 最大不模糊速度计算
-    ctx->wave_params.maxUmAmbVlc = ctx->wave_params.wavelength / 4.0f / ctx->wave_params.chirp_period;
+    ctx->waveParams.maxUmAmbVlc[0] = ctx->waveParams.wavelength[0] / 4.0f / ctx->waveParams.chirp_period[0];
 
     // ADC 数据检查（简化，仅检查子帧存在性）
     if (!ctx->adcData.isSubframe1Exist) {
@@ -269,4 +273,3 @@ int extract_ADCData_from_buffer(GlbCtx* ctx, void* pFrameBuf)
 
     return 0;
 }
-

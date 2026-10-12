@@ -359,9 +359,6 @@ void Warn_task(void *pvParameters)
     float left_distance = -1.0f, right_distance = -1.0f;
     bool is_rcw = false;
     bool buzzer_state = false;
-    bool last_buzzer_state = false;
-
-    // LED延时熄灭相关变量
     LedMode left_led_mode_stored = LED_MODE_OFF;
     LedMode right_led_mode_stored = LED_MODE_OFF;
     uint32_t left_led_off_time = 0;

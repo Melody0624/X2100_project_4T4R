@@ -711,7 +711,7 @@ static void vic_dvp_init_setting(int index, struct sensor_attr *attr)
     //vic_dump_reg(index);
 }
 
-static void vic_mipi_init_setting(int index, struct sensor_attr *attr)
+static int vic_mipi_init_setting(int index, struct sensor_attr *attr)
 {
     assert_range(attr->sensor_info.width, 1, 3840);
     assert_range(attr->sensor_info.height, 1, 2560);
@@ -732,21 +732,30 @@ static void vic_mipi_init_setting(int index, struct sensor_attr *attr)
     init_mipi_irq(index);
 
     int csi_ret = mipi_csi_phy_initialization(index, &attr->mipi);
-    assert(csi_ret >= 0);
+    if (csi_ret < 0) {
+        printf("[CSI_RESTART] vic%d abort stream-on: CSI init failed (%d)\n",
+               index, csi_ret);
+        mipi_csi_phy_stop(index);
+        return csi_ret;
+    }
 
     vic_register_enable(index);
 
     vic_start(index);
 
-    //vic_dump_reg(index);
+    return 0;
 }
 
-static void vic_hal_stream_on(int index, struct sensor_attr *attr)
+static int vic_hal_stream_on(int index, struct sensor_attr *attr)
 {
-    if (attr->dbus_type == SENSOR_DATA_BUS_DVP)
+    if (attr->dbus_type == SENSOR_DATA_BUS_DVP) {
         vic_dvp_init_setting(index, attr);
-    else if (attr->dbus_type == SENSOR_DATA_BUS_MIPI)
-        vic_mipi_init_setting(index, attr);
+        return 0;
+    } else if (attr->dbus_type == SENSOR_DATA_BUS_MIPI) {
+        return vic_mipi_init_setting(index, attr);
+    }
+
+    return -EINVAL;
 }
 
 
@@ -781,10 +790,14 @@ int vic_stream_on(int index, struct sensor_attr *attr)
         if (ret)
             goto out;
 
-        vic_hal_stream_on(index, attr);
+        ret = vic_hal_stream_on(index, attr);
+        if (ret)
+            goto out;
     } else {
 
-        vic_hal_stream_on(index, attr);
+        ret = vic_hal_stream_on(index, attr);
+        if (ret)
+            goto out;
 
         ret = attr->ops.stream_on();
         if (ret) {
@@ -1065,6 +1078,22 @@ void soc_vic_camera_disable_sensor_mclk(int index)
 
     clk_disable(drv->mclk_div);
     clk_disable(drv->mclk_gate);
+}
+
+int soc_vic_camera_set_frame_count(int index, unsigned int mem_cnt)
+{
+    struct jz_camera_data *drv;
+
+    if (index < 0 || index >= 3 || mem_cnt < 1)
+        return -EINVAL;
+
+    drv = &jz_camera_dev[index];
+
+    if (drv->camera.sensor)
+        return -EBUSY;
+
+    drv->cam_mem_cnt = mem_cnt;
+    return 0;
 }
 
 int soc_vic_camera_register_sensor(int index, struct sensor_attr *sensor)

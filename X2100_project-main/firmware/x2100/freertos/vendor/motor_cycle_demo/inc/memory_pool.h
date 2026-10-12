@@ -9,14 +9,31 @@ extern "C" {
 struct Mmw_pkt_info_t;
 #include <stdbool.h>
 
-#define MAXPOOLNUM 3
+#if ((CHEETAH_CONFIG == cheetah_128_256_config) || (CHEETAH_CONFIG == cheetah_128_512_config))
+#define MAXPOOLNUM 1
+#elif (CHEETAH_CONFIG == cheetah_256_512_config)
+#define MAXPOOLNUM 1
+#endif
+
 
 // 内存池结构体
 typedef struct {
-    // 检测处理相关缓冲区
+    // ===== ADC 数据缓冲区 =====
+    float* adcData_sf1;
+#if NUM_SUBFRAMES == 2
+    float* adcData_sf2;
+#endif
+
+    // ===== 算法参数缓冲区 =====
+    float* angFFTvec;
+
+    // ===== 检测处理相关缓冲区 =====
     fft_cpx_f32* adcData_winDC;                     // ADC去直流数据
     fft_cpx_f32* rangeFFT_res;                      // Range FFT结果
     fft_cpx_f32* dopplerFFT_res;                    // Doppler FFT结果
+#if (CHEETAH_CONFIG == cheetah_256_512_config)
+    fft_cpx_f32* dopplerFFT_res_tmp;                // Doppler FFT结果临时缓冲区
+#endif
     fft_cpx_f32* fftTemp;                           // FFT临时缓冲区
     float* dopplerFFT_sumRx;                        // 非相干累积结果
     unsigned int* maxMetricIndices;                 // 最大度量索引
@@ -25,7 +42,7 @@ typedef struct {
     // FFT配置结构体
     ne10_fft_r2c_cfg_float32_t range_fft_cfg;       // Range FFT配置
     ne10_fft_r2c_cfg_float32_t doppler_fft_cfg;     // Doppler FFT配置
-    ne10_fft_r2c_cfg_float32_t azim_fft_cfg;        // azim FFT配置
+    ne10_fft_r2c_cfg_float32_t azim_fft_cfg;        // Azimuth FFT配置
 
     // Range FFT内部缓冲区
     float* rangeFFT_in;                             // Range FFT输入
@@ -36,8 +53,9 @@ typedef struct {
     fft_cpx_f32* doppler_fft_out;                   // Doppler FFT输出缓冲区
     
     // azim FFT相关缓冲区
-    fft_cpx_f32* azim_fft_in;                       // azim FFT输入缓冲区
-    fft_cpx_f32* azim_fft_out;                      // azim FFT输出缓冲区
+    fft_cpx_f32* FFTInput;                       // azim FFT输入缓冲区
+    fft_cpx_f32* FFTRes;                      // azim FFT输出缓冲区
+    float* FFTAbsRes;                              // FFT幅度结果缓冲区
 
     // 角度估计相关缓冲区
     fft_cpx_f32* bv;                                // 波束形成向量
@@ -134,7 +152,8 @@ typedef struct {
 extern MemoryPool g_memoryPool[MAXPOOLNUM];
 
 // 函数声明
-int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg);
+int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg,
+                     uint32_t raw_frame_size);
 void free_memory_pool(int pool_index);
 
 #ifdef __cplusplus

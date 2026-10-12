@@ -31,6 +31,15 @@ extern uint8_t g_calib_result_status;
 #define DID_CALIB_RESULT_ANG      0x0200
 #define DID_CALIB_RESULT_STATUS   0x0201
 
+// Initial Phase Calibration (CAN) Data Identifiers
+#define DID_PHASE_CALIB_TARGET_PARA    0x0130  // 设置标靶信息: minRange(1B), minAng(1B), maxAng(1B)
+#define DID_PHASE_CALIB_SET_ANGLE      0x0133  // 设置当前转台角度: 2bytes, 666=无效, -90~90有效
+#define DID_PHASE_CALIB_START          0x0135  // 启动校准: 0=停止, 1=启动
+
+// CAN response status codes
+#define PHASE_CALIB_CAN_STATUS_SUCCESS 0x01
+#define PHASE_CALIB_CAN_STATUS_FAIL    0x00
+
 void eol_calib_start(void);
 void eol_calib_stop(void);
 void eol_calib_process_frame(DetInfo* detInfo);

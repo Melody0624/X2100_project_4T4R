@@ -13,28 +13,37 @@
 
 #include "radar_types.h"
 
+ /* 阈值定义 */
+// 一般阈值
+extern const float th_fovEdgeInit_deg;		// 阈值：FOV边缘初始化角度（度）
+extern const float th_FOVEdge_deg;			// 阈值：FOV边缘偏置（m）
+
+extern const int th_maxAgeAsHeader_near;	// Header状态的最大Age
+extern const int th_maxAgeAsHeader_far;		// Header状态的最大Age
+
+extern const float th_len_max_basic;		// 长度上限（航迹头）
+extern const float th_len_max_small_veh;	// 长度上限（小车）
+extern const float th_len_max_large_veh;	// 长度上限（大车）
+extern const float th_wid_max_veh;			// 宽度上限
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 	// 获取航迹ID
 	int get_track_ID(GlbCtx* ctx);
-	// 更新航迹分数
-	void update_track_score(GlbCtx* ctx, int trackID);
 	// 获取航迹运动状态
 	void get_track_motion_state(GlbCtx* ctx, int trackID, bool isHeaderToNew);
-	// 获取航迹参考边界
-	//void get_reference_edge(GlbCtx* ctx, int trackID);
 	// 删除航迹
 	void delete_track(GlbCtx* ctx, int trkIdx);
-	// 坐标系旋转
-	void rotate_coordinates(float x_in, float y_in, float angle_rad, float* x_out, float* y_out);
-	// 计算目标在雷达坐标系中的方位角覆盖范围
-	void compute_FOV_range(float x_rcs, float y_rcs, float legnth_tcs,
-		float width_tcs, float heading_rcs_rad, float* max_azm, float* min_azm);
 	// 获取航迹最近边
 	void get_closet_trk_edge(float x_rcs, float y_rcs, float heading_rcs_rad, int* refEdgeLen, int* refEdgeWid);
-	// 计算主车（雷达处）速度矢量（基于静态目标的 VLC 估计，后向雷达专用）
-	void getEgoVlcByStatic(GlbCtx* glbCtx, float* egoVx_out, float* egoVy_out, int pool_index);
+	// 获取聚类中心点(通过最近边)
+	void get_ctr_by_edge(float* refPt_x_rcs, float* refPt_y_rcs,
+		int refEdgeLen, int refEdgeWid, float* x_tcs_list, float* y_tcs_list, int numPoints,
+		float boxLen, float boxWid, float heading_rcs_rad);
+	// 计算主车车速（基于静态目标的 VLC 估计，后向雷达专用）
+	float getEgoVlcByStatic(GlbCtx* glbCtx, int pool_index);
 	// 获取自车信息
 	void getEgoVehInfo(GlbCtx* ctx, int pool_index);
 	// 计算自车运动帧间差异量

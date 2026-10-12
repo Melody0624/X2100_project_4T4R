@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file        angle_estimation_v1.c
  * @brief       角度估计模块。对 CFAR 检测点执行方位 FFT 加抛物线插值，
  *              估计到达角(AoA)，支持 DDMA 解码后的虚拟天线阵列处理。
@@ -16,7 +16,7 @@
 #include "complex_abs_f32.h"
 #include "memory_pool.h"
 
-static float parabolic_interp(const float *x, int n, int k)
+static float angle_parabolic_interp(const float *x, int n, int k)
 {
     int km1 = (k - 1 + n) % n;
     int kp1 = (k + 1) % n;
@@ -41,8 +41,8 @@ static void azim_fft_ne10(fft_cpx_f32* bv, const float* winAzimuth, int numVirtu
     }
 
     // 使用全局内存池中的输入输出缓冲区
-    fft_cpx_f32 *in = g_memoryPool[pool_index].azim_fft_in;
-    fft_cpx_f32 *out = g_memoryPool[pool_index].azim_fft_out;
+    fft_cpx_f32 *in = g_memoryPool[pool_index].FFTInput;
+    fft_cpx_f32 *out = g_memoryPool[pool_index].FFTRes;
     
     // 检查内存池是否已初始化
     if (!g_memoryPool[pool_index].initialized) {
@@ -87,10 +87,10 @@ void angle_estimation_v1(
     int pool_index)
 {
     int numDets = glbCtx->detInfoRD.numDets;
-    // float d_azm = glbCtx->basic_params.minElemSpacing;
-    unsigned int numTxs = glbCtx->basic_params.numTxs;
-    unsigned int numRxs = glbCtx->basic_params.numRxs;
-    unsigned int numTotalSubBands = numTxs + glbCtx->wave_params.numEmptyBands;
+    // float d_azm = glbCtx->basicParams.minElemSpacing[0];
+    unsigned int numTxs = glbCtx->basicParams.numTxs[0];
+    unsigned int numRxs = glbCtx->basicParams.numRxs[0];
+    unsigned int numTotalSubBands = numTxs + glbCtx->waveParams.numEmptyBands[0];
     unsigned int NFFT_doppler = numDoppBinsPerSubBand * numTotalSubBands;
     for (int detIdx = 0; detIdx < numDets; detIdx ++) 
     {
@@ -113,7 +113,7 @@ void angle_estimation_v1(
                 dopBinIdx_ddmaDec_tx = dopIdx + subBandIdx * numDoppBinsPerSubBand;
                 idx = rxIdx * numRngBins * NFFT_doppler + dopBinIdx_ddmaDec_tx * numRngBins + rngIdx;
                 bv_idx = txIdx * numRxs + rxIdx;
-                bv_logIdx = glbCtx->radarInfo.logicIdx_reorder[bv_idx]; // 调整逻辑顺序
+                bv_logIdx = glbCtx->radarInfo.logicIdx_reorder_sf1[bv_idx]; // 调整逻辑顺序
                 bv[bv_idx].r = (float)(dopplerFFT_res[idx].r * angCalib[bv_idx].r - dopplerFFT_res[idx].i * angCalib[bv_idx].i); // calibration real
                 bv[bv_idx].i = (float)(dopplerFFT_res[idx].r * angCalib[bv_idx].i + dopplerFFT_res[idx].i * angCalib[bv_idx].r); // calibration imag
             }
@@ -137,7 +137,7 @@ void angle_estimation_v1(
         float azm_deg = parab_peak(glbCtx->algInfo.angFFTvec, azmFFT_abs, AZM_FFT_SIZE, peakIdx, 1);
 
         ///* ---------- Interpolation ---------- */
-        // float peakInterp = parabolic_interp(azmFFT_abs, AZM_FFT_SIZE, peakIdx);
+        // float peakInterp = angle_parabolic_interp(azmFFT_abs, AZM_FFT_SIZE, peakIdx);
 
         // if (peakInterp > AZM_FFT_SIZE/2)
         //     peakInterp -= AZM_FFT_SIZE;
@@ -151,7 +151,10 @@ void angle_estimation_v1(
         // float azm_deg = rad2deg(asinf(sin_theta));
 
         /* ---------- Output ---------- */
-        float cur_rng = glbCtx->wave_params.rngRes * rd->rngBinIdx;
+        /* FFT bin spacing differs from the 506-sample physical resolution. */
+        float range_bin_m = LIGHT_SPEED * glbCtx->waveParams.sampling_freq[0] /
+            (2.0f * glbCtx->waveParams.slope[0] * (2 * numRngBins));
+        float cur_rng = range_bin_m * rd->rngBinIdx;
         if (glbCtx->radarInfo.isInHighAlt)
             cur_rng = sqrtf(cur_rng * cur_rng - glbCtx->radarInfo.mountingHeightSqr);
 
@@ -168,9 +171,15 @@ void angle_estimation_v1(
             
         out->x_rcs = cur_rng * cosf(deg2rad(out->azm_deg));
         out->y_rcs = cur_rng * sinf(deg2rad(out->azm_deg));
-        out->vlc_amb = glbCtx->wave_params.dopRes * rd->dopBinIdx_dec;
+        out->vlc_amb = glbCtx->waveParams.dopRes[0] * rd->dopBinIdx_dec;
         out->vlc = out->vlc_amb;
         out->relRDIdx = detIdx;
+        out->sfID = 0;
+        out->rngIdx = rd->rngIdx;
+        out->dopIdx = rd->dopIdx;
+        out->vlc_cand = out->vlc;
+        out->vlc_disAmb_fac = 0;
+        out->vlc_disAmb_conf = VLC_DISAMB_CONF_INIT;
     }
 
     glbCtx->detInfo.numDets = numDets;

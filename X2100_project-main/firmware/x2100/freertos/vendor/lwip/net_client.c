@@ -177,8 +177,8 @@ void net_client_deinit(void)
     if (g_send_queue != NULL) {
         net_send_item_t item;
         while (xQueueReceive(g_send_queue, &item, 0) == pdTRUE) {
-            // if (item.data) vPortFree(item.data);
-            if (item.data) free(item.data);
+            // if (item.need_free && item.data) vPortFree(item.data);
+            if (item.need_free && item.data) free(item.data);
         }
         vQueueDelete(g_send_queue);
         g_send_queue = NULL;
@@ -435,27 +435,29 @@ int net_client_send_async(const uint8_t *data, uint32_t len, uint32_t frameID, u
     return NET_OK;  // 成功入队
 }
 
-int net_client_send_async_nocopy(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
+int net_client_send_async_nocopy(const uint8_t *data, uint32_t len, uint32_t timeout_ms,
+                                 volatile int *done_flag)
 {
-    NET_CHECK_INIT(NET_ERR_STATE); 
+    NET_CHECK_INIT(NET_ERR_STATE);
 
     if (!data || len == 0) return NET_ERR_PARAM;
     if (g_send_queue == NULL) return NET_ERR_STATE;
-    
+
     // 不使用 pvPortMalloc，直接传递指针
     net_send_item_t item = {
         .data = (uint8_t *)data,
         .len = len,
         .result = NULL,
         .timeout_ms = timeout_ms,
-        .need_free = false
+        .need_free = false,
+        .done_flag = done_flag
     };
-    
+
     TickType_t wait_ticks = (timeout_ms == 0) ? 0 : pdMS_TO_TICKS(timeout_ms);
     if (xQueueSend(g_send_queue, &item, wait_ticks) != pdTRUE) {
         return NET_ERR_QUEUE_FULL;
     }
-    
+
     return NET_OK;
 }
 
@@ -539,7 +541,7 @@ static inline bool prv_is_initialized(void)
 static int prv_do_send(int sock, const uint8_t *data, uint32_t len, uint32_t timeout_ms)
 {
     if (sock < 0) return NET_ERR_CONN;
-    
+
     uint32_t sent = 0;
     TickType_t start_tick = xTaskGetTickCount();
     TickType_t timeout_ticks = pdMS_TO_TICKS(timeout_ms);
@@ -551,18 +553,18 @@ static int prv_do_send(int sock, const uint8_t *data, uint32_t len, uint32_t tim
             return NET_ERR_TIMEOUT;
         }
         uint32_t rem_ms = (timeout_ticks - elapsed) * portTICK_PERIOD_MS;
-        
+
         // select 等待可写
         struct timeval tv = { rem_ms / 1000, (rem_ms % 1000) * 1000 };
         fd_set writeset;
         FD_ZERO(&writeset);
         FD_SET(sock, &writeset);
-        
+
         int ret = lwip_select(sock + 1, NULL, &writeset, NULL, &tv);
         if (ret <= 0) {
             return (ret == 0) ? NET_ERR_TIMEOUT : NET_ERR_SEND;
         }
-        
+
         // 执行 send
         int n = lwip_send(sock, data + sent, len - sent, 0);
         if (n < 0) {
@@ -607,18 +609,19 @@ static void prv_send_thread(void *pvParameters)
                 // 未连接，直接返回错误
                 if (item.result) *item.result = NET_ERR_STATE;
 
-                // if (item.data) vPortFree(item.data);
-                if (item.data) free(item.data);
+                if (item.done_flag) *item.done_flag = 1;
+
+                // if (item.need_free && item.data) vPortFree(item.data);
+                if (item.need_free && item.data) free(item.data);
                 continue;
             }
-            
-            // 执行实际发送
-            int ret = prv_do_send(sock, item.data, item.len, 
-                                (item.timeout_ms > 0) ? item.timeout_ms : 3000);
-            
+
+            // 执行实际发送（使用独立的长超时，避免因队列超时过短导致大数据发不完）
+            int ret = prv_do_send(sock, item.data, item.len, 5000);
+
             // 通知结果
             if (item.result) *item.result = ret;
-            
+
             // 发送失败且连接异常，更新状态
             if (ret < 0 && ret != NET_ERR_TIMEOUT) {
                 xSemaphoreTake(g_state_mutex, portMAX_DELAY);
@@ -628,7 +631,10 @@ static void prv_send_thread(void *pvParameters)
                 xSemaphoreGive(g_state_mutex);
             }
         }
-        
+
+        // 通知调用者发送已完成
+        if (item.done_flag) *item.done_flag = 1;
+
         // 释放资源
         if (item.need_free && item.data) {
             // vPortFree(item.data);

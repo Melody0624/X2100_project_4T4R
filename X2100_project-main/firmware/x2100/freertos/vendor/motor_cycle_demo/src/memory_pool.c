@@ -2,61 +2,201 @@
 #include "general_functions.h"
 #include "ransac.h"
 #include "vlc_estimation.h"
+#include "board_calib_config.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include "heap_malloc.h"
 
-// 全局内存池实例
 MemoryPool g_memoryPool[MAXPOOLNUM] = {0};
 
 static unsigned int g_numTxs = 0;
 static unsigned int g_numRxs = 0;
+extern volatile uint8_t g_ps_cal_mode;
+extern volatile uint8_t g_ps_cal_local_mode;
+
+static unsigned int logicIdx_reorder_sf1[NUM_VX_SF1] = { 0, 1, 2, 3, 4, 5, 6, 7};
+static unsigned int vxBVIdx_sf1_azm[NUM_VX_AZM_SF1] = { 0, 1, 2, 3, 4, 5, 6, 7};
+static float vxPosn_sf1_azm[NUM_VX_AZM_SF1] = { 0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f };
+#if NUM_VX_EL_SF1 != 0
+static unsigned int vxBVIdx_el_sf1[NUM_VX_EL_SF1] = { 5, 11 };
+static float vxPosn_el_sf1[NUM_VX_EL_SF1] = { 0.0f, 1.0f };
+#endif
+#if NUM_SUBFRAMES == 2
+static unsigned int logicIdx_reorder_sf2[NUM_VX_SF2] = {  };
+static unsigned int vxBVIdx_sf2_azm[NUM_VX_AZM_SF2] = {	 };
+static float vxPosn_sf2_azm[NUM_VX_AZM_SF2] = { };
+#if NUM_VX_EL_SF2 != 0
+static unsigned int vxBVIdx_el_sf2[NUM_VX_EL_SF2] = { };
+static float vxPosn_el_sf2[NUM_VX_EL_SF2] = { };
+#endif
+#endif
 
 // 内存池初始化函数
-int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
+int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg,
+                     uint32_t raw_frame_size) {
 
-    // printf("init_memory_pool pool_index: %d, g_memoryPool[pool_index].initialized: %d\n", pool_index, g_memoryPool[pool_index].initialized);
     if (g_memoryPool[pool_index].initialized)
     {
-        return -2; // 已经初始化
+        /* 幂等: 已初始化不是错误, 路径 A/B 两次调用都能通过 */
+        return 0;
     }
     
     // 获取雷达参数
-    g_numTxs = ctx->basic_params.numTxs;
-    g_numRxs = ctx->basic_params.numRxs;
-    unsigned int adcLen = ctx->wave_params.adcLen;
-    unsigned int numChirps = ctx->wave_params.numChirps;
-    unsigned int numTotalSubBands = g_numTxs + ctx->wave_params.numEmptyBands;
+    g_numTxs = ctx->basicParams.numTxs[0];
+    g_numRxs = ctx->basicParams.numRxs[0];
+    unsigned int adcLen = ctx->waveParams.adcLen[0];
+    unsigned int numChirps = ctx->waveParams.numChirps[0];
+    unsigned int numTotalSubBands = g_numTxs + ctx->waveParams.numEmptyBands[0];
     unsigned int numVirtualAnts = g_numTxs * g_numRxs;
-    unsigned int numRXPerMMIC = ctx->basic_params.numRXPerMMIC;
+    unsigned int numRXPerMMIC = ctx->basicParams.numRXPerMMIC;
 
     unsigned int NFFT_range = nextPowerOfTwo(adcLen);
     unsigned int numRngBins = NFFT_range / 2;
     unsigned int NFFT_doppler = nextPowerOfTwo(numChirps);
     unsigned int numDopBinsPerSubBand = NFFT_doppler / numTotalSubBands;
     unsigned int totalAdcSamples = adcLen * numChirps * g_numRxs;
+
+    unsigned int numVx_azm[NUM_SUBFRAMES];
+    unsigned int numVx[NUM_SUBFRAMES];
+    for (int s = 0; s < NUM_SUBFRAMES; s++) {
+        numVx_azm[s] = ctx->basicParams.numTxs[s] * ctx->basicParams.numRxs[s];
+        numVx[s] = numVx_azm[s]
+#if NUM_VX_EL_SF1 != 0 || NUM_VX_EL_SF2 != 0
+                    + ((s == 0) ? NUM_VX_EL_SF1 : NUM_VX_EL_SF2)
+#endif
+                    ;
+    }
+    unsigned int totalAdcSamplesPerSubframe[NUM_SUBFRAMES];
+    for (int s = 0; s < NUM_SUBFRAMES; s++) {
+        totalAdcSamplesPerSubframe[s] = ctx->waveParams.adcLen[s] * ctx->waveParams.numChirps[s] * ctx->basicParams.numRxs[s];
+    }
+
+    // === S2 优化: logicIdx/vxBVIdx/vxPosn 是编译期常量 (L20-35 静态数组) ===
+    // === 所有 pool 共享同一份只读引用, 无需 per-pool malloc+memcpy       ===
+
+    g_memoryPool[pool_index].adcData_sf1 = (float*)malloc(totalAdcSamplesPerSubframe[0] * sizeof(float));
+#if NUM_SUBFRAMES == 2
+    g_memoryPool[pool_index].adcData_sf2 = (float*)malloc(totalAdcSamplesPerSubframe[1] * sizeof(float));
+#endif
+
+    g_memoryPool[pool_index].angFFTvec = (float*)malloc(AZM_FFT_SIZE * sizeof(float));
+
+    if (g_memoryPool[pool_index].adcData_sf1 == NULL
+#if NUM_SUBFRAMES == 2
+        || g_memoryPool[pool_index].adcData_sf2 == NULL
+#endif
+        || g_memoryPool[pool_index].angFFTvec == NULL) {
+        printf("错误: memory_pool 雷达相关缓冲区分配失败 pool_index=%d\n", pool_index);
+        free_memory_pool(pool_index);
+        return -1;
+    }
+
+    // === S2: 直接绑定到文件级静态数组 (同一份只读数据, 所有 pool 共享) ===
+    ctx->radarInfo.logicIdx_reorder_sf1 = logicIdx_reorder_sf1;
+    ctx->radarInfo.vxBVIdx_sf1_azm = vxBVIdx_sf1_azm;
+    ctx->radarInfo.vxPosn_sf1_azm = vxPosn_sf1_azm;
+#if NUM_VX_EL_SF1 != 0
+    ctx->radarInfo.vxBVIdx_sf1_el = vxBVIdx_el_sf1;
+    ctx->radarInfo.vxPosn_sf1_el = vxPosn_el_sf1;
+#endif
+#if NUM_SUBFRAMES == 2
+    ctx->radarInfo.logicIdx_reorder_sf2 = logicIdx_reorder_sf2;
+    ctx->radarInfo.vxBVIdx_sf2_azm = vxBVIdx_sf2_azm;
+    ctx->radarInfo.vxPosn_sf2_azm = vxPosn_sf2_azm;
+#if NUM_VX_EL_SF2 != 0
+    ctx->radarInfo.vxBVIdx_sf2_el = vxBVIdx_el_sf2;
+    ctx->radarInfo.vxPosn_sf2_el = vxPosn_el_sf2;
+#endif
+#endif
+
+#if IS_ANG_ACC_IMPROVE_INTERP
+    memcpy(g_memoryPool[pool_index].angFFTvec, angFFT_interp, AZM_FFT_SIZE * sizeof(float));
+#else
+    for (int index = 0; index < AZM_FFT_SIZE; index++)
+    {
+        int shiftIdx = (index < AZM_FFT_SIZE / 2) ? index : (index - AZM_FFT_SIZE);
+        float sin_theta = (float)shiftIdx / (AZM_FFT_SIZE * ctx->basicParams.minElemSpacing[0]);
+        if (sin_theta > 1.0f)  sin_theta = 1.0f;
+        if (sin_theta < -1.0f) sin_theta = -1.0f;
+        g_memoryPool[pool_index].angFFTvec[index] = rad2deg(asinf(sin_theta));
+    }
+#endif
+
+    ctx->adcData.sf1 = g_memoryPool[pool_index].adcData_sf1;
+#if NUM_SUBFRAMES == 2
+    ctx->adcData.sf2 = g_memoryPool[pool_index].adcData_sf2;
+#endif
+
+    ctx->algInfo.angFFTvec = g_memoryPool[pool_index].angFFTvec;
+
+    if (g_ps_cal_mode) {
+        uint32_t packet_size;
+
+        if (raw_frame_size == 0) {
+            raw_frame_size = numChirps *
+                (sizeof(CheetahChirpHeadInfo) +
+                 sizeof(uint16_t) * numRXPerMMIC * adcLen +
+                 CHIRP_END_BYTES);
+        }
+        g_memoryPool[pool_index].saver_pkt_buf_raw =
+            (char *)malloc(raw_frame_size);
+
+        if (!g_ps_cal_local_mode) {
+            packet_size = sizeof(Mmw_output_message_header) +
+                          sizeof(Mmw_output_message_tl) + raw_frame_size;
+            g_memoryPool[pool_index].mmw_pkt_info_buf =
+                (Mmw_pkt_info *)malloc(sizeof(Mmw_pkt_info));
+            g_memoryPool[pool_index].shared_pkt_buf =
+                (char *)malloc(packet_size);
+            g_memoryPool[pool_index].shared_pkt_buf_size = packet_size;
+        }
+        g_memoryPool[pool_index].initialized = true;
+
+        if (!g_memoryPool[pool_index].saver_pkt_buf_raw ||
+            (!g_ps_cal_local_mode &&
+             (!g_memoryPool[pool_index].mmw_pkt_info_buf ||
+              !g_memoryPool[pool_index].shared_pkt_buf))) {
+            free_memory_pool(pool_index);
+            return -1;
+        }
+        return 0;
+    }
     
     // 分配检测处理相关缓冲区
-    g_memoryPool[pool_index].adcData_winDC = (fft_cpx_f32*)malloc(totalAdcSamples * sizeof(fft_cpx_f32));
-    g_memoryPool[pool_index].rangeFFT_res = (fft_cpx_f32*)malloc(numRngBins * numChirps * g_numRxs * sizeof(fft_cpx_f32));
-    g_memoryPool[pool_index].dopplerFFT_res = (fft_cpx_f32*)malloc(numRngBins * NFFT_doppler * g_numRxs * sizeof(fft_cpx_f32));
-    
+    #define DBG_MALLOC(ptr, name, sz) do { \
+        (ptr) = malloc(sz); \
+        if (!(ptr)) printf("[MEMFAIL] pool=%d alloc %s sz=%u FAILED\n", pool_index, name, (unsigned)(sz)); \
+        else        printf("[MEMOK]   pool=%d alloc %s sz=%u ok\n",     pool_index, name, (unsigned)(sz)); \
+    } while(0)
+
+    DBG_MALLOC(g_memoryPool[pool_index].adcData_winDC, "adcData_winDC", totalAdcSamples * sizeof(fft_cpx_f32));
+    DBG_MALLOC(g_memoryPool[pool_index].rangeFFT_res, "rangeFFT_res", numRngBins * numChirps * g_numRxs * sizeof(fft_cpx_f32));
+    DBG_MALLOC(g_memoryPool[pool_index].dopplerFFT_res, "dopplerFFT_res", numRngBins * NFFT_doppler * g_numRxs * sizeof(fft_cpx_f32));
+#if (CHEETAH_CONFIG == cheetah_256_512_config)
+    DBG_MALLOC(g_memoryPool[pool_index].dopplerFFT_res_tmp, "dopplerFFT_res_tmp", numRngBins * NFFT_doppler * g_numRxs * sizeof(fft_cpx_f32));
+#endif
     unsigned int maxFFTSize = (NFFT_range > NFFT_doppler) ? NFFT_range : NFFT_doppler;
-    g_memoryPool[pool_index].fftTemp = (fft_cpx_f32*)malloc((maxFFTSize + FFT_ARRAY_GUARD_LEN) * sizeof(fft_cpx_f32));
+    DBG_MALLOC(g_memoryPool[pool_index].fftTemp, "fftTemp", (maxFFTSize + FFT_ARRAY_GUARD_LEN) * sizeof(fft_cpx_f32));
     
-    g_memoryPool[pool_index].dopplerFFT_sumRx = (float*)malloc(numRngBins * NFFT_doppler * sizeof(float));
-    g_memoryPool[pool_index].maxMetricIndices = (unsigned int*)malloc(numRngBins * numDopBinsPerSubBand * sizeof(unsigned int));
-    g_memoryPool[pool_index].RDMap = (float*)malloc(numRngBins * numDopBinsPerSubBand * sizeof(float));
+    DBG_MALLOC(g_memoryPool[pool_index].dopplerFFT_sumRx, "dopplerFFT_sumRx", numRngBins * NFFT_doppler * sizeof(float));
+    DBG_MALLOC(g_memoryPool[pool_index].maxMetricIndices, "maxMetricIndices", numRngBins * numDopBinsPerSubBand * sizeof(unsigned int));
+    DBG_MALLOC(g_memoryPool[pool_index].RDMap, "RDMap", numRngBins * numDopBinsPerSubBand * sizeof(float));
     
     if (numTotalSubBands == 6 || numTotalSubBands == 12)			// Doppler FFT点数修正
 		NFFT_doppler = NFFT_doppler / 4 * 3;
     
     // 分配和初始化FFT配置结构体
+    printf("[CFG] pool=%d range_fft_size=%u doppler_fft_size=%u azim_fft_size=%u\n",
+           pool_index, NFFT_range, NFFT_doppler, AZM_FFT_SIZE);
     g_memoryPool[pool_index].range_fft_cfg = ne10_fft_alloc_r2c_float32((ne10_int32_t)NFFT_range);
     g_memoryPool[pool_index].doppler_fft_cfg = ne10_fft_alloc_r2c_float32((ne10_int32_t)NFFT_doppler);
     g_memoryPool[pool_index].azim_fft_cfg = ne10_fft_alloc_r2c_float32((ne10_int32_t)AZM_FFT_SIZE);
+    if (!g_memoryPool[pool_index].range_fft_cfg)  printf("[MEMFAIL] range_fft_cfg FAILED\n");
+    if (!g_memoryPool[pool_index].doppler_fft_cfg) printf("[MEMFAIL] doppler_fft_cfg FAILED\n");
+    if (!g_memoryPool[pool_index].azim_fft_cfg)  printf("[MEMFAIL] azim_fft_cfg FAILED\n");
 
     // 分配Range FFT内部缓冲区
     g_memoryPool[pool_index].rangeFFT_in = (float*)malloc((NFFT_range + FFT_ARRAY_GUARD_LEN) * sizeof(float));
@@ -69,8 +209,9 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
     // 分配角度估计相关缓冲区
     g_memoryPool[pool_index].bv = (fft_cpx_f32*)malloc(sizeof(fft_cpx_f32) * numVirtualAnts);
     g_memoryPool[pool_index].azimFFTMag = (float*)malloc(AZM_FFT_SIZE * sizeof(float));
-    g_memoryPool[pool_index].azim_fft_in = (fft_cpx_f32*)malloc((AZM_FFT_SIZE + FFT_ARRAY_GUARD_LEN) * sizeof(fft_cpx_f32));
-    g_memoryPool[pool_index].azim_fft_out = (fft_cpx_f32*)malloc((AZM_FFT_SIZE + FFT_ARRAY_GUARD_LEN) * sizeof(fft_cpx_f32));
+    g_memoryPool[pool_index].FFTAbsRes = (float*)malloc(AZM_FFT_SIZE * sizeof(float));
+    g_memoryPool[pool_index].FFTInput = (fft_cpx_f32*)malloc((AZM_FFT_SIZE + FFT_ARRAY_GUARD_LEN) * sizeof(fft_cpx_f32));
+    g_memoryPool[pool_index].FFTRes = (fft_cpx_f32*)malloc((AZM_FFT_SIZE + FFT_ARRAY_GUARD_LEN) * sizeof(fft_cpx_f32));
     
     // 分配非相干累积临时缓冲区
     g_memoryPool[pool_index].rx_abs_values = (float**)malloc(g_numRxs * sizeof(float*));
@@ -153,14 +294,16 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
     // 分配mmw_pkt_info缓冲区
     g_memoryPool[pool_index].mmw_pkt_info_buf = (Mmw_pkt_info*)malloc(sizeof(Mmw_pkt_info));
 
-    // 分配保存原始数据包缓冲区
-    uint32_t save_raw_packetLen =  numChirps * (sizeof(CheetahChirpHeadInfo) + sizeof(uint16_t) * numRXPerMMIC * adcLen + CHIRP_END_BYTES);
+    // 分配保存原始数据包缓冲区（使用 g_numRxs 与 get_adc_total_size 保持一致）
+    uint32_t save_raw_packetLen =  numChirps * (sizeof(CheetahChirpHeadInfo) + sizeof(uint16_t) * g_numRxs * adcLen + CHIRP_END_BYTES);
     g_memoryPool[pool_index].saver_pkt_buf_raw = (char*)malloc(save_raw_packetLen * sizeof(char));
 
 #if(USE_USB_OUTPUT == 1)
-#if(UART_ADC_SEND == 0)
+// 当 UART 或 NET 任一需要 ADC 时，分配合并大小（ADC + 点云）
+#if(UART_ADC_SEND == 0) && (NET_ADC_SEND == 0)
     if(adcOutFlg == 1)
     {
+        // init 1: ADC + 点云合并大小
         uint32_t shared_packetLen = sizeof(Mmw_output_message_header) + sizeof(Mmw_output_message_tl) + save_raw_packetLen;
         uint32_t shared_totalPacketLen = shared_packetLen;
         g_memoryPool[pool_index].shared_pkt_buf = (char *)malloc(shared_totalPacketLen * sizeof(char));
@@ -168,14 +311,14 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
     }
     else
     {
-        // 分配发送数据包缓冲区
+        // init 2: 仅点云
         uint32_t shared_packetLen = sizeof(Mmw_output_message_header) + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_DetInfo) + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_TrkInfo) + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_EgoVlcInfo) + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_WarnInfo);
-        // uint32_t shared_totalPacketLen = MMWDEMO_OUTPUT_MSG_SEGMENT_LEN * ((shared_packetLen + (MMWDEMO_OUTPUT_MSG_SEGMENT_LEN - 1)) / MMWDEMO_OUTPUT_MSG_SEGMENT_LEN);
         uint32_t shared_totalPacketLen = shared_packetLen;
         g_memoryPool[pool_index].shared_pkt_buf = (char *)malloc(shared_totalPacketLen * sizeof(char));
         g_memoryPool[pool_index].shared_pkt_buf_size = shared_totalPacketLen;
     }
 #else
+    // init 3: ADC + 点云合并大小（UART_ADC_SEND 或 NET_ADC_SEND 为 1）
     uint32_t shared_packetLen;
     shared_packetLen = sizeof(Mmw_output_message_header) + sizeof(Mmw_output_message_tl) + save_raw_packetLen
                          + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_DetInfo)
@@ -183,6 +326,7 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
                          + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_EgoVlcInfo)
                          + sizeof(Mmw_output_message_tl) + sizeof(Mmw_output_message_WarnInfo);
     uint32_t shared_totalPacketLen = shared_packetLen;
+
     g_memoryPool[pool_index].shared_pkt_buf = (char *)malloc(shared_totalPacketLen * sizeof(char));
     g_memoryPool[pool_index].shared_pkt_buf_size = shared_totalPacketLen;
 #endif
@@ -205,7 +349,12 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
 #endif
 
     // 检查所有分配是否成功
-    if (g_memoryPool[pool_index].adcData_winDC == NULL || g_memoryPool[pool_index].rangeFFT_res == NULL ||
+    if (g_memoryPool[pool_index].adcData_sf1 == NULL
+#if NUM_SUBFRAMES == 2
+        || g_memoryPool[pool_index].adcData_sf2 == NULL
+#endif
+        || g_memoryPool[pool_index].angFFTvec == NULL ||
+        g_memoryPool[pool_index].adcData_winDC == NULL || g_memoryPool[pool_index].rangeFFT_res == NULL ||
         g_memoryPool[pool_index].dopplerFFT_res == NULL || g_memoryPool[pool_index].fftTemp == NULL || g_memoryPool[pool_index].dopplerFFT_sumRx == NULL ||
         g_memoryPool[pool_index].maxMetricIndices == NULL || g_memoryPool[pool_index].RDMap == NULL ||
         g_memoryPool[pool_index].cfar_det_flag_mat == NULL || g_memoryPool[pool_index].cfar_range_th_mat == NULL ||
@@ -220,8 +369,8 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
         g_memoryPool[pool_index].cov_mean == NULL || g_memoryPool[pool_index].cov_diff == NULL ||
         g_memoryPool[pool_index].rangeFFT_in == NULL || g_memoryPool[pool_index].rangeFFT_out == NULL ||
         g_memoryPool[pool_index].doppler_fft_in == NULL || g_memoryPool[pool_index].doppler_fft_out == NULL ||
-        g_memoryPool[pool_index].azim_fft_in == NULL || g_memoryPool[pool_index].azim_fft_out == NULL ||
-        g_memoryPool[pool_index].bv == NULL || g_memoryPool[pool_index].azimFFTMag == NULL ||
+        g_memoryPool[pool_index].FFTRes == NULL || g_memoryPool[pool_index].FFTRes == NULL ||
+        g_memoryPool[pool_index].bv == NULL || g_memoryPool[pool_index].azimFFTMag == NULL || g_memoryPool[pool_index].FFTAbsRes == NULL ||
         g_memoryPool[pool_index].rx_abs_values == NULL || g_memoryPool[pool_index].ddma_curSubBandVals == NULL || g_memoryPool[pool_index].ddma_minSubBandVal == NULL ||
         g_memoryPool[pool_index].vlc_azRad == NULL || g_memoryPool[pool_index].vlc_cosVal == NULL || g_memoryPool[pool_index].vlc_sinVal == NULL || g_memoryPool[pool_index].vlc_inlierMask == NULL ||
         g_memoryPool[pool_index].ransac_sampleIndices == NULL || g_memoryPool[pool_index].ransac_tempModel == NULL || g_memoryPool[pool_index].ransac_tempInliers == NULL || g_memoryPool[pool_index].ransac_perm == NULL ||
@@ -236,6 +385,9 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg) {
         g_memoryPool[pool_index].trk_kalman_gain == NULL || g_memoryPool[pool_index].trk_validTrkID_list == NULL ||
         g_memoryPool[pool_index].mmw_pkt_info_buf == NULL || g_memoryPool[pool_index].shared_pkt_buf == NULL ||
         g_memoryPool[pool_index].saver_pkt_buf_raw == NULL 
+#if (CHEETAH_CONFIG == cheetah_256_512_config)
+        || g_memoryPool[pool_index].dopplerFFT_res_tmp == NULL
+#endif
 #if 0
         || g_memoryPool[pool_index].saver_pkt_buf_proc == NULL
 #endif
@@ -271,10 +423,22 @@ void free_memory_pool(int pool_index) {
         return;
     }
     
+    // 释放ADC数据缓冲区
+    if (g_memoryPool[pool_index].adcData_sf1) free(g_memoryPool[pool_index].adcData_sf1);
+#if NUM_SUBFRAMES == 2
+    if (g_memoryPool[pool_index].adcData_sf2) free(g_memoryPool[pool_index].adcData_sf2);
+#endif
+
+    // 释放算法参数缓冲区
+    if (g_memoryPool[pool_index].angFFTvec) free(g_memoryPool[pool_index].angFFTvec);
+
     // 释放检测处理相关缓冲区
     if (g_memoryPool[pool_index].adcData_winDC) free(g_memoryPool[pool_index].adcData_winDC);
     if (g_memoryPool[pool_index].rangeFFT_res) free(g_memoryPool[pool_index].rangeFFT_res);
     if (g_memoryPool[pool_index].dopplerFFT_res) free(g_memoryPool[pool_index].dopplerFFT_res);
+#if (CHEETAH_CONFIG == cheetah_256_512_config)
+    if (g_memoryPool[pool_index].dopplerFFT_res_tmp) free(g_memoryPool[pool_index].dopplerFFT_res_tmp);
+#endif
     if (g_memoryPool[pool_index].fftTemp) free(g_memoryPool[pool_index].fftTemp);
     if (g_memoryPool[pool_index].dopplerFFT_sumRx) free(g_memoryPool[pool_index].dopplerFFT_sumRx);
     if (g_memoryPool[pool_index].maxMetricIndices) free(g_memoryPool[pool_index].maxMetricIndices);
@@ -294,12 +458,13 @@ void free_memory_pool(int pool_index) {
     if (g_memoryPool[pool_index].doppler_fft_out) free(g_memoryPool[pool_index].doppler_fft_out);
 
     // 释放azim FFT相关缓冲区
-    if (g_memoryPool[pool_index].azim_fft_in) free(g_memoryPool[pool_index].azim_fft_in);
-    if (g_memoryPool[pool_index].azim_fft_out) free(g_memoryPool[pool_index].azim_fft_out);
+    if (g_memoryPool[pool_index].FFTInput) free(g_memoryPool[pool_index].FFTInput);
+    if (g_memoryPool[pool_index].FFTRes) free(g_memoryPool[pool_index].FFTRes);
 
     // 释放角度估计相关缓冲区
     if (g_memoryPool[pool_index].bv) free(g_memoryPool[pool_index].bv);
     if (g_memoryPool[pool_index].azimFFTMag) free(g_memoryPool[pool_index].azimFFTMag);
+    if (g_memoryPool[pool_index].FFTAbsRes) free(g_memoryPool[pool_index].FFTAbsRes);
     
     // 释放非相干累积临时缓冲区
     if (g_memoryPool[pool_index].rx_abs_values)

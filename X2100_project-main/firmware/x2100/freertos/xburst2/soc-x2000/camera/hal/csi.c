@@ -118,6 +118,22 @@ static inline int mipi_csi_dphy_get_state(int index)
     return mipi_csi_read_reg(index ,MIPI_PHY_STATE);
 }
 
+static int mipi_csi_dphy_controls_ready(int index)
+{
+    return (mipi_csi_read_reg(index, MIPI_PHY_SHUTDOWNZ) & 0x1) &&
+           (mipi_csi_read_reg(index, MIPI_DPHY_RSTZ) & 0x1) &&
+           (mipi_csi_read_reg(index, MIPI_CSI2_RESETN) & 0x1);
+}
+
+static void mipi_csi_dphy_dump_controls(int index)
+{
+    printf("csi%d control state: shutdownz=0x%08x, dphy_rstz=0x%08x, "
+           "csi2_resetn=0x%08x\n", index,
+           mipi_csi_read_reg(index, MIPI_PHY_SHUTDOWNZ),
+           mipi_csi_read_reg(index, MIPI_DPHY_RSTZ),
+           mipi_csi_read_reg(index, MIPI_CSI2_RESETN));
+}
+
 /*
  * MIPI PHY (Only One PHY)
  */
@@ -295,27 +311,19 @@ static int mipi_csi_gate_clock_disable(int index)
 
 int mipi_csi_phy_ready(int index, int lanes)
 {
-    int ready;
-    int ret = 0;
+    unsigned int ready;
+    unsigned int data_required;
 
-    ready = mipi_csi_dphy_get_state(index);
-    ret = ready & (1 << MIPI_PHY_STATE_CLK_LANE_STOP );
-
-    switch (lanes) {
-    case 4:
-        ret |= ret && (ready & (1 << MIPI_PHY_STATE_DATA_LANE3));
-        ret |= ret && (ready & (1 << MIPI_PHY_STATE_DATA_LANE2));
-    case 2:
-        ret |= ret && (ready & (1 << MIPI_PHY_STATE_DATA_LANE1));
-    case 1:
-        ret |= ret && (ready & (1 << MIPI_PHY_STATE_DATA_LANE0));
-        break;
-    default:
+    if (lanes < 1 || lanes > 4) {
         printf("Do not support lane num %d!\n", lanes);
-        break;
+        return 0;
     }
 
-    return !!ret;
+    ready = mipi_csi_dphy_get_state(index);
+    data_required = ((1U << lanes) - 1U) <<
+                    MIPI_PHY_STATE_DATA_LANE0;
+
+    return (ready & data_required) == data_required;
 }
 
 static int mipi_csi_phy_configure(int index, struct mipi_csi_bus *mipi_info)
@@ -448,10 +456,50 @@ int mipi_csi_phy_initialization(int index, struct mipi_csi_bus *mipi_info)
     }
 
     /*
+     * The CSI hosts share one DPHY.  After a camera unregister/register
+     * transition, verify that the hardware control state still agrees with
+     * the software enable state.  Lane-state bits alone are not sufficient:
+     * they may retain a stop-state value even though DPHY_RSTZ is still zero.
+     * Perform one clean stop/configure cycle before reporting an error.
+     */
+    udelay(100);
+    if (!mipi_csi_dphy_controls_ready(index)) {
+        printf("[CSI_RESTART] csi%d control state invalid after init; "
+               "retry DPHY initialization once\n", index);
+        mipi_csi_dphy_dump_controls(index);
+
+        ret = mipi_csi_phy_stop(index);
+        if (ret < 0) {
+            printf("[CSI_RESTART] csi%d failed to stop before DPHY retry\n",
+                   index);
+            return ret;
+        }
+
+        udelay(100);
+        ret = mipi_csi_phy_configure(index, mipi_info);
+        if (ret < 0) {
+            printf("[CSI_RESTART] csi%d DPHY retry configure failed\n",
+                   index);
+            return ret;
+        }
+
+        udelay(100);
+        if (!mipi_csi_dphy_controls_ready(index)) {
+            printf("[CSI_RESTART] csi%d control state still invalid after "
+                   "DPHY retry\n", index);
+            mipi_csi_dphy_dump_controls(index);
+            mipi_csi_phy_stop(index);
+            return -EIO;
+        }
+        printf("[CSI_RESTART] csi%d DPHY initialization retry succeeded\n",
+               index);
+    }
+
+    /*
      * 检查MIPI CLK DATA的状态是否为停止状态
      */
     int i;
-    int retries = 30;
+    int retries = 5000;
     for (i = 0; i < retries; i++) {
         if (mipi_csi_phy_ready(index, csi_lanes))
             break;
@@ -464,7 +512,8 @@ int mipi_csi_phy_initialization(int index, struct mipi_csi_bus *mipi_info)
         printf("VERSION             : 0x%08x\n", mipi_csi_read_reg(index, MIPI_VERSION));
         printf("N_LANES             : 0x%08x\n", mipi_csi_read_reg(index, MIPI_N_LANES));
         printf("PHY_STATE           : 0x%08x\n", mipi_csi_read_reg(index, MIPI_PHY_STATE));
-        ret = EIO;
+        mipi_csi_dphy_dump_reg(index);
+        ret = -EIO;
     }
 
     return ret;

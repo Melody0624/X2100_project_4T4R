@@ -237,6 +237,7 @@ int parse_dat_detInfo(FILE* fid, GlbCtx* ctx, bool isSkipFrm)
 			fread(&egoSpeed_fw, sizeof(float), 1, fid);
 #if !EGO_VLC_EST_ENABLE
 			ctx->egoVehInfo.egoSpeed = egoSpeed_fw;
+			ctx->egoVehInfo.isEgoSpeedValid = true;
 #else
 			(void)egoSpeed_fw;
 #endif

@@ -1,39 +1,44 @@
-﻿/* DBSCAN 聚类参数 */
-#define DBSCAN_WEIGHT_X         0.1f   /* 纵向权重(极低): 容忍同护栏延伸 */
-#define DBSCAN_WEIGHT_Y         2.0f    /* 横向权重(高): 区分不同护栏 */
+﻿/**
+ * @file        static_zone_supports.h
+ * @brief       静止目标带支持函数接口。提供静止点降采样、聚类、静止带重置、形状检查等常用工具的声明。
+ * @author      Runze Huang
+ * @company     SenardMicro
+ * @date        2026-08-18
+ * @version     1.0
+ * @copyright   Copyright (c) 2026 SenardMicro. All rights reserved.
+ */
+#ifndef STATICZONESUPPORTS_H
+#define	STATICZONESUPPORTS_H
 
-/* RANSAC 拟合参数 */
-#define RANSAC_SAMPLE_SIZE      3
-#define RANSAC_MAX_DISTANCE     1.0f
-#define RANSAC_MAX_TRIALS       9999
 
-/* 关联阈值 */
-#define TH_MAX_X_DIFF_UPDATE    30.0f   /* 更新时x外扩 */
-#define TH_MAX_X_DIFF_MARK      5.0f    /* 标记/删除时x外扩 */
-#define TH_MAX_ASSOC_DIST       1.5f
+ /* 静止目标带识别相关阈值 */
+extern const float th_downsample_tol;			// 降采样 相似性阈值
+extern const float th_max_x_diff_update;		// 静止带更新时x外扩
+extern const float th_max_assoc_dist;			// 静止带关联点到直线距离阈值
 
-/* 生命周期 */
-#define FORGET_COEFF_RLS        1.0f
-#define MAX_MISS_CNT            6
-#define EMA_ALPHA_X_RANGE       0.2f
+extern const int ransac_sample_size;			// RANSAC 样本点数
+extern const int ransac_max_trials;				// RANSAC 最大迭代次数
+extern const float ransac_max_distance;			// RANSAC 内点距离阈值
+extern const float ransac_confidence;			// RANSAC 置信度
 
-/* 形状判别 */
-#define MIN_LONGITUDINAL_SPAN   15.0f   /* 最小纵向跨度(m) */
-#define MIN_ASPECT_RATIO        3.0f    /* 纵/横最小比例 */
-#define MAX_X_RANGE_STATIC_ZONE 50.0f  /* 处理的最大纵向距离(m) */
+extern const float forget_coeff_rls;			// RLS 遗忘因子
+extern const float ema_alpha_x_range;			// EMA 平滑纵向范围系数
 
-/* 下采样 */
-#define TH_DOWNSAMPLE_TOL       2.0f
+extern const float th_min_longitudinal_span;	// 最小纵向跨度(m)
+extern const float th_min_aspect_ratio;			// 纵/横最小比例
+extern const float th_max_x_range_static_zone;	// 处理的最大纵向距离(m)
+extern const float th_max_x_diff_mark;			// 静止带标记
 
-/* 模型参数数量 (直线: y = kx + b) */
-#define LINE_MODEL_SIZE         2
-
+/* 静止目标带支持函数接口 */
+// 相似点降采样
 void downsample_points(float* points, int* numPoints, float tol);
-
+// DBSCAN聚类算法 
 int static_zone_cluster_direct(const StaticDetInfo* repo, unsigned char* clusterIDs);
-
+// 重置静止带对象
 void reset_static_zone(StaticZoneObj* zone);
-
+// 检查点集是否呈条状分布 
 bool check_strip_shape(const float* points, int numPoints);
-
+// 标记静止目标带的检测结果
 void static_zone_mark_detections(GlbCtx* ctx);
+
+#endif // !STATICZONESUPPORTS_H

@@ -53,12 +53,14 @@ int vic_power_on(int index);
 void vic_power_off(int index);
 int vic_power_state(int index);
 int vic_stream_state(int index);
+void vic_dump_reg(int index);
 
 /*
  * 对外接口
  */
 void soc_vic_camera_enable_sensor_mclk(int index, unsigned long clk_rate);
 void soc_vic_camera_disable_sensor_mclk(int index);
+int soc_vic_camera_set_frame_count(int index, unsigned int mem_cnt);
 int soc_vic_camera_register_sensor(int index, struct sensor_attr *sensor);
 void soc_vic_camera_unregister_sensor(int index, struct sensor_attr *sensor);
 

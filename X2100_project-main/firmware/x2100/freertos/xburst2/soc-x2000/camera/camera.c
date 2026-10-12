@@ -257,6 +257,11 @@ void camera_disable_sensor_mclk(int index)
     soc_vic_camera_disable_sensor_mclk(index);
 }
 
+int camera_set_frame_count(int index, unsigned int mem_cnt)
+{
+    return soc_vic_camera_set_frame_count(index, mem_cnt);
+}
+
 int camera_register_sensor(int index, struct sensor_attr *sensor)
 {
     return soc_vic_camera_register_sensor(index, sensor);

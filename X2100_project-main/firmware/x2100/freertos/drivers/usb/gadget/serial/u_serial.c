@@ -9,8 +9,11 @@
 /* RX and TX queues can buffer QUEUE_SIZE packets before they hit the
  * next layer of buffering.  For TX that's a circular buffer; for RX
  * consider it a NOP.  A third layer is provided by the TTY code.
+ *
+ * 注: 从 8 扩到 16, 每方向多占 16*512=8KB 内存 (HS bulk maxpacket=512),
+ *     可降低 USB NACK 空转概率, 提升吞吐。
  */
-#define QUEUE_SIZE		8
+#define QUEUE_SIZE		16
 
 /*
  * The port structure holds info for each port, one for each minor number

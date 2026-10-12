@@ -20,6 +20,7 @@ extern "C" {
 #define BOARD_TYPE_TWO_LAYER   0            /* 两层板 (2026.05.18 x2100) */
 #define BOARD_TYPE_32X32       1            /* 32x32 板子 (X2100_1 ~ X2100_5) */
 #define BOARD_TYPE_LONG_STRIP  2            /* 长条板 (x2100-8#, x2100-9# ...) */
+#define BOARD_TYPE_BARRACADE   3            /* 长条板 (x2100-8#, x2100-9# ...) */
 
 // 32*32 板子编号定义
 #define BOARD_32X32_ID_X2100_1 1            /* 32x32 板子 X2100_1 */
@@ -40,13 +41,23 @@ extern "C" {
 #define BOARD_LONG_STRIP_ID_X2100_8 8       /* 长条板 x2100-8# */
 #define BOARD_LONG_STRIP_ID_X2100_9 9       /* 长条板 x2100-9# */
 #define BOARD_LONG_STRIP_ID_X2100_10 10     /* 长条板 x2100-10# */
-#define BOARD_LONG_STRIP_ID_MT4T4R_TX01 100 /* MT-4T4R-01, TX0/TX1 only */
+#define BOARD_LONG_STRIP_ID_X2100_C1 0xC1     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C2 0xC2     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C3 0xC3     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C4 0xC4     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C5 0xC5     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C6 0xC6     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C7 0xC7     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C8 0xC8     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C9 0xC9     /* 长条板 x2100-10# */
+#define BOARD_LONG_STRIP_ID_X2100_C0 0xC0     /* 长条板 x2100-10# */
 
 
 /* [!] 在此选择当前板型 */
 // #define BOARD_TYPE BOARD_TYPE_TWO_LAYER
 // #define BOARD_TYPE  BOARD_TYPE_32X32
-#define BOARD_TYPE BOARD_TYPE_LONG_STRIP
+// #define BOARD_TYPE BOARD_TYPE_LONG_STRIP
+#define BOARD_TYPE  BOARD_TYPE_BARRACADE
 
 /* ================================================================
  * 各板型变体编号定义（小判断）
@@ -59,19 +70,27 @@ extern "C" {
 
 /* ----- 32x32 板子（1~5） ----- */
 #if BOARD_TYPE == BOARD_TYPE_32X32
-#define BOARD_ID_32X32 BOARD_32X32_ID_X2100_13 /* 选择 X2100_13 */
+#define BOARD_ID_32X32 BOARD_32X32_ID_X2100_1 /* 选择 X2100_13 */
 #endif
 
 /* ----- 长条板（以 x2100-<编号#> 区分） ----- */
 #if BOARD_TYPE == BOARD_TYPE_LONG_STRIP
-#define BOARD_ID_LONG_STRIP BOARD_LONG_STRIP_ID_MT4T4R_TX01
+#define BOARD_ID_LONG_STRIP BOARD_LONG_STRIP_ID_X2100_C1 /* 选择 x2100-8#，可改为 9, 10... */
+
 #endif
 
 /* ================================================================
  * 全局变量声明
  * ================================================================ */
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R
 extern fft_cpx_f32 angCalibMat[8]; // 雷达角度校准矩阵
 extern fft_cpx_f32 angCalibMat_back[8];
+#else
+	extern fft_cpx_f32 angCalibMat_sf1[NUM_VX_SF1];
+#if NUM_SUBFRAMES == 2
+	extern fft_cpx_f32 angCalibMat_sf2[NUM_VX_SF2];
+#endif
+#endif
 extern float angFFT_interp[128];
 
 /* ================================================================

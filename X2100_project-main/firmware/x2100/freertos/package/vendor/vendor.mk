@@ -17,15 +17,7 @@ HAS_DETECTION_SRC := $(if $(wildcard $(TOPDIR)vendor/motor_cycle_demo/src/detect
 HAS_TRACKING_SRC  := $(if $(wildcard $(TOPDIR)vendor/motor_cycle_demo/src/Tracking/Makefile),y,n)
 HAS_WARNING_SRC   := $(if $(wildcard $(TOPDIR)vendor/motor_cycle_demo/src/warningFunc/Makefile),y,n)
 
-ifeq ($(HAS_DETECTION_SRC), n)
-  CONFIG_USE_DETECTION_LIB := y
-else
-  ifeq ($(BUILD_MODE), RELEASE)
-    CONFIG_USE_DETECTION_LIB := y
-  else
-    CONFIG_USE_DETECTION_LIB := n
-  endif
-endif
+CONFIG_USE_DETECTION_LIB := n
 
 ifeq ($(HAS_TRACKING_SRC), n)
   CONFIG_USE_TRACKING_LIB := y
@@ -56,9 +48,6 @@ define vendor_build_mmw_libs_cmd
 	@echo "======================================================"
 	@echo "    BUILD_MODE=RELEASE: Checking MMW Static Libs      "
 	@echo "======================================================"
-	$(if $(wildcard $(TOPDIR)vendor/motor_cycle_demo/src/detection/Makefile), \
-		$(Q)$(MAKE) -C $(TOPDIR)vendor/motor_cycle_demo/src/detection clean all, \
-		@echo "    [SDK Mode] Detection source missing. Skipping rebuild.")
 	$(if $(wildcard $(TOPDIR)vendor/motor_cycle_demo/src/Tracking/Makefile), \
 		$(Q)$(MAKE) -C $(TOPDIR)vendor/motor_cycle_demo/src/Tracking clean all, \
 		@echo "    [SDK Mode] Tracking source missing. Skipping rebuild.")
@@ -68,9 +57,12 @@ define vendor_build_mmw_libs_cmd
 endef
 endif
 
+CFLAGS += -Ivendor
+
 CFLAGS += -Ivendor/cheetah
 
 CFLAGS += -Ivendor/heap_malloc
+CFLAGS += -Ivendor/logger
 
 CFLAGS += -Ivendor/gadget_serial
 CFLAGS += -Ivendor/uart_trans
@@ -87,16 +79,17 @@ CFLAGS += -Ivendor/ne10_fft_lib/inc
 
 CFLAGS += -Ivendor/motor_cycle_demo
 CFLAGS += -Ivendor/motor_cycle_demo/inc
+CFLAGS += -Ivendor/phase_calib
 
 CFLAGS += -Ivendor/eol_cal
 
 CFLAGS += -Ivendor/control
 CFLAGS += -Ivendor/mmw_msg_pkt
+CFLAGS += -Ivendor/InitPhaseCalib
 
 # Conditionally link detection and tracking libraries
-ifeq ($(CONFIG_USE_DETECTION_LIB), y)
-	package_lib-y += -L$(TOPDIR)vendor/motor_cycle_demo/mmwlib -lmmw_detection
-endif
+# Only the supplier velocity/cache object is retained; no closed core detection.
+package_lib-y += -L$(TOPDIR)vendor/motor_cycle_demo/mmwlib -lmmw_velocity
 
 ifeq ($(CONFIG_USE_TRACKING_LIB), y)
 	package_lib-y += -L$(TOPDIR)vendor/motor_cycle_demo/mmwlib -lmmw_tracking

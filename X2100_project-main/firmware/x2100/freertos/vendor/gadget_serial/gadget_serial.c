@@ -20,7 +20,7 @@ static SemaphoreHandle_t usb_serial_mutex = NULL;  // USB Serial 互斥信号量
 static thread_ptr_t usb_gadget_serial_handle = NULL; // 接收任务句柄，用于挂起/恢复
 static volatile int usb_gadget_serial_suspended = 0;  // 任务挂起状态标志
 
-#define RING_BUF_SIZE (64 * 1024)  // 环形缓冲区大小 64KB
+#define RING_BUF_SIZE (256 * 1024)  // 环形缓冲区大小 256KB (扩容以减少丢帧)
 static unsigned char ring_buf[RING_BUF_SIZE];
 static volatile uint32_t ring_buf_head = 0;  // 写入指针
 static volatile uint32_t ring_buf_tail = 0;  // 读取指针
@@ -200,7 +200,7 @@ static void ring_buf_clear(void)
  */
 static void ring_buf_process_task(void *arg)
 {
-    unsigned char send_buf[512];
+    unsigned char send_buf[8192];  // 8KB, 匹配 RX 缓冲, 一次可塞 16 个 USB request (HS bulk 512B)
     int len;
     
     printf("usb serial: ring buffer process thread started\n");
@@ -284,9 +284,8 @@ int usb_serial_send(const unsigned char *data, int len)
         remaining -= sent_this_round;
         current_ptr += sent_this_round;
 
-        if (remaining > 0) {
-            vTaskDelay(pdMS_TO_TICKS(1));
-        }
+        /* gadget_serial_write(block=1) 已阻塞等待 USB 完成中断唤醒,
+         * 无需再主动 sleep, 否则会打断 USB 流水线, 降低吞吐 */
     }
 
     return total_sent;
@@ -399,7 +398,7 @@ static void usb_gadget_serial_thread(void *data)
                 printf("usb serial: read %d bytes\n", len);
                 // CliSiganlProcess 不能放在信号量保护范围内，
                 // 因为它内部会调用 usb_serial_send，导致死锁
-                CliSiganlProcess(usb_rx_buf, len);
+                CliSiganlProcess(usb_rx_buf, len, 1);
             }
         }
         else if (len < 0)

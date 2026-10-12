@@ -15,6 +15,7 @@
 #include <driver/spi.h>
 #include <driver/gpio.h>
 #include <driver/camera.h>
+#include <soc/camera_sensor.h>
 #include <os.h>
 #include <sys/time.h>
 #include <delay.h>
@@ -31,12 +32,11 @@
 #include "cheetah.h"
 #include "heap_malloc.h"
 #include "general_functions.h"
+#include "perf_logger.h"
 #include "radar_functions.h"
 #include "memory_pool.h"
 #include "algorithm_functions.h"
-#if EGO_VLC_ENABLE
-#include "ego_vlc_estimation.h"
-#endif
+#include "rcs_estimation.h"
 #if WARNING_ENABLE
 #include <float.h>
 #include "warning_detection.h"
@@ -60,6 +60,12 @@
 
 #include "board.h"
 #include "board_calib_config.h"
+#include "InitPhaseCalib.h"
+#include "cheetah_calib.h"
+
+extern struct sensor_attr *cheetah_get_sensor_attr(void);
+extern void cheetah_sensor_dynamic_reconfig(int new_width, int new_height);
+float cheetah_get_temperature(int devidx);
 
 // 虚拟数据输入测试功能
 #define WARN_REPLAY 				0  // 启用警告测试数据重放
@@ -257,7 +263,7 @@ extern void release_irq(int irq);
 extern void arch_enable_fpu(void);
 /**************************************CPU 1 veriables********************************************/
 // int watch[10] = {0};
-#define CPU1_ENABLE 1
+#define CPU1_ENABLE 0
 static int first_frame_flg = 1;
 static int current_pool_index = 0;
 static int last_pool_index = 0;
@@ -275,12 +281,17 @@ static int maxFrames = -1;				// 减少帧数以加速测试
 static volatile int isNewTest = 0;
 static int cheetah_running_flg = 0;
 static uint8_t g_outRawDataFlg = 0;		// 输出Raw Data标志，上电时从Flash读取一次，之后不再切换
+static volatile int g_host_config_ready = 0;
+static volatile uint8_t g_reconfig_stop_pending = 0;
 
-#define SOFTWARE_VERSION "V1.2.0"
+/* 网络发送完成标志，每 pool 一个，用于 nocopy 模式下确保 buffer 不被提前复用 */
+static volatile int g_net_send_done[MAXPOOLNUM] = {1};
+
+#define SOFTWARE_VERSION "V1.4.1"
 #define PRODUCT_PLATFORM "X2100"
-#define PRODUCT_VERSION "01_02_00"
+#define PRODUCT_VERSION "01_04_01"
 #define PRODUCT_NAME "MotorCycle_Ingenic"
-#define RELEASE_DATE "2026-07-15"
+#define RELEASE_DATE "2026-09-28"
 /* ---------------- CPU0 (FreeRTOS) Mailbox Logic ---------------- */
 static void cpu0_mailbox_isr(int irq, void *data)
 {
@@ -335,6 +346,9 @@ void update_frmCnt(int input_cnt);
 /* OTA semaphore for main loop blocking during OTA upgrade */
 SemaphoreHandle_t ota_sem;
 
+/* Phase calibration ADC data ready semaphore */
+SemaphoreHandle_t calib_adc_sem = NULL;
+
 // ADC完成通知机制
 struct mutex adc_mutex;
 volatile int adc_finished = 0;
@@ -346,9 +360,9 @@ volatile int g_is_eol_mode = 0; // 0: Normal operation, 1: EOL calibration mode
 
 struct mutex curFrame_mutex;
 volatile int curFrame_is_processing = 0;
+GlbCtx* glbCtx[MAXPOOLNUM];
 
-#define CHEETAH_SAVE 			1
-#define RAW_ADC_CAPTURE_FRAMES	100	// 原始ADC采集帧数；达到后自动停止并关闭文件
+#define CHEETAH_SAVE 			0
 #define USE_WARN_LIGHT			1
 #define USE_UART_TRANS			1
 // #define USE_UART_CLI			1
@@ -357,12 +371,147 @@ volatile int curFrame_is_processing = 0;
 #define USE_NET					0
 #ifdef CONFIG_X2000_MAC0
 #define USE_NET					1
-#define NET_ADC_SEND			0	// 1: 仅发送ADC数据。 2: 发送除了ADC以外的其他数据，例如点云等
 #define NET_TEST				0	// 启用测试函数
 #define USE_WARN_LIGHT			0	// 报警灯与网口在PC1、PC2、PC3冲突，不能同时启用
-#define USE_UART_TRANS			0	// 关闭了串口传输数据和cli功能，仅使用uart9传输log
+/* 保留 USE_UART_TRANS=1 (Line 368)，UART3 作为命令通道不能关闭 */
 #define USE_UART_CLI			0
 #endif
+
+/* 临时关闭逐帧运行日志；最终发布前改为 1 恢复。 */
+#define FRAME_RUNTIME_LOG_ENABLE 1
+/* 调试移相器校准期间临时关闭点云输出；调试完成后改为 1 恢复。 */
+#define POINT_CLOUD_OUTPUT_ENABLE 1
+
+volatile uint8_t g_ps_cal_mode = 0;
+volatile uint8_t g_ps_cal_local_mode = 0;
+volatile int g_ps_cal_ready_pool_index = -1;
+volatile int g_ps_cal_capture_start_error = 0;
+volatile uint8_t g_wait_for_sensor_start = 0;
+static volatile uint8_t g_ps_cal_mem_ready = 0;
+static uint32_t g_ps_cal_saved_chirps;
+static uint32_t g_ps_cal_saved_adc_len;
+size_t g_total_adc_size = 0;
+struct camera_device *g_camera = NULL;
+
+int radar_capture_host_stop(void);
+int radar_capture_reconfig_stop(void);
+int radar_capture_host_start(void);
+static void radar_config_start(void);
+
+int enter_ps_cal_mode(void)
+{
+	mutex_lock(&curFrame_mutex);
+	g_ps_cal_mode = 1;
+	g_ps_cal_mem_ready = 0;
+	isNewTest = 0;
+	mutex_unlock(&curFrame_mutex);
+
+	return 0;
+}
+
+int enter_local_ps_cal_mode(void)
+{
+	/*
+	 * Every local calibration stage carries its own verified wake-up and
+	 * power-on sequence.  Enter calibration from the deterministic low-power
+	 * state produced by cheetah_stop(), rather than leaving Cheetah active
+	 * after the reconfiguration-only reset.
+	 */
+	int ret = radar_capture_host_stop();
+
+	if (ret != 0)
+		return ret;
+
+	mutex_lock(&curFrame_mutex);
+	g_ps_cal_saved_chirps = glbCtx[0]->waveParams.numChirps[0];
+	g_ps_cal_saved_adc_len = glbCtx[0]->waveParams.adcLen[0];
+	g_ps_cal_local_mode = 1;
+	g_ps_cal_mode = 1;
+	g_ps_cal_mem_ready = 0;
+	g_ps_cal_ready_pool_index = -1;
+	g_ps_cal_capture_start_error = 0;
+	mutex_unlock(&curFrame_mutex);
+	return 0;
+}
+
+int prepare_local_ps_cal_memory(uint32_t num_chirps, uint32_t adc_len)
+{
+	if (!g_ps_cal_local_mode || num_chirps == 0 || num_chirps > 512 ||
+	    adc_len == 0 || adc_len > 506)
+		return -EINVAL;
+
+	mutex_lock(&curFrame_mutex);
+	g_ps_cal_mem_ready = 0;
+	for (int i = 0; i < MAXPOOLNUM; i++) {
+		glbCtx[i]->waveParams.numChirps[0] = num_chirps;
+		glbCtx[i]->waveParams.adcLen[0] = adc_len;
+		free_memory_pool(i);
+	}
+	mutex_unlock(&curFrame_mutex);
+
+	return 0;
+}
+
+int allocate_local_ps_cal_memory(uint32_t adc_frame_size)
+{
+	int pool_ret = 0;
+
+	if (!g_ps_cal_local_mode || adc_frame_size == 0)
+		return -EINVAL;
+
+	mutex_lock(&curFrame_mutex);
+	for (int i = 0; i < MAXPOOLNUM; i++) {
+		pool_ret = init_memory_pool(glbCtx[i], i, 0, adc_frame_size);
+		if (pool_ret != 0)
+			break;
+	}
+	if (pool_ret == 0) {
+		g_ps_cal_mem_ready = 1;
+	} else {
+		for (int i = 0; i < MAXPOOLNUM; i++)
+			free_memory_pool(i);
+	}
+	mutex_unlock(&curFrame_mutex);
+
+	return pool_ret;
+}
+
+int configure_ps_cal_memory(uint32_t num_chirps, uint32_t adc_len,
+			    uint32_t adc_frame_size)
+{
+	int pool_ret = 0;
+
+	if (!g_ps_cal_mode || num_chirps == 0 || num_chirps > 512 ||
+	    adc_len == 0 || adc_len > 506 || adc_frame_size == 0)
+		return -EINVAL;
+
+	mutex_lock(&curFrame_mutex);
+	g_ps_cal_mem_ready = 0;
+	mutex_unlock(&curFrame_mutex);
+
+	mutex_lock(&curFrame_mutex);
+	for (int i = 0; i < MAXPOOLNUM; i++) {
+		glbCtx[i]->waveParams.numChirps[0] = num_chirps;
+		glbCtx[i]->waveParams.adcLen[0] = adc_len;
+	}
+
+	for (int i = 0; i < MAXPOOLNUM; i++) {
+		free_memory_pool(i);
+		pool_ret = init_memory_pool(glbCtx[i], i, 0, adc_frame_size);
+		if (pool_ret != 0)
+			break;
+	}
+	if (pool_ret == 0) {
+		g_ps_cal_mem_ready = 1;
+	} else {
+		for (int i = 0; i < MAXPOOLNUM; i++)
+			free_memory_pool(i);
+	}
+	mutex_unlock(&curFrame_mutex);
+
+	return pool_ret;
+}
+
 
 #if CHEETAH_CONFIG == cheetah_128_256_config
 static struct reg_line cheetah_default_config[] = {
@@ -475,7 +624,7 @@ static struct reg_line cheetah_default_config[] = {
 	{0, CMD_DELAY, 1, {0x00000064}},
 	// {0, 0x1053, 1, {0x10000000}},
 };
-#elif CHEETAH_CONFIG == cheetah_128_512_config
+#elif (CHEETAH_CONFIG == cheetah_128_512_config)
 
 static struct reg_line cheetah_default_config[] = {
 
@@ -517,13 +666,15 @@ static struct reg_line cheetah_default_config[] = {
 	{0, CMD_RESET_RAMS, 1, {0x00000000}},
 	{0, CMD_DELAY, 1, {0x0000000A}},
 	// BurstProfileRam0
-	{0, 0x0000, 24, {0x007C0003, 0x00000000, 0x00000000, 0x82450AD1, 0xA91DD272, 0x94C851F8, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x41EF8045, 0x062E6348, 0x92444596, 0x11E3B501, 0x78EA0D34, 0x665A2248, 0x0C783D15, 0x6585F493, 0xF1E79971, 0x00000000, 0x00000000, 0x00000000}},
+	{0, 0x0000, 24, {0x007C0003, 0x00000000, 0x00000000, 0x007C0803, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x41EF8045, 0x062E6348, 0x92444596, 0x11E3B501, 0x78EA0D34, 0x665A2248, 0x0C783D15, 0x6585F493, 0xF1E79971, 0x00000000, 0x00000000, 0x00000000}},
 	// ChripProfileRam0
-	// 512
-	// {0, 0x0018, 24, {0x0EE05A4D, 0x18206064, 0x001F905C, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
-	// 506
-	{0, 0x0018, 24, {0x0EE0599A, 0x18206064, 0x001F905C, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
-
+#if(WAVERANGE_CONFIG == 38)
+    {0, 0x0018, 24, {0x8EE05A4D, 0x3021410A, 0x001F9080, 0x8EE05A4D, 0x3022010A, 0x001F9080, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+#elif (WAVERANGE_CONFIG == 60)
+    {0, 0x0018, 24, {0x8EE05A4D, 0x302140AA, 0x001F9080, 0x8EE05A4D, 0x302200AA, 0x001F9080, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+#else
+	{0, 0x0018, 24, {0x8EE05A4D, 0x30214055, 0x001F9080, 0x8EE05A4D, 0x30220055, 0x001F9080, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+#endif
 	// BurstProfileRam1
 	{0, 0x0030, 24, {0x00FC0003, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
 	// ChripProfileRam1
@@ -531,11 +682,11 @@ static struct reg_line cheetah_default_config[] = {
 	// BeamProfileRam
 	{0, 0x0060, 64, {0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693, 0x80FF80FF, 0x80FF80FF, 0x6027E337, 0xA9C84693}},
 	// DDMAProfileRam
-	{0, 0x00A0, 32, {0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0xFA5A80FF, 0x039F7300, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x730080FF, 0x730080FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x039F80FF, 0xFA5A7300, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF}},
+	{0, 0x00A0, 32, {0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0xFC6080FF, 0x02987900, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x730080FF, 0x730080FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF, 0x80FF80FF}},
 	// RfParamRam
 	{0, 0x00C0, 4, {0x00000000, 0x00000000, 0x00000000, 0x00000000}},
 	// ChirpRam
-	{0, 0x00C4, 64, {0xE000D800, 0x18001000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+	{0, 0x00C4, 64, {0xE000D800, 0x18001000, 0x00010001, 0x00010001, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
 	{0, 0x0104, 64, {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
 	{0, 0x0144, 64, {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
 	{0, 0x0184, 64, {0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000}},
@@ -572,27 +723,41 @@ static struct reg_line cheetah_default_config[] = {
 #if ADC_REPLAY
 	{0, 0x1023, 1, {0x000000F5}},
 #else
+
+#if((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 1))
+	{0, 0x1023, 1, {0x00000050}}, // chirp 发射时间 3.328ms; 0x1023 值： ctx->wave_params.frame_period (50.328ms) - 3.328ms -1ms
+    {0, 0x1028, 1, {0xF9F80080}}, // Intersubframe: 
+#else
 	{0, 0x1023, 1, {0x0000002E}}, // chirp 发射时间 3.328ms; 0x1023 值： ctx->wave_params.frame_period (50.328ms) - 3.328ms -1ms
+    {0, 0x1028, 1, {0x8B680080}}, // Intersubframe: 
 #endif
 #endif
-	{0, 0x1027, 1, {0x04000000}},
+#endif
+	{0, 0x1027, 1, {0x04000001}},
+	{0, 0x1024, 1, {0x04000000}},
+	{0, 0x1025, 1, {0x20000000}},
 	// BPM enabled
 #if USE_BPM
-	{0, 0x1029, 1, {0x04050000}},
+	{0, 0x1029, 1, {0x04052800}},
 #else
-	{0, 0x1029, 1, {0x04010000}},
+	{0, 0x1029, 1, {0x04052800}},
 #endif
 	// BPM Number = 128
-	{0, 0x1033, 1, {0x001FC0E0}},
+	{0, 0x1033, 1, {0x001FCFE0}},
 	// BPM chirp = 1
 	{0, 0x1034, 1, {0x0381C000}},
+	{0, 0x1035, 1, {0x00000000}},
 	{0, 0x103B, 1, {0x00000000}},
-	{0, 0x103C, 1, {0x0000C0E0}},
+	{0, 0x103C, 1, {0x0000C060}},
 	{0, 0x103D, 1, {0x0381C000}},
-	{0, 0x102A, 1, {0xF3FFFFFF}},
+	{0, 0x102A, 1, {0xF3FFF3FF}},
+	{0, 0x100E, 1, {0xFFFF080C}},
+	{0, 0x100F, 1, {0x50A50500}},
+	{0, 0x1014, 1, {0x07006666}},
+	{0, 0x10A0, 1, {0x00120000}},
 	{0, 0x10B5, 1, {0x03020003}},
 	{0, 0x10B6, 1, {0x02020001}},
-	{0, 0x10BB, 1, {0x20000002}},
+	{0, 0x10BB, 1, {0x20000012}},
 	{0, 0x1051, 1, {0x8E9492B0}},
 	{0, 0x1053, 1, {0x04000000}},
 	{0, CMD_DELAY, 1, {0x00000064}},
@@ -601,13 +766,32 @@ static struct reg_line cheetah_default_config[] = {
 	// {0, 0x1053, 1, {0x10000000}},
 };
 
+#elif (CHEETAH_CONFIG == cheetah_256_512_config)
+
+static struct reg_line cheetah_default_config[] = {
+
+};
+
 #endif
 
+const struct reg_line *x2100_get_normal_radar_config(size_t *count)
+{
+#if CHEETAH_CONFIG == cheetah_128_512_config
+    if (count != NULL)
+        *count = sizeof(cheetah_default_config) /
+                 sizeof(cheetah_default_config[0]);
+    return cheetah_default_config;
+#else
+    if (count != NULL)
+        *count = 0;
+    return NULL;
+#endif
+}
+
 /* 变量声明 */
-volatile GlbCtx* glbCtx[MAXPOOLNUM];
 volatile static GlbCtx glbCtx2;
 /* 函数声明 */
-GlbCtx* set_parameters(bool isCalibInstallAng, bool isInhighAltitude, bool isFlipInstall_azm, float radarInstallAng);
+GlbCtx* set_parameters(bool isInhighAltitude, bool isFlipInstall_azm, float radarInstallAng, int pool_index);
 /* angCalibMat / angCalibMat_back / angFFT_interp 已迁移到 board_calib_config.c，通过 board_calib_config.h 统一管理 */
 
 // 使用编译时间戳命名文件名
@@ -756,6 +940,8 @@ static void radar_config_start(void)
         printf("[RADAR_CONFIG] Error: malloc failed! Fallback to Factory Default.\n");
         cheetah_reset();
         mdelay(500);
+        phase_calib_apply_saved_regs(cheetah_default_config,
+                                      sizeof(cheetah_default_config) / sizeof(struct reg_line));
         set_regs_to_target(cheetah_default_config, sizeof(cheetah_default_config) / sizeof(struct reg_line));
         return;
     }
@@ -765,6 +951,8 @@ static void radar_config_start(void)
         printf("[RADAR_CONFIG] Error: Flash read failed! Fallback to Factory Default.\n");
         cheetah_reset();
         mdelay(500);
+        phase_calib_apply_saved_regs(cheetah_default_config,
+                                      sizeof(cheetah_default_config) / sizeof(struct reg_line));
         set_regs_to_target(cheetah_default_config, sizeof(cheetah_default_config) / sizeof(struct reg_line));
         free(read_cfg_buffer);
         return;
@@ -788,6 +976,8 @@ static void radar_config_start(void)
         printf("[RADAR_CONFIG] Warning: Flash config is EMPTY or Corrupted! Fallback to Factory Default.\n");
         cheetah_reset();
         mdelay(500);
+        phase_calib_apply_saved_regs(cheetah_default_config,
+                                      sizeof(cheetah_default_config) / sizeof(struct reg_line));
         set_regs_to_target(cheetah_default_config, sizeof(cheetah_default_config) / sizeof(struct reg_line));
         free(read_cfg_buffer);
         return;
@@ -805,6 +995,11 @@ static void radar_config_start(void)
         printf("[RADAR_CONFIG] Info: Using Custom User Configuration from Flash.\n");
     }
 
+    /* Keep both the immediate Flash configuration and the static fallback
+     * synchronized.  The main loop and restart paths may use the latter. */
+    phase_calib_apply_saved_regs(cheetah_default_config,
+                                  sizeof(cheetah_default_config) / sizeof(struct reg_line));
+    phase_calib_apply_saved_regs(read_cfg_buffer, cfg_count);
     printf("[RADAR_CONFIG] Step 2: Applying config to Radar hardware...\n");
     cheetah_reset();
     mdelay(500);
@@ -824,12 +1019,14 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
     // 调用 Flash 读写测试
     // test_flash_rw();
 
+	perf_logger_init();
+
 	ota_trigger_ab_init();
 	ota_sem = xSemaphoreCreateBinary();
+	calib_adc_sem = xSemaphoreCreateBinary();
 	
     // thread_create("spi_test", 2048, spi_test, NULL);
 	int index = 0;
-	struct camera_device *camera;
     struct camera_info *info;
     int ret;
 	// struct timeval det_start_time, det_end_time;
@@ -849,11 +1046,11 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 	bool isFlipInstall_azm = false;
 #endif
 
-	float radarInstallAng = 180.0f;	// 雷达安装角（度）
+	float radarInstallAng = 0.0f;	// 雷达安装角（度）
 
-	extern float* winRng;
-	extern float* winDop;
-	extern float* winAz;
+	// extern float* winRng;
+	// extern float* winDop;
+	// extern float* winAz;
 
 #if USE_WARN_LIGHT
 	board_init();	// 初始化板级应用
@@ -887,14 +1084,6 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 		   g_outRawDataFlg, 
 		   USE_USB_OUTPUT ? "enabled" : "disabled",
 		   g_outRawDataFlg ? "enabled" : "disabled");
-
-	if(USE_NET == 1)
-	{
-#ifdef	NET_ADC_SEND
-		g_outRawDataFlg = NET_ADC_SEND;
-#endif
-	}
-
 
 	float mech_ang = 0.0f;
 	float calib_ang = 0.0f;
@@ -974,13 +1163,9 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
         maxFrames = -1;
     }
 
-#if (CHEETAH_SAVE == 1) && (SAVE_RAW_DATA == 1)
-    /* 原始ADC采集使用编译期固定上限，避免Flash参数为-1时写满TF卡。 */
-    maxFrames = RAW_ADC_CAPTURE_FRAMES;
-    printf("[ADC_CAPTURE] raw capture enabled, frame limit=%d\r\n", maxFrames);
-#endif
-
     update_frmCnt(maxFrames);
+    g_wait_for_sensor_start = 0;
+    isNewTest = 0;
     printf("CLI init ok: maxFrameCnt=%d (from Flash)\r\n", maxFrames);
 	// 初始化ADC完成mutex
 	mutex_init(&adc_mutex);
@@ -997,7 +1182,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
     // 设置全局参数
     for(int i = 0; i < MAXPOOLNUM; i++)
 	{
-		glbCtx[i] = set_parameters(isCalibInstallAng, isInhighAltitude, isFlipInstall_azm, radarInstallAng);
+		glbCtx[i] = set_parameters(isInhighAltitude, isFlipInstall_azm, radarInstallAng, i);
 		if (!glbCtx[i])
 		{
 			fprintf(stderr, "set_parameters 失败\n");
@@ -1011,15 +1196,21 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 
 	mem_print_system_heap("Before init memory pool");
 	
+	InitPhaseCalibInit(glbCtx[0]);
+
 	// 初始化全局内存池
     for(int i = 0; i < MAXPOOLNUM; i++)
 	{
 		// mem_print_system_heap("Processing init memory pool");
-#if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 0))
-		if (init_memory_pool(glbCtx[i], i, g_outRawDataFlg) != 0)
+		int adc_flag;
+#if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 0)&&(NET_ADC_SEND == 0))
+		adc_flag = g_outRawDataFlg;  // USB 按 flash 参数（仅当两路都无 ADC 时）
 #else
-		if (init_memory_pool(glbCtx[i], i, 0) != 0)
+		adc_flag = 0;  // NET_ADC_SEND 或 UART_ADC_SEND 已由 memory_pool.c 处理
 #endif
+		printf("[POOL_INIT] i=%d adc_flag=%d UART_ADC=%d NET_ADC=%d USE_NET=%d\n",
+		       i, adc_flag, UART_ADC_SEND, NET_ADC_SEND, USE_NET);
+		if (init_memory_pool(glbCtx[i], i, adc_flag, 0) != 0)
 		{
 			printf("内存池初始化失败 glbCtx[%d]\n", i);
 			return;
@@ -1033,15 +1224,15 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 
 	mem_print_system_heap("After init memory pool");
 
-	size_t total_adc_size = get_adc_total_size(glbCtx[0]);
-	printf("Total ADC size per frame: %zu bytes\n", total_adc_size);
+	g_total_adc_size = get_adc_total_size(glbCtx[0]);
+	printf("Total ADC size per frame: %zu bytes\n", g_total_adc_size);
 
 	printf("项目信息: %s_%s_%s_%s_%s\n", PRODUCT_VERSION, PRODUCT_PLATFORM, PRODUCT_NAME, SOFTWARE_VERSION, RELEASE_DATE);
 
-	// 窗函数赋值
-	blackman_window(winRng, WIN_LEN_RANGE_FFT);
-	hanning_window(winDop, WIN_LEN_DOPPLER_FFT);
-	hanning_window(winAz, WIN_LEN_AZIMUTH_FFT);
+	// // 窗函数赋值
+	// blackman_window(winRng, WIN_LEN_RANGE_FFT);
+	// hanning_window(winDop, WIN_LEN_DOPPLER_FFT);
+	// hanning_window(winAz, WIN_LEN_AZIMUTH_FFT);
 
 	if (USE_UART_TRANS)
 	{
@@ -1089,27 +1280,27 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
     // 执行从Flash读取配置，并配置，启动雷达雷达配置
     radar_config_start();
 
-    camera = camera_detect(index);
-    if (!camera) {
+    g_camera = camera_detect(index);
+    if (!g_camera) {
         printf("camera not found\n");
         return;
     }
 
-    info = camera_get_info(camera);
+    info = camera_get_info(g_camera);
     assert(info);
 
     printf("camera found %s (%dx%d) %d\n", info->name, info->width, info->height, info->frame_align_size);
 
-    ret = camera_power_on(camera);
+    ret = camera_power_on(g_camera);
     if (ret < 0) {
         printf("camera failed to power on\n");
         return;
     }
 
-    ret = camera_stream_on(camera);
+    ret = camera_stream_on(g_camera);
     if (ret < 0) {
         printf("camera failed to stream on\n");
-        camera_power_off(camera);
+        camera_power_off(g_camera);
         return;
     }
 #if (CPU1_ENABLE == 1)
@@ -1140,7 +1331,9 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 
 		// 使用锁来安全地检查条件，防止在更新变量时执行
 		mutex_lock(&curFrame_mutex);
-		int should_process = (!isNewTest && ((frmCnt <= maxFrames + numSkippedFrms) || (maxFrames == -1)));
+		int should_process = (!isNewTest && !g_wait_for_sensor_start &&
+				      ((frmCnt <= maxFrames + numSkippedFrms) ||
+				       (maxFrames == -1)));
 		mutex_unlock(&curFrame_mutex);
 		
 		if (should_process)
@@ -1149,10 +1342,62 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 			{
 				cheetah_running_flg = 1;
 				first_frame_flg = 1;
-				cheetah_reset();
-				mdelay(500);
-				set_regs_to_target(cheetah_default_config, sizeof(cheetah_default_config) / sizeof(struct reg_line));
-				cheetah_start();
+#if !(CHEETAH_CONFIG == cheetah_256_512_config)
+				if (g_host_config_ready) {
+					g_host_config_ready = 0;
+					printf("[HOST_CAPTURE] using configuration supplied by host\n");
+				} else if (!g_ps_cal_mode) {
+					cheetah_reset();
+					mdelay(500);
+					set_regs_to_target(cheetah_default_config,
+							   sizeof(cheetah_default_config) /
+							   sizeof(struct reg_line));
+				}
+				ret = camera_stream_on(g_camera);
+				if (ret < 0) {
+					printf("camera failed to stream on\n");
+					cheetah_running_flg = 0;
+					if (g_ps_cal_local_mode) {
+						isNewTest = 1;
+						g_wait_for_sensor_start = 1;
+						g_host_config_ready = 0;
+						g_ps_cal_capture_start_error = ret;
+						if (calib_adc_sem != NULL)
+							xSemaphoreGive(calib_adc_sem);
+						msleep(20);
+						continue;
+					}
+					return;
+				}
+				msleep(20);
+				if (g_ps_cal_local_mode)
+					ret = cheetah_start_checked();
+				else {
+					cheetah_start();
+					ret = 0;
+				}
+				if (ret < 0) {
+					printf("[HOST_CAPTURE] Cheetah data-flow start failed: %d\n",
+					       ret);
+					cheetah_stop();
+					camera_stream_off(g_camera);
+					cheetah_running_flg = 0;
+					if (g_ps_cal_local_mode) {
+						isNewTest = 1;
+						g_wait_for_sensor_start = 1;
+						g_host_config_ready = 0;
+						g_ps_cal_capture_start_error = ret;
+						if (calib_adc_sem != NULL)
+							xSemaphoreGive(calib_adc_sem);
+					} else if (g_ps_cal_mode) {
+						isNewTest = 1;
+						g_wait_for_sensor_start = 1;
+						g_host_config_ready = 0;
+					}
+					msleep(20);
+					continue;
+				}
+#endif
 
 				if (CHEETAH_SAVE)
 				{
@@ -1160,11 +1405,25 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 					save_init(dump_file_name);
 				}
 
+#if ZU3_FORMAT_DATA_REPLAY == 1
+#if ((BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_3T4R) && (CHEETAH_CONFIG == cheetah_128_512_config))
+				zu3_adc_init("/mmcblk2p0/21_06_17_3T4R_506x128_bpm_Zu3Format.dat");
+#elif ((BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_3T4R) && (CHEETAH_CONFIG == cheetah_256_512_config))
+				zu3_adc_init("/mmcblk2p0/21_12_58_3T4R_506x256_bpm_Zu3Format_100.dat");
+#elif ((BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R) && (CHEETAH_CONFIG == cheetah_128_512_config))
+				zu3_adc_init("/mmcblk2p0/21_08_21_4T4R_506x128_bpm_Zu3Format.dat");
+#elif ((BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R) && (CHEETAH_CONFIG == cheetah_256_512_config))
+				zu3_adc_init("/mmcblk2p0/21_13_54_4T4R_506x256_bpm_Zu3Format_100.dat");
+#endif
+#endif
+
 				// 跳过前几帧
-				camera_skip_frames(camera, 3);
+				if (!g_ps_cal_mode)
+					camera_skip_frames(g_camera, 3);
 			}
 
-			printf("\n############### Frame %d ###############\n", frmCnt);
+			if (FRAME_RUNTIME_LOG_ENABLE)
+				printf("\n############### Frame %d ###############\n", frmCnt);
 
 			update_pool_index();
 
@@ -1178,13 +1437,46 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 			struct timeval get_adc_start_time, get_adc_end_time;
 			gettimeofday(&get_adc_start_time, NULL);
 
-			void *buf = camera_wait_frame(camera);
+			info = camera_get_info(g_camera);
+			void *buf = NULL;
+#if ((ADC_REPLAY == 0) && (ZU3_FORMAT_DATA_REPLAY == 0))
+			buf = camera_wait_frame(g_camera);
 			if (buf == NULL) {
-				camera_frame_error_type err = camera_get_frame_error(camera);
-				printf("camera failed to get frame:%d\n", err);
-				if (retry_count++ == 1) {
-					printf("camera reset failed\n");
-					// camera_power_off(camera);
+				camera_frame_error_type err = camera_get_frame_error(g_camera);
+				printf("camera get frame error, %d\n", err);
+				if (retry_count++ >= 10) {
+					printf("camera reset failed permanently (10 consecutive errors). Aborting.\n");
+					if (g_ps_cal_mode) {
+						uint32_t frame_mode = 0;
+						uint32_t int_status = 0;
+						int mode_ret = cheetah_reg_read_single(
+							0, 0x1053, &frame_mode, CHEETAH_CHECK);
+						int int_ret = cheetah_reg_read_single(
+							0, 0x10D2, &int_status, CHEETAH_CHECK);
+						printf("[PhaseCalib] First-frame timeout Cheetah state: "
+						       "0x1053=0x%08x (ret=%d), 0x10D2=0x%08x "
+						       "(ret=%d)\n", frame_mode, mode_ret,
+						       int_status, int_ret);
+						isNewTest = 1;
+						g_wait_for_sensor_start = 1;
+						g_host_config_ready = 0;
+						if (g_ps_cal_local_mode) {
+							g_ps_cal_capture_start_error = -ETIMEDOUT;
+							if (calib_adc_sem != NULL)
+								xSemaphoreGive(calib_adc_sem);
+						}
+					}
+					curFrame_is_processing = 0;
+					mutex_unlock(&curFrame_mutex);
+					if (g_ps_cal_mode) {
+						cheetah_stop();
+						msleep(50);
+						camera_stream_off(g_camera);
+						g_reconfig_stop_pending = 0;
+						cheetah_running_flg = 0;
+						retry_count = 0;
+						continue;
+					}
 					return;
 				}
 				
@@ -1197,12 +1489,16 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 				//     camera_stream_on(camera);
 				// }
 
+				curFrame_is_processing = 0;
+				mutex_unlock(&curFrame_mutex);
 				continue;
 			}
 			gettimeofday(&get_adc_end_time, NULL);
 			// 计算并输出ADC获取时间
 			long get_adc_time_ms = timeval_diff_ms(&get_adc_start_time, &get_adc_end_time);
-			printf("!!! csi获取ADC总时间: %ld 毫秒\n", get_adc_time_ms);
+			if (FRAME_RUNTIME_LOG_ENABLE)
+				printf("!!! csi获取ADC总时间: %ld 毫秒\n", get_adc_time_ms);
+#endif
 
 			retry_count = 0;
 
@@ -1252,32 +1548,67 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 				// }
 			}
 
+			if (g_ps_cal_mode)
+			{
+				uint16_t *pchirp = (uint16_t *)buf;
+
+				for (int j = 0; j < 64; j++)
+				{
+					printf("%04x ", pchirp[j] >> 4);
+					if (j % 16 == 15)
+						printf("\r\n");
+				}
+				printf("\r\n");
+			}
+
 			if (isProcDetection) {
-				struct timeval adc_start_time, adc_end_time;
-				gettimeofday(&adc_start_time, NULL);
-				// printf("\n1) 开始获取ADC数据\n");
-
 #if ADC_REPLAY
-				unsigned long offset = (frmCnt - 1) * total_adc_size;
-				read_frame_raw_data("/mmcblk2p0/Record_202606181713_300Frame.bin", (frmCnt - 1), g_memoryPool[current_pool_index].saver_pkt_buf_raw, total_adc_size, offset);
-
+				unsigned long offset = (frmCnt - 1) * g_total_adc_size;
+				read_frame_raw_data("/mmcblk2p0/Record_20260922_105743_adc.dat", (frmCnt - 1), g_memoryPool[current_pool_index].saver_pkt_buf_raw, g_total_adc_size, offset);
+#elif ZU3_FORMAT_DATA_REPLAY
+				/* ZU3格式：跳过25712字节文件头，按TLV格式读取ADC帧数据 */
+				/* 参考 get_adc_from_dat_file.c 中 get_adc_from_dat_file() 的解析方式 */
+				{
+					PERF_BEGIN(Read_zu3_adc);
+					int zu3_ret = read_zu3_adc_frame_data(frmCnt, g_memoryPool[current_pool_index].saver_pkt_buf_raw, g_total_adc_size);
+					if (zu3_ret <= 0) {
+						perf_logger_printf("ZU3数据读取失败(帧%u)，跳过本帧\n", frmCnt);
+						frmCnt++;
+						continue;
+					}
+					// perf_logger_printf("read_zu3_adc_data: Frame %u, %d bytes\n", frmCnt, zu3_ret);
+					PERF_END(Read_zu3_adc, 0);
+				}
 #else
-				memcpy(g_memoryPool[current_pool_index].saver_pkt_buf_raw, buf, total_adc_size);
+				uint32_t copy_size = (info && info->frame_size < g_total_adc_size) ?
+						     info->frame_size : g_total_adc_size;
+				memcpy(g_memoryPool[current_pool_index].saver_pkt_buf_raw, buf, copy_size);
 #endif
-				// ADC数据读取
-				if (extract_ADCData_from_buffer(glbCtx[current_pool_index], g_memoryPool[current_pool_index].saver_pkt_buf_raw) != 0) {
+
+				PERF_BEGIN(Parse_adc);
+				// 普通模式解析ADC供算法使用；移相器校准直接上送完整原始帧
+				/* Phase calibration: notify calibration task that raw data is ready */
+				if (g_ps_cal_mode && calib_adc_sem != NULL) {
+					flush_dcache_all();
+					asm volatile ("sync");
+					g_ps_cal_ready_pool_index = current_pool_index;
+					xSemaphoreGive(calib_adc_sem);
+				}
+
+				// 普通模式解析ADC供算法使用；移相器校准保留原始帧供本地算法使用
+				if (!g_ps_cal_mode &&
+				    extract_ADCData_from_buffer(glbCtx[current_pool_index],
+								g_memoryPool[current_pool_index].saver_pkt_buf_raw) != 0) {
 					printf("ADC数据读取失败，跳过帧\n");
 					break;
 				}
+				PERF_END(Parse_adc, 0);
 
-				gettimeofday(&adc_end_time, NULL);
-				// 计算并输出ADC处理时间
-				
 				if (CHEETAH_SAVE)
 				{
 					if (SAVE_RAW_DATA)
 					{
-						save_frame_pkt_update_raw(buf, total_adc_size, frmCnt, current_pool_index);
+						save_frame_pkt_update_raw(buf, g_total_adc_size, frmCnt, current_pool_index);
 						printf("\n2) 保存原始数据开始\n");
 						//msleep(2);
 					}
@@ -1317,23 +1648,24 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 				printf("[*** frame %d ***] ADC 等待 总耗时: %.2f 毫秒\n", frmCnt, (get_time_ns() - start_time_adc) / 1000000.0);
 
 #endif
-
+				InitPhaseCalibProcess();
 				// gettimeofday(&det_start_time, NULL);
 				// printf("\n2) 开始检测处理\n");
 #if (CPU1_ENABLE == 1)
-				if (frmCnt >= numSkippedFrms)
+				if (!g_ps_cal_mode && frmCnt >= numSkippedFrms)
 				{
+#if CHEETAH_CONFIG == cheetah_256_512_config
+					memcpy(g_memoryPool[current_pool_index].dopplerFFT_res, g_memoryPool[last_pool_index].dopplerFFT_res_tmp,
+						   (nextPowerOfTwo(glbCtx[last_pool_index]->wave_params.adcLen) / 2) * nextPowerOfTwo(glbCtx[last_pool_index]->wave_params.numChirps) * glbCtx[last_pool_index]->basic_params.numRxs * sizeof(fft_cpx_f32));
+#endif
+					perf_logger_printf("[CPU1] det_1 处理...\n");
 					flush_dcache_all();
 					ccu_write_reg(CCU_MBR(1), 1);
 				}
 #endif
-				// printf("等待CPU1处理开始, frame_count: %d, cpu1_has_finished: %d\n", frame_count, cpu1_has_finished);
-				// printf("watch[0]: %d, watch[1]: %d, watch[2]: %d, watch[3]: %d, watch[4]: %d, watch[5]: %d\n", watch[0], watch[1], watch[2], watch[3], watch[4], watch[5]);
-				// long adc_processing_time_ms = timeval_diff_ms(&adc_start_time, &adc_end_time);
-				// printf("!!! 获取ADC总时间: %ld 毫秒\n", adc_processing_time_ms);
 			}
 
-			if(!first_frame_flg)
+			if((!first_frame_flg || g_ps_cal_mode) && !g_ps_cal_local_mode)
 			{
 				// 临界区保护：确保跟踪处理在正确的临界区状态下运行
 				// 先退出所有可能的临界区，确保状态干净
@@ -1363,14 +1695,13 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 					printf("检测处理失败\n"); break;
 				}
 #endif
+				perf_logger_printf("[CPU0] det_2 处理...\n");
 
-
-				if (isProcDetection && (frmCnt >= numSkippedFrms) && detection_processing_v2(glbCtx[last_pool_index], angCalibMat_back, last_pool_index) != 0) {
-					printf("检测2处理失败\n"); break;
+				PERF_BEGIN(Detection_processing_2);
+				if (!g_ps_cal_mode && isProcDetection && (frmCnt >= numSkippedFrms) && detection_processing_v2(glbCtx[last_pool_index], angCalibMat_back, last_pool_index) != 0) {
+					printf("det_2 处理失败\n"); break;
 				}
-				//gettimeofday(&det_2_end_time, NULL);
-				//long det_2_processing_time_ms = timeval_diff_ms(&det_2_start_time, &det_2_end_time);
-				//printf("!!! 检测2处理总时间: %ld 毫秒\n", det_2_processing_time_ms);
+				PERF_END(Detection_processing_2, 0);
 #else
 				// 从TLV格式文件中读取当前帧的DETINFO并解析填充到 glbCtx
 				// 使用 parse_dat_detInfo 逐帧顺序解析 (利用 FILE* 指针前移特性)
@@ -1445,27 +1776,46 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 				if (g_calib_operation == 1 && (frmCnt >= numSkippedFrms)) {
 					// EOL 校准模式（绕过正常跟踪）
 					eol_calib_process_frame(&glbCtx[last_pool_index]->detInfo);
-				} else if (isProcTracking && (frmCnt >= numSkippedFrms)) {
-					
+				} else if (!g_ps_cal_mode && isProcTracking && (frmCnt >= numSkippedFrms)) {
+					PERF_BEGIN(Ego_processing);
 					getEgoVehInfo(glbCtx[last_pool_index], last_pool_index); // 获取自车信息（外部传入）
+					PERF_END(Ego_processing, 0);
+
+					PERF_BEGIN(Ego_motion_processing);
 					compute_ego_motion(glbCtx[last_pool_index]);
-                	// 后处理
+					PERF_END(Ego_motion_processing, 0);
+
+					PERF_BEGIN(Post_processing);
+					// printf("\n4) 开始后处理\n"
+					// 后处理
 					detection_post_processing(glbCtx[last_pool_index]);
 					// printf("后处理完成\n");
+					PERF_END(Post_processing, 0);
 
 					// 进入临界区保护跟踪处理
-					// struct timeval trk_start_time, trk_end_time;
-					// gettimeofday(&trk_start_time, NULL);
+					PERF_BEGIN(Tracking_processing);
 					// printf("\n3) 开始跟踪处理\n");
 					if (tracking_processing(glbCtx[last_pool_index], last_pool_index) != 0) {
 						printf("跟踪处理失败\n"); break;
 					}
-
-					// gettimeofday(&trk_end_time, NULL);
-					// 计算并输出跟踪处理时间
-					// long trk_processing_time_ms = timeval_diff_ms(&trk_start_time, &trk_end_time);
-					// printf("!!! 跟踪处理总时间: %ld 毫秒\n", trk_processing_time_ms);
+					PERF_END(Tracking_processing, 0);
 				}
+				else
+				{
+					glbCtx[last_pool_index]->egoVehInfo.egoSpeed = 0.0f;		// 自车速度 (m/s) — 關閉 ego 估計
+					// glbCtx[last_pool_index]->egoVehInfo.egoSpeedLat = 0.0f;	// 自车横向速度 (m/s) — 關閉 ego 估計
+					compute_ego_motion(glbCtx[last_pool_index]);
+                	// 后处理
+					detection_post_processing(glbCtx[last_pool_index]);
+				}
+
+				/* Final point order after sorting/filtering; no protocol fields added. */
+				if (!g_ps_cal_mode)
+					rcs_process_frame(glbCtx[last_pool_index], last_pool_index);
+				else
+					rcs_clear_frame(last_pool_index);
+
+				PERF_BEGIN(Pkt_processing);
 
 				Mmw_pkt_info *pktInfo = update_mmw_pkt_info_from_ctx(glbCtx[last_pool_index], last_pool_index);
 
@@ -1484,22 +1834,36 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 
 				/* 在主任务中统一封包到共享缓冲区，减少memcpy */
 				{
+#ifdef CONFIG_X2000_MAC0
+					/* 等待该 pool 的上一次网络发送完成，防止 buffer 被提前覆盖 */
+					if (USE_NET) {
+						int wait_cnt = 0;
+						while (!g_net_send_done[last_pool_index]) {
+							msleep(2);
+							if (++wait_cnt > 1000) {
+								printf("net send wait timeout! pool=%d\n", last_pool_index);
+								break;
+							}
+						}
+					}
+#endif
 					char *sharedBuf = g_memoryPool[last_pool_index].shared_pkt_buf;
 					uint32_t sharedBufSize = g_memoryPool[last_pool_index].shared_pkt_buf_size;
 					int32_t sharedPktSize = 0;
 					uint32_t send_frame_id = frmCnt;
 #if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 0))
-                    if(g_outRawDataFlg == 1)
+                    if(g_outRawDataFlg == 1 || g_ps_cal_mode == 1)
 					{
 						// save_frame_pkt_update_proc(buf, total_adc_size, frmCnt, current_pool_index);
-						sharedPktSize = adc_packetize_results(g_memoryPool[current_pool_index].saver_pkt_buf_raw, total_adc_size, frmCnt, sharedBuf, sharedBufSize, NULL, 0, 0);
-						printf("frmCnt: %d, total_adc_size: %d, sharedPktSize: %d\n", frmCnt, total_adc_size, sharedPktSize);
+						sharedPktSize = adc_packetize_results(g_memoryPool[current_pool_index].saver_pkt_buf_raw, g_total_adc_size, frmCnt, sharedBuf, sharedBufSize, NULL, 0, 0);
+						printf("frmCnt: %d, total_adc_size: %zu, sharedPktSize: %d\n", frmCnt, g_total_adc_size, sharedPktSize);
 						printf("\n2) 保存处理后的数据开始\n");
 						//msleep(2);
 					}
 					else
                     {
 #endif
+					if (POINT_CLOUD_OUTPUT_ENABLE) {
 #if (DOT_REPLAY == 0)
 #if WARN_REPLAY
 					// WARN_REPLAY模式下使用replay_pktInfo打包数据，确保包含测试预警信息
@@ -1510,8 +1874,8 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 						sharedPktSize = mmw_packetize_results(pktInfo, frmCnt, sharedBuf, NULL, 0, 0);
 					}
 #else
-#if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 1))
-					sharedPktSize = mmw_packetize_results(pktInfo, frmCnt, sharedBuf, g_memoryPool[current_pool_index].saver_pkt_buf_raw, total_adc_size, MMW_OUTPUT_MSG_ADC_FRAME);
+#if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 1)) || (USE_NET && NET_ADC_SEND == 1)
+					sharedPktSize = mmw_packetize_results(pktInfo, frmCnt, sharedBuf, g_memoryPool[current_pool_index].saver_pkt_buf_raw, g_total_adc_size, MMW_OUTPUT_MSG_ADC_FRAME);
 #else
 					sharedPktSize = mmw_packetize_results(pktInfo, frmCnt, sharedBuf, NULL, 0, 0);
 #endif
@@ -1519,12 +1883,12 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 #else
 					sharedPktSize = mmw_packetize_results(pktInfo, DetFrameNum, sharedBuf, NULL, 0, 0);
 #endif
+					}
 
 #if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 0))
                     }
 #endif
-
-					if (!g_is_eol_mode && USE_UART_TRANS && sharedPktSize > 0)
+					if (!g_is_eol_mode && USE_UART_TRANS && sharedPktSize > 0 && (GetInitPhaseStepFlg() == INIT_PHASE_STEP_IDLE))
 					{
 #if WARN_REPLAY
 						if (g_warn_replay_fd >= 0) {
@@ -1536,7 +1900,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 						uart_frame_pkt_update(pktInfo, sharedBuf, sharedPktSize, send_frame_id);
 #endif
 					}
-					if (!g_is_eol_mode && USE_CAN_TRANS && sharedPktSize > 0)
+					if (!g_is_eol_mode && USE_CAN_TRANS && sharedPktSize > 0 && (GetInitPhaseStepFlg() == INIT_PHASE_STEP_IDLE))
 					{
 #if WARN_REPLAY
 						if (g_warn_replay_fd >= 0) {
@@ -1580,9 +1944,16 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 #ifdef CONFIG_X2000_MAC0
 					if (!g_is_eol_mode && USE_NET && sharedPktSize > 0)
 					{
-						int ret = net_client_send_async((const uint8_t *)sharedBuf, sharedPktSize, frmCnt, 10); // 10ms入队超时
-						if (ret < 0) {
-							printf("net_server_send error! Error Number %d", ret);
+						if (sharedPktSize > (int32_t)sharedBufSize) {
+							printf("net_server_send error! Buffer overflow: %d > %u\n", sharedPktSize, sharedBufSize);
+						} else {
+							g_net_send_done[last_pool_index] = 0;
+							int ret = net_client_send_async_nocopy((const uint8_t *)sharedBuf, sharedPktSize, 10,
+							                                       &g_net_send_done[last_pool_index]);
+							if (ret < 0) {
+								printf("net_server_send error! Error Number %d\n", ret);
+								g_net_send_done[last_pool_index] = 1;
+							}
 						}
 					}
 #endif
@@ -1591,6 +1962,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 						save_frame_pkt_update(sharedBuf, sharedPktSize, frmCnt, last_pool_index);
 					}
 				}
+				PERF_END(Pkt_processing, 0);
 			}
 			else
 			{
@@ -1600,27 +1972,32 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 			// printf("current pool index: %d, last pool index: %d\n", current_pool_index, last_pool_index);
 
 #if (CPU1_ENABLE == 1)
-			if (frmCnt >= numSkippedFrms) {
-				// struct timeval det_wait_start_time, det_wait_end_time;
-				// gettimeofday(&det_wait_start_time, NULL);
+			if (!g_ps_cal_mode && frmCnt >= numSkippedFrms) {
+				PERF_BEGIN(Wait_det1_processing);
 				xSemaphoreTake(cpu0_mailbox_sem, portMAX_DELAY);
 				flush_dcache_all();
 				asm volatile ("sync");
 
-				// gettimeofday(&det_wait_end_time, NULL);
-				// long det_wait_processing_time_ms = timeval_diff_ms(&det_wait_start_time, &det_wait_end_time);
-				// printf("!!! 等待CPU1检测处理总时间: %ld 毫秒\n", det_wait_processing_time_ms);
+				PERF_END(Wait_det1_processing, 0);
 			}
 #endif
-			float temp = cheetah_get_temperature(0);
-			printf("\n温度: %.2f C\n", temp);
+
+			// PERF_BEGIN(Get_temp_processing);
+			float temp = 0;
+			if (!g_ps_cal_mode) {
+				temp = cheetah_get_temperature(0);
+				if (FRAME_RUNTIME_LOG_ENABLE)
+					printf("\n温度: %.2f C\n", temp);
+			}
+			// PERF_END(Get_temp_processing, 0);
 			/** 复制跟踪信息到当前内存池的跟踪管理器 */
 			glbCtx[current_pool_index]->trackIDManager = glbCtx[last_pool_index]->trackIDManager;
 			glbCtx[current_pool_index]->trkInfo = glbCtx[last_pool_index]->trkInfo;
 
 			// printf("确认当前运行的内存池索引: %d, 上一帧的内存池索引: %d\n", current_pool_index, last_pool_index);
 			// 检测处理
-			if (frmCnt >= numSkippedFrms && (cpu1_detection_result != 0)) {
+			if (!g_ps_cal_mode && frmCnt >= numSkippedFrms &&
+			    (cpu1_detection_result != 0)) {
 				printf("检测处理失败\n"); break;
 			}
 			// gettimeofday(&det_end_time, NULL);
@@ -1628,6 +2005,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 			// long det_processing_time_ms = timeval_diff_ms(&det_start_time, &det_end_time);
 			// printf("!!! 检测处理总时间: %ld 毫秒\n", det_processing_time_ms);
 
+			PERF_BEGIN(Reset_processing);
 			// glbCtx2 = *glbCtx[0];
 			// 帧后处理：重置参数
 #if (DOT_REPLAY == 0)
@@ -1650,12 +2028,18 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 			memset(&glbCtx[last_pool_index]->detInfo, 0, sizeof(glbCtx[last_pool_index]->detInfo));
 			memset(&glbCtx[last_pool_index]->detInfoRD, 0, sizeof(glbCtx[last_pool_index]->detInfoRD));
 
-			camera_put_frame(camera, buf);
+			camera_put_frame(g_camera, buf);
+
+			PERF_END(Reset_processing, 0);
 
 			end_time = get_time_ns();
 			// 计算并输出处理时间
 			double processing_time_ms = (end_time - start_time) / 1000000.0;
-			printf("\n[*** frmCnt %d ***] main thread 总耗时: %.2f 毫秒\n", (frmCnt - 1), processing_time_ms);
+			if (FRAME_RUNTIME_LOG_ENABLE)
+				printf("\n[*** frmCnt %d ***] main thread 总耗时: %.2f 毫秒\n", (frmCnt - 1), processing_time_ms);
+
+			// 刷新并打印所有性能记录
+			perf_logger_flush();
 
 			curFrame_is_processing = 0;
 			mutex_unlock(&curFrame_mutex);
@@ -1667,15 +2051,22 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 			msleep(10);
 			if(cheetah_running_flg == 1)
 			{
-				cheetah_running_flg = 0;
-
-				cheetah_stop();
+				if (g_reconfig_stop_pending) {
+					cheetah_stop_for_reconfig();
+				} else {
+					cheetah_stop();
+				}
 				msleep(50);
 
 				if (CHEETAH_SAVE)
 				{
 					save_close();
 				}
+#if (ZU3_FORMAT_DATA_REPLAY == 1)
+				{
+					zu3_close_adc_file();
+				}
+#endif
 
 				// 清空所有内存池中的跟踪状态和检测结果
 				for (int i = 0; i < MAXPOOLNUM; i++)
@@ -1684,6 +2075,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 					memset(&glbCtx[i]->trackIDManager, 0, sizeof(glbCtx[i]->trackIDManager));
 					memset(&glbCtx[i]->detInfo, 0, sizeof(glbCtx[i]->detInfo));
 					memset(&glbCtx[i]->detInfoRD, 0, sizeof(glbCtx[i]->detInfoRD));
+					rcs_clear_frame(i);
 				}
 
 				// radar_config_start();
@@ -1691,30 +2083,12 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 				// 跳过前几帧
 				// camera_skip_frames(camera, info->frame_nums);
 
-				camera_stream_off(camera);
-				// camera_power_off(camera);
+				camera_stream_off(g_camera);
 				msleep(20);
-
-				// ret = camera_power_on(camera);
-				// if (ret < 0)
-				// {
-				// 	printf("camera failed to power on\n");
-				// 	return;
-				// }
-
-				ret = camera_stream_on(camera);
-				if (ret < 0)
-				{
-					printf("camera failed to stream on\n");
-					camera_power_off(camera);
-					return;
-				}
-				msleep(20);
-
-				// 跳过前几帧
-				camera_skip_frames(camera, info->frame_nums);
 
 				printf("cheetah_stop completed\n");
+				g_reconfig_stop_pending = 0;
+				cheetah_running_flg = 0;
 			}
 		}
 
@@ -1729,6 +2103,12 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 	{
 	 	save_close();
 	}
+
+#if (ZU3_FORMAT_DATA_REPLAY == 1)
+	{
+		zu3_close_adc_file();
+	}
+#endif
 
 	if (USE_UART_TRANS)
 	{
@@ -1747,27 +2127,27 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 		{
 			free(glbCtx[i]->adcData.sf1);
 		}
-		if (glbCtx[i]->radarInfo.vxPosn)
+		if (glbCtx[i]->radarInfo.vxPosn_sf1_azm)
 		{
-			free(glbCtx[i]->radarInfo.vxPosn);
+			free(glbCtx[i]->radarInfo.vxPosn_sf1_azm);
 		}
 		free(glbCtx[i]);
     }
 
 
 	// 释放窗函数数组
-	if (winRng)
-	{
-		free(winRng);
-	}
-	if (winDop)
-	{
-		free(winDop);
-	}
-	if (winAz)
-	{
-		free(winAz);
-	}
+	// if (winRng)
+	// {
+	// 	free(winRng);
+	// }
+	// if (winDop)
+	// {
+	// 	free(winDop);
+	// }
+	// if (winAz)
+	// {
+	// 	free(winAz);
+	// }
 
 	for(int i = 0; i < MAXPOOLNUM; i++)
 	{
@@ -1813,6 +2193,7 @@ static int cpu1_init(void)
 */
 static void Cpu1Thread(void *data)
 {
+	arch_enable_fpu(); // 保证 CPU1 开启FPU，因为耗时计算需要硬浮点支持
     cpu1_main_loop();
 }
 
@@ -1865,11 +2246,23 @@ __attribute__((optimize("O3"))) static void cpu1_main_loop(void)
         flush_dcache_all();
         asm volatile ("sync");
         ccu_write_reg(CCU_MBR(1), 0); // Ack
+
+		if (g_ps_cal_mode) {
+			ccu_write_reg(CCU_MBR(0), 1);
+			continue;
+		}
+
         frame_count++;
         
         // 执行雷达检测算法 (支持 MSA 加速)
         // cpu1_detection_result = detection_processing(glbCtx, angCalibMat);
-		cpu1_detection_result = detection_processing(glbCtx[current_pool_index], angCalibMat, current_pool_index);
+		if (g_ps_cal_mode) {
+			cpu1_detection_result = 0;
+		} else {
+			PERF_BEGIN(Detection_processing_1);
+			cpu1_detection_result = detection_processing(glbCtx[current_pool_index], angCalibMat, current_pool_index);
+			PERF_END(Detection_processing_1, 1);
+		}
 		// for (volatile int i = 0; i < 3000000; i++);
 		cpu1_delay_us(100);
         
@@ -1883,9 +2276,13 @@ __attribute__((optimize("O3"))) static void cpu1_main_loop(void)
 static void update_pool_index(void)
 {
 
-	/* 非第一帧，更新pool_index */
+	/* 非第一帧，更新 pool_index。普通模式由 CPU1 的 frame_count
+	 * 驱动；校准模式绕过 CPU1，改用 CPU0 的 frmCnt 保持三池轮转。 */
 	last_pool_index = current_pool_index;
-	current_pool_index = frame_count % MAXPOOLNUM;
+	if (g_ps_cal_mode)
+		current_pool_index = frmCnt % MAXPOOLNUM;
+	else
+		current_pool_index = (frame_count + 1) % MAXPOOLNUM;
 
 	// printf("current_pool_index: %d, last_pool_index: %d\n", current_pool_index, last_pool_index);
 }
@@ -1912,6 +2309,177 @@ void update_frmCnt(int input_cnt)
 	last_pool_index = 0;
 	frame_count = 0;
 	mutex_unlock(&curFrame_mutex);
+}
+
+void configure_host_frame_count(int input_cnt)
+{
+	/*
+	 * Publish the stop request before taking curFrame_mutex.  The capture
+	 * thread holds this mutex while camera_wait_frame() is blocking, so
+	 * taking the mutex first can deadlock when the radar has stopped
+	 * producing frames.
+	 */
+	isNewTest = 1;
+	g_wait_for_sensor_start = 1;
+
+	mutex_lock(&curFrame_mutex);
+	maxFrames = input_cnt == 0 ? -1 : input_cnt;
+	frmCnt = 1;
+	current_pool_index = 0;
+	last_pool_index = 0;
+	frame_count = 0;
+	mutex_unlock(&curFrame_mutex);
+
+	while (cheetah_running_flg == 1)
+		msleep(10);
+}
+
+int radar_capture_host_stop(void)
+{
+	int timeout_ms = 5000;
+	int was_running = cheetah_running_flg == 1;
+
+	/* See configure_host_frame_count(): wake the capture state machine first. */
+	isNewTest = 1;
+	g_wait_for_sensor_start = 1;
+	g_host_config_ready = 0;
+
+	while (cheetah_running_flg == 1 && timeout_ms > 0) {
+		msleep(10);
+		timeout_ms -= 10;
+	}
+
+	if (cheetah_running_flg == 1)
+		return -ETIMEDOUT;
+
+	/* Several configuration layers defensively request stop.  Only report a
+	 * real running -> stopped transition; repeated calls while already stopped
+	 * are successful no-ops and should not look like repeated hardware stops. */
+	if (was_running)
+		printf("[HOST_CAPTURE] sensorStop complete: radar and CSI/VIC stopped\n");
+	return 0;
+}
+
+int radar_capture_reconfig_stop(void)
+{
+	int ret;
+
+	g_reconfig_stop_pending = 1;
+	ret = radar_capture_host_stop();
+	if (ret != 0) {
+		g_reconfig_stop_pending = 0;
+		return ret;
+	}
+
+	/*
+	 * RadarStudio sends SetMaxFrameCount before gropstart.  The former may
+	 * have already stopped the capture loop, so no running loop remains to
+	 * consume g_reconfig_stop_pending.  Complete the same reset sequence
+	 * used by masbranch before accepting the calibration configuration.
+	 */
+	if (g_reconfig_stop_pending) {
+		cheetah_stop_for_reconfig();
+		g_reconfig_stop_pending = 0;
+	}
+
+	return 0;
+}
+
+int radar_capture_host_start(void)
+{
+	if (!g_camera)
+		return -ENODEV;
+	if (g_ps_cal_mode && !g_ps_cal_mem_ready)
+		return -EINVAL;
+	if (cheetah_running_flg != 0)
+		return -EBUSY;
+
+	mutex_lock(&curFrame_mutex);
+	g_host_config_ready = 1;
+	isNewTest = 0;
+	g_wait_for_sensor_start = 0;
+	mutex_unlock(&curFrame_mutex);
+
+	printf("[HOST_CAPTURE] sensorStart accepted: waiting for main capture loop\n");
+	return 0;
+}
+
+int exit_local_ps_cal_mode(void)
+{
+	struct sensor_attr *attr;
+	uint32_t chirps = g_ps_cal_saved_chirps;
+	uint32_t adc_len = g_ps_cal_saved_adc_len;
+	int adc_flag;
+	int pixel_width;
+	int ret = 0;
+
+	if (!g_ps_cal_local_mode || chirps == 0 || adc_len == 0)
+		return -EINVAL;
+
+	radar_capture_host_stop();
+	mutex_lock(&curFrame_mutex);
+	for (int i = 0; i < MAXPOOLNUM; i++)
+		free_memory_pool(i);
+	for (int i = 0; i < MAXPOOLNUM; i++) {
+		glbCtx[i]->waveParams.numChirps[0] = chirps;
+		glbCtx[i]->waveParams.adcLen[0] = adc_len;
+	}
+	g_ps_cal_mem_ready = 0;
+	g_ps_cal_ready_pool_index = -1;
+	g_ps_cal_capture_start_error = 0;
+	g_ps_cal_mode = 0;
+	g_ps_cal_local_mode = 0;
+	mutex_unlock(&curFrame_mutex);
+
+	/* Local calibration uses two VIC circular buffers.  Rebuild the normal
+	 * camera first so its configured buffer set receives a contiguous block
+	 * before the normal DSP pools fragment the released calibration memory. */
+	pixel_width = (sizeof(CheetahChirpHeadInfo) +
+		       sizeof(uint16_t) * glbCtx[0]->basicParams.numRXPerMMIC * adc_len +
+		       CHIRP_END_BYTES) / 2;
+	attr = cheetah_get_sensor_attr();
+	if (g_camera) {
+		camera_unregister_sensor(0, attr);
+		g_camera = NULL;
+	}
+	ret = camera_set_frame_count(0, CONFIG_SOC_X2000_CAMERA_VIC0_FRAME_NUMS);
+	if (ret < 0)
+		return ret;
+	cheetah_sensor_dynamic_reconfig(pixel_width, chirps);
+	ret = camera_register_sensor(0, attr);
+	if (ret < 0)
+		return ret;
+	g_camera = camera_detect(0);
+	if (!g_camera)
+		return -ENODEV;
+	mutex_lock(&curFrame_mutex);
+#if ((USE_USB_OUTPUT == 1)&&(UART_ADC_SEND == 0)&&(NET_ADC_SEND == 0))
+	adc_flag = g_outRawDataFlg;
+#else
+	adc_flag = 0;
+#endif
+	for (int i = 0; i < MAXPOOLNUM; i++) {
+		if (init_memory_pool(glbCtx[i], i, adc_flag, 0) != 0) {
+			ret = -ENOMEM;
+			break;
+		}
+	}
+	if (ret != 0) {
+		for (int i = 0; i < MAXPOOLNUM; i++)
+			free_memory_pool(i);
+	}
+	g_total_adc_size = get_adc_total_size(glbCtx[0]);
+	mutex_unlock(&curFrame_mutex);
+	if (ret != 0)
+		return ret;
+
+#if PHASE_CALIB_AUTO_RESTART_RADAR
+	radar_config_start();
+	return radar_capture_host_start();
+#else
+	printf("[PhaseCalib] Auto restart disabled; radar remains stopped.\n");
+	return 0;
+#endif
 }
 
 void restart_cheetah(void)

@@ -1,4 +1,4 @@
-CONFIG_SPL_BIN_FILE=xburst2/soc-x2000/spl/x2100l-spl-sfc-nor-ota-1200M-500M.bin
+CONFIG_SPL_BIN_FILE=xburst2/soc-x2000/spl/x2100l-spl-sfc-nor-1200M-500M.bin
 # CONFIG_COMPRESS_RTOS_BIN is not set
 RTOS_TOOLCHAIN_PATH=../tools/toolchains/mips-xburst2-newlib430/bin
 CROSS=mips-sde-elf-

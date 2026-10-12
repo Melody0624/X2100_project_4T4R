@@ -23,10 +23,17 @@
 #if (CHEETAH_CONFIG == cheetah_128_256_config)
 #define GC2053_DEVICE_WIDTH             1040         //256
 #elif (CHEETAH_CONFIG == cheetah_128_512_config)
-#define GC2053_DEVICE_WIDTH             2040        //506
+#define GC2053_DEVICE_WIDTH             2040         //506
+#elif (CHEETAH_CONFIG == cheetah_256_512_config)
+#define GC2053_DEVICE_WIDTH             2040         //506
 #endif
 
+#if ((CHEETAH_CONFIG == cheetah_128_256_config) || (CHEETAH_CONFIG == cheetah_128_512_config))
 #define GC2053_DEVICE_HEIGHT            128
+#elif (CHEETAH_CONFIG == cheetah_256_512_config)
+#define GC2053_DEVICE_HEIGHT            256
+#endif
+
 #define SENSOR_OUTPUT_MAX_FPS           30
 #define SENSOR_OUTPUT_MIN_FPS           5
 
@@ -743,6 +750,21 @@ static struct sensor_attr cheetah_sensor_attr = {
     },
     .isp_bin_data               = NULL,
 };
+
+void cheetah_sensor_dynamic_reconfig(int new_width, int new_height)
+{
+    cheetah_sensor_attr.info.width = new_width;
+    cheetah_sensor_attr.info.height = new_height;
+    cheetah_sensor_attr.sensor_info.width = new_width;
+    cheetah_sensor_attr.sensor_info.height = new_height;
+    cheetah_sensor_attr.sensor_info.total_width = new_width;
+    cheetah_sensor_attr.sensor_info.total_height = new_height;
+}
+
+struct sensor_attr *cheetah_get_sensor_attr(void)
+{
+    return &cheetah_sensor_attr;
+}
 
 void cheetah_sensor_init(void)
 {

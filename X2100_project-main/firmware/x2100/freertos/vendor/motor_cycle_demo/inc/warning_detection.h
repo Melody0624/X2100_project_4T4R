@@ -1,8 +1,7 @@
 /**
  * @file        warning_detection.h
- * @brief       两轮车后向雷达预警模块接口。定义 WarnResult 结构体及 BSD/AOA/LCA/RCW
- *              四种预警类型的检测函数声明。受 WARNING_ENABLE 宏控制，具体预警策略
- *              （零行/新大洲本田）由 WARNING_PROFILE_HONDA 宏选择。
+ * @brief       雷达预警模块接口。定义 WarnResult 结构体及预警检测函数声明：
+ *              依安装角区分前向(FCW)/后向(RCW + LCA)，受 WARNING_ENABLE 宏控制。
  * @author      Jie Wu
  * @company     SenardMicro
  * @date        2026-05-27
@@ -17,23 +16,12 @@
  * 位于 header/，对应 MATLAB Func/warningFunc/ 子目录。
  *
  * 受 WARNING_ENABLE 宏控制（定义于 radar_types.h），默认关闭。
- * 具体预警策略由 WARNING_PROFILE_HONDA 宏选择（0=零行/LingXing，1=新大洲本田/honda），
- * 定义于 radar_types.h，默认 0。
- */
-
-/*
- * warning_detection.h
- *
- * 两轮车后向雷达预警模块（对应 MATLAB warningDetection.m）
- * 位于 header/，对应 MATLAB Func/warningFunc/ 子目录。
- *
- * 受 WARNING_ENABLE 宏控制（定义于 radar_types.h），默认关闭。
  */
 
 #ifndef WARNING_DETECTION_H
 #define WARNING_DETECTION_H
 
-#include "radar_types.h"    /* WARNING_ENABLE, TrkInfo, MAX_TRACKS */
+#include "radar_types.h"    /* WARNING_ENABLE, TrkInfo, MAX_TRACKERS */
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,17 +33,19 @@ extern "C" {
 /* ------------------------------------------------------------------ */
 /*  常量定义                                                           */
 /* ------------------------------------------------------------------ */
-// #define MAX_WARN_IDS    32      /* 每类预警最多记录的 trkID 数量 */
+#define MAX_WARN_IDS    32      /* 每类预警最多记录的 trkID 数量 */
+
+/* 预警模式（由安装角决定，单一雷达只输出一种碰撞预警） */
+#define WARN_MODE_FCW   1       /* 前向安装 |φ| < 90°：前方碰撞预警 */
+#define WARN_MODE_RCW   2       /* 后向安装 |φ| >= 90°：后方碰撞预警 + 左右 LCA */
 
 /* ------------------------------------------------------------------ */
 /*  WarnResult — 预警输出                                               */
-/*  对应 MATLAB warningDetection 返回的 warnResult struct               */
 /*                                                                     */
 /*  各字段含义：                                                        */
-/*    BSD_left/right  : 盲区警示（Blind Spot Detection）               */
-/*    AOA_left/right  : 超车后警示（Approaching from Overtake）        */
-/*    LCA_left/right  : 车道变更辅助（Lane Change Assist）             */
-/*    RCW             : 正后方碰撞预警（Rear Collision Warning）       */
+/*    warnMode        : WARN_MODE_FCW / WARN_MODE_RCW                  */
+/*    collision       : 正前方(FCW) / 正后方(RCW) 碰撞预警             */
+/*    LCA_left/right  : 车道变更辅助（Lane Change Assist），仅 RCW 模式 */
 /*    TTC_min         : 所有警示目标中最小 TTC (s)，无警示时为 FLT_MAX */
 /*    *_IDs / *_cnt   : 触发各类预警的 trkID 列表及数量               */
 /* ------------------------------------------------------------------ */
@@ -89,26 +79,23 @@ extern "C" {
 // } WarnResult;
 
 /**
- * @brief  两轮车后向雷达预警
- *         对应 MATLAB warningDetection.m
+ * @brief  雷达预警（依安装角选择 FCW 或 RCW + LCA）
  *
- *         坐标系（雷达坐标系 RCS）：
- *           x_output : 纵向距离，正值 = 雷达前方 = 车辆后方（后向雷达）
- *           y_output : 横向距离，正值 = 右侧，负值 = 左侧
+ *         坐标系（车体坐标系 VCS，已由 tracking_output 按安装角旋转）：
+ *           x_output : 纵向距离，正值 = 车辆前方，负值 = 车辆后方
+ *           y_output : 横向距离，正值 = 左侧，负值 = 右侧
  *
  *         速度说明：
- *           vx/vy_output 为地面绝对坐标系速度（非相对 ego）
- *           dvx = vx + egoVx（ego 前进方向为 RCS -x 方向）
- *           TTC 采 2D 最近点时刻：TTC = -(x·dvx + y·dvy) / (dvx²+dvy²)
+ *           vx/vy_output 为地面绝对速度，车体坐标系，向前为正
+ *           dvx = vx - egoVx：RCW 时 dvx > 0 为后方目标接近；FCW 时 dvx < 0 为前方目标接近
+ *           TTC 取纵向最近边缘：RCW = -x_front_edge / dvx，FCW = x_rear_edge / (-dvx)
  *
- *         预警区域宽度、纵向长度、TTC/速度门槛等具体数值依 WARNING_PROFILE_HONDA
- *         宏选择的预警策略而定（0=零行/LingXing，1=新大洲本田/honda），详见 .c 实现。
- *
- * @param trkInfo  航迹集合指针（来自 GlbCtx.trkInfo）
- * @param egoVx    ego 前进速度 (m/s, 正值 = 前进)
+ * @param trkInfo            航迹集合指针（来自 GlbCtx.trkInfo）
+ * @param egoVx              ego 前进速度 (m/s, 正值 = 前进)
+ * @param installAngComp_deg 雷达安装补偿角（度）：前向 0、后向 180、右侧 90、左侧 -90
  * @return WarnResult 预警结果
  */
-WarnResult warning_detection(const TrkInfo *trkInfo, float egoVx);
+WarnResult warning_detection(const TrkInfo *trkInfo, float egoVx, float installAngComp_deg);
 
 /*
 * @brief 预警结果处理（示例：打印预警信息）

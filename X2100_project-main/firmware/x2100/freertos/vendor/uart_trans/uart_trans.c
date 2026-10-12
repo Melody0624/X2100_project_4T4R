@@ -13,6 +13,9 @@
 #include "../eol_cal/eol_calibration.h"
 #include "board.h"
 #include "ota_trigger_ab.h"
+#include "../InitPhaseCalib/InitPhaseCalib.h"
+#include "../frames_save/frames_save.h"
+#include "../uart_cli/cli.h"
 
 #define USE_UART_SEND_THREAD
 
@@ -79,7 +82,11 @@ static volatile int gTargetInfoOutputEnabled = 0;
 static uint32_t gRadarVersion = 0x010203; // 默认版本号 1.2.3
 
 // BSD启动车速阈值(单位：km/h)
-static float gEgoSpeedThresholdKph = 10.0f;
+#if WARNING_HONDA_MIN_EGO_KMH > 0
+static float gEgoSpeedThresholdKph = WARNING_HONDA_MIN_EGO_KMH;
+#else
+static float gEgoSpeedThresholdKph = 0.0f;
+#endif
 
 static int uart_frame_pkt_send(void);
 static int uart_alarm_pkt_send(int direction, float distance, float velocity);
@@ -338,6 +345,20 @@ int uart_general_send(char *buf, int size)
     send_data(buf, size);
 
     return 0;
+}
+
+int usb_serial_gerenal_send(char *buf, int size)
+{
+    if (!buf || size <= 0)
+    {
+        return -1;
+    }
+
+    if (ota_is_busy()) return 0;
+
+    usb_serial_send(buf, size);
+
+    return size;
 }
 
 int uart_frame_pkt_update(Mmw_pkt_info *pktInfo, const char *pktBuf, int32_t pktSize, uint32_t frameID)
@@ -622,6 +643,73 @@ static void uart_recv_task(void *pvParameters)
                                         //                  "OK\r\n";
                                         // uart_general_send((char *)err_msg, strlen(err_msg));
                                     }
+                                }
+                                else if (strcmp(tokenizedArgs[0], "setTargetPara") == 0)
+                                {
+                                    /* Initial phase calibration parameter setting command */
+                                    if (argIndex == 5)
+                                    {
+                                        InitPhasePara_t local_para;
+                                        local_para.Range = (int8_t)strtof(tokenizedArgs[1], NULL);
+                                        local_para.minAng = (int8_t)strtof(tokenizedArgs[2], NULL);
+                                        local_para.maxAng = (int8_t)strtof(tokenizedArgs[3], NULL);
+                                        local_para.AngStep = (int8_t)strtof(tokenizedArgs[4], NULL);
+                                        local_para.commChannel = INIT_PHASE_COMM_UART;
+                                        
+                                        SetTargetPara(&local_para);
+                                        printf("UART3: setTargetPara executed successfully\n");
+                                    }
+                                    else
+                                    {
+                                        printf("Error: Usage: setTargetPara <Range> <minAng> <maxAng> <AngStep>\n");
+                                        char err_msg[] = "Error: Usage: setTargetPara <Range> <minAng> <maxAng> <AngStep>\r\nOK\r\n";
+                                        uart_general_send((char *)err_msg, strlen(err_msg));
+                                    }
+                                }
+                                else if (strcmp(tokenizedArgs[0], "startPhaseCalib") == 0)
+                                {
+                                    /* Initial phase calibration start/stop command */
+                                    if (argIndex == 2)
+                                    {
+                                        uint8_t local_start = (uint8_t)strtol(tokenizedArgs[1], NULL, 10);
+                                        SetInitPhaseStepFlg((InitPhaseStep_n)local_start);
+                                        printf("UART3: startPhaseCalib executed successfully\n");
+                                        char ack_msg[64];
+                                        snprintf(ack_msg, sizeof(ack_msg),
+                                                 "startPhaseCalib %d executed\r\nOK\r\n", local_start);
+                                        uart_general_send((char *)ack_msg, strlen(ack_msg));
+                                    }
+                                    else
+                                    {
+                                        printf("Error: Usage: startPhaseCalib <0|1|2>\n");
+                                        char err_msg[] = "Error: Usage: startPhaseCalib <0|1|2>\r\nOK\r\n";
+                                        uart_general_send((char *)err_msg, strlen(err_msg));
+                                    }
+                                }
+                                else if (strcmp(tokenizedArgs[0], "setAngle") == 0 || strcmp(tokenizedArgs[0], "etAngle") == 0)
+                                {
+#if USE_SAVE_ANGLE
+                                    if (argIndex == 2)
+                                    {
+                                        int32_t angle = (int32_t)strtol(tokenizedArgs[1], NULL, 10);
+                                        setAngle(argIndex, tokenizedArgs);
+                                        printf("UART3: setAngle executed successfully, angle: %d\n", angle);
+                                        char ack_msg[256];
+                                        snprintf(ack_msg, sizeof(ack_msg),
+                                                 "Angle set to: %d\r\nOK\r\n", angle);
+                                        uart_general_send((char *)ack_msg, strlen(ack_msg));
+                                    }
+                                    else
+                                    {
+                                        printf("Error: Usage: setAngle <angle>\n");
+                                        char err_msg[] = "Error: Usage: setAngle <angle>\r\nOK\r\n";
+                                        uart_general_send((char *)err_msg, strlen(err_msg));
+                                    }
+#else
+                                    printf("Error: USE_SAVE_ANGLE not enabled\n");
+                                    char err_msg[] = "Error: USE_SAVE_ANGLE not enabled\r\nOK\r\n";
+                                    uart_general_send((char *)err_msg, strlen(err_msg));
+#endif
                                 }
                                 else
                                 {
@@ -1040,7 +1128,7 @@ static float get_track_distance(uint8_t trkID)
         if (g_pPktInfo->trkInfo.trkObj[i].isvalid && 
             g_pPktInfo->trkInfo.trkObj[i].trkID == trkID) {
             // 返回纵向距离（取绝对值）
-            return fabs(g_pPktInfo->trkInfo.trkObj[i].x_output);
+            return (g_pPktInfo->trkInfo.trkObj[i].x_output / 8.0f - 255.0f);
         }
     }
     return -1.0f;

@@ -6,16 +6,10 @@ HAS_DETECTION_SRC := $(if $(wildcard vendor/motor_cycle_demo/src/detection/Makef
 HAS_TRACKING_SRC  := $(if $(wildcard vendor/motor_cycle_demo/src/Tracking/Makefile),y,n)
 HAS_WARNING_SRC   := $(if $(wildcard vendor/motor_cycle_demo/src/warningFunc/Makefile),y,n)
 
-# --- DETECTION MODULE CONFIG ---
-ifeq ($(HAS_DETECTION_SRC), n)
-  # Safety net: If source is physically missing, force library link to prevent compile errors
-  CONFIG_USE_DETECTION_LIB := y
-else
-  ifeq ($(BUILD_MODE), RELEASE)
-    CONFIG_USE_DETECTION_LIB := y
-  else
-    CONFIG_USE_DETECTION_LIB := n
-  endif
+# Source detection is mandatory in this SDK, including RELEASE builds.
+CONFIG_USE_DETECTION_LIB := n
+ifeq ($(HAS_DETECTION_SRC),n)
+$(error Detection sources are required; no library fallback)
 endif
 
 # --- TRACKING MODULE CONFIG ---
@@ -46,28 +40,36 @@ src-y += vendor.c
 src-y += cheetah/cheetah.c
 
 src-y += heap_malloc/heap_malloc.c
+src-y += logger/perf_logger.c
 
 src-y += gadget_serial/gadget_serial.c
 src-y += uart_trans/uart_trans.c
 src-y += uart_cli/cli.c
 src-y += mcp2515/mcp2515.c
 src-y += mcp2515/mcp2515_task.c
-ifeq ($(CONFIG_NET_LWIP), y)
 src-y += lwip/net_client.c
-endif
 
 src-y += ota_upgrade/pkt.c
 src-y += ota_upgrade/pkt_api.c
 src-y += ota_upgrade/rtos_ota_init.c
 src-y += ota_upgrade/ota_trigger_ab.c
+src-y += ota_upgrade/ota_upgrade_sd/ota_update_task.c
 
 src-y += frames_save/frames_save.c
 
 src-y += motor_cycle_demo/src/board_calib_config.c
+src-y += motor_cycle_demo/src/rcs_estimation.c
 src-y += motor_cycle_demo/src/get_adc_from_dat_file.c
 src-y += motor_cycle_demo/src/set_params.c
 src-y += motor_cycle_demo/src/memory_pool.c
 src-y += motor_cycle_demo/src/parse_dat_detInfo.c
+src-y += phase_calib/calib_misc.c
+src-y += phase_calib/cheetah_calib.c
+src-y += phase_calib/phase_calib.c
+src-y += phase_calib/window.c
+src-y += phase_calib/x2100_calib_configs.c
+
+CFLAGS += -Ivendor/phase_calib
 
 src-y += config_manager.c
 src-y += eol_cal/eol_calibration.c
@@ -75,6 +77,9 @@ src-y += eol_cal/eol_calibration.c
 src-y += control/board.c
 
 src-y += mmw_msg_pkt/mmw_msg_pkt.c
+src-y += InitPhaseCalib/InitPhaseCalib.c
+src-y += InitPhaseCalib/zero_phase_correction.c
+src-y += InitPhaseCalib/mapping_gen_processing.c
 
 # --- DETECTION MODULE COMPILATION CONDITIONAL ---
 ifeq ($(CONFIG_USE_DETECTION_LIB), y)

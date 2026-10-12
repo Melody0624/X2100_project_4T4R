@@ -783,7 +783,8 @@ static void ota_ab_upgrade_work(void *data)
 
         /* 等待操作命令（WRITE / READ） */
         if (!pri_data->ota_cmd) {
-            if (thread_waiter_wait_timeout(&pri_data->ota_cmd_wait, PKT_TRANS_TIMEOUT_MS)) {
+            // if (thread_waiter_wait_timeout(&pri_data->ota_cmd_wait, PKT_TRANS_TIMEOUT_MS)) {
+            if (thread_waiter_wait_timeout(&pri_data->ota_cmd_wait, 6*1000)) {
                 pri_data->devstatus = STATUS_TIMEOUT;
                 if (++consec_retry >= OTA_AB_MAX_RETRY) {
                     printf("ota: too many timeouts waiting for ota_cmd, resetting\n");

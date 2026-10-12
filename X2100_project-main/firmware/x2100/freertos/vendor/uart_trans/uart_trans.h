@@ -26,6 +26,14 @@ int uart_close(void);
 int uart_general_send(char *buf, int size);
 
 /**
+ * @brief USB发送原始数据
+ * @param buf 数据指针
+ * @param size 数据大小
+ * @return 成功返回发送字节数，失败返回-1
+ */
+int usb_serial_gerenal_send(char *buf, int size);
+
+/**
  * @brief 更新已封包好的共享数据 (由主任务统一封包后调用)
  * @param pktBuf 预封包好的数据缓冲区指针
  * @param pktSize 封包数据字节数

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file        cfar_func_v2.c
  * @brief       2D CFAR 检测算法实现。支持 CA-CFAR/GO-CFAR 模式，在距离维和多普勒维
  *              分别进行 CFAR 检测，结合峰值检测输出检测标志矩阵。

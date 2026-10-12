@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file        detection_processing.c
  * @brief       检测处理主流水线。组织完整的信号处理流程：ADC 去直流 → Range FFT →
  *              Doppler FFT → DDMA 解码 → RD 图生成 → CFAR 检测 → 角度估计 → 后处理。
@@ -21,6 +21,12 @@
 #include "general_functions.h"
 #include "complex_abs_f32.h"
 #include "memory_pool.h"
+#include "InitPhaseCalib.h"
+
+#if NUM_SUBFRAMES != 1 || BOARD_ANTENNA_CONFIG != BOARD_ANTENNA_2T4R || CHEETAH_CONFIG != cheetah_128_512_config
+#error "Source detection adaptation supports 2T4R 506x128 only"
+#endif
+extern volatile uint8_t g_ps_cal_mode;
 #if USE_BPM
 #include "bpm_code.h"
 #endif
@@ -63,12 +69,15 @@ int detection_processing(GlbCtx* ctx, fft_cpx_f32* angCalibMat, int pool_index)
 #if OFFLINE_DEBUG_MODE
 	(void)debug_print_counter; // 抑制 C4100 未引用参数警告
 #endif
+	/* Calibration mode allocates raw buffers only, not DSP buffers. */
+	if (g_ps_cal_mode) return 0;
+	if (pool_index < 0 || pool_index >= MAXPOOLNUM) return -1;
 	// 参数提取
-	gnumTxs[pool_index] = ctx->basic_params.numTxs;
-	gnumRxs[pool_index] = ctx->basic_params.numRxs;
-	gadcLen[pool_index] = ctx->wave_params.adcLen;
-	gnumChirps[pool_index] = ctx->wave_params.numChirps;
-	gnumTotalSubBands[pool_index] = gnumTxs[pool_index] + ctx->wave_params.numEmptyBands;
+	gnumTxs[pool_index] = ctx->basicParams.numTxs[0];
+	gnumRxs[pool_index] = ctx->basicParams.numRxs[0];
+	gadcLen[pool_index] = ctx->waveParams.adcLen[0];
+	gnumChirps[pool_index] = ctx->waveParams.numChirps[0];
+	gnumTotalSubBands[pool_index] = gnumTxs[pool_index] + ctx->waveParams.numEmptyBands[0];
 	gnumVirtualAnts[pool_index] = gnumTxs[pool_index] * gnumRxs[pool_index];
 
 	// 变量定义
@@ -111,7 +120,7 @@ int detection_processing(GlbCtx* ctx, fft_cpx_f32* angCalibMat, int pool_index)
 			gsampleMean[pool_index] = gsampleSum[pool_index] / gadcLen[pool_index];
 			// 减去均值并存储到新数组（复数，虚部为0）
 			for (unsigned int sampleIdx = 0; sampleIdx < gadcLen[pool_index]; sampleIdx++) {
-				adcData_winDC[gbaseIdx[pool_index] + sampleIdx].r = (ctx->adcData.sf1[gbaseIdx[pool_index] + sampleIdx] - gsampleMean[pool_index]) * winRng[sampleIdx];
+				adcData_winDC[gbaseIdx[pool_index] + sampleIdx].r = (ctx->adcData.sf1[gbaseIdx[pool_index] + sampleIdx] - gsampleMean[pool_index]) * winRng_sf1[sampleIdx];
 				adcData_winDC[gbaseIdx[pool_index] + sampleIdx].i = 0.0f;
 			}
 		}
@@ -121,7 +130,7 @@ int detection_processing(GlbCtx* ctx, fft_cpx_f32* angCalibMat, int pool_index)
 	range_fft(ctx, adcData_winDC, rangeFFT_res, fftTemp, gNFFT_range[pool_index], pool_index);
 
 	// Doppler FFT
-	doppler_fft(ctx, rangeFFT_res, winDop, gnumRngBins[pool_index], gNFFT_doppler[pool_index], fftTemp, dopplerFFT_res, pool_index);
+	doppler_fft(ctx, rangeFFT_res, winDop_sf1, gnumRngBins[pool_index], gNFFT_doppler[pool_index], fftTemp, dopplerFFT_res, pool_index);
 
 	// 非相干累积（修正索引以匹配新的维度顺序）
 	// 版本1（原型）
@@ -185,7 +194,7 @@ int detection_processing(GlbCtx* ctx, fft_cpx_f32* angCalibMat, int pool_index)
 	// cfar_detection(ctx, RDMap, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], maxMetricIndices, pool_index);
 
 	// // 角度估计
-	// angle_estimation_v1(ctx, angCalibMat, winAz, dopplerFFT_res, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumVirtualAnts[pool_index], pool_index);
+	// angle_estimation_v1(ctx, angCalibMat, winAzm_sf1, dopplerFFT_res, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumVirtualAnts[pool_index], pool_index);
 
 	// // 后处理
 	// detection_post_processing(ctx);
@@ -264,12 +273,30 @@ int detection_processing_v2(GlbCtx* ctx, fft_cpx_f32* angCalibMat, int pool_inde
 	// printf("DDMA解码完成\n");
 	// 计算RD图
 	compute_rd_map(dopplerFFT_sumRx, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumTotalSubBands[pool_index], gnumTxs[pool_index], RDMap);
+	/* Calibration consumes the same decoded cube as normal source detection. */
+	InitPhaseStep_n calibration_step = GetInitPhaseStepFlg();
+	if (calibration_step == INIT_PHASE_STEP_ZERO_CALIB) {
+		if (InitPhaseRDMap(ctx, RDMap, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], maxMetricIndices, pool_index) != 0) return -1;
+		InitPhaseAngCalibCal(ctx, angCalibMat, winAzm_sf1, dopplerFFT_res, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumVirtualAnts[pool_index], pool_index);
+		ctx->detInfo.numDets = 0;
+		return 0;
+	}
+	if (calibration_step == INIT_PHASE_STEP_FFT_CALIB_START) {
+		InitPhaseAngleSample(ctx, angCalibMat, winAzm_sf1, dopplerFFT_res, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumVirtualAnts[pool_index], pool_index);
+		ctx->detInfo.numDets = 0;
+		return 0;
+	}
 	// printf("RD图计算完成\n");
 	// CFAR检测
 	cfar_detection(ctx, RDMap, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], maxMetricIndices, pool_index);
 	// printf("CFAR检测完成\n");
 	// 角度估计
-	angle_estimation_v1(ctx, angCalibMat, winAz, dopplerFFT_res, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumVirtualAnts[pool_index], pool_index);
+	angle_estimation_v1(ctx, angCalibMat, winAzm_sf1, dopplerFFT_res, maxMetricIndices, gnumRngBins[pool_index], gnumDopBinsPerSubBand[pool_index], gnumVirtualAnts[pool_index], pool_index);
+
+	/* Keep the supplier CRT stage and cache ABI; core detection remains source. */
+	unsigned int ranges[NUM_SUBFRAMES] = {gnumRngBins[pool_index]};
+	if (ctx->waveParams.isCRT) velocity_disambiguation(ctx, ranges, ctx->detInfo.numDets);
+	save_frame_to_cache(ctx, ctx->detInfo.numDets);
 	// printf("角度估计完成\n");
 
     // int maxDopIdx = 0;
@@ -297,9 +324,9 @@ int detection_processing_v2(GlbCtx* ctx, fft_cpx_f32* angCalibMat, int pool_inde
 // Range FFT实现
 static void range_fft(GlbCtx* ctx, fft_cpx_f32* adcData_winDC, fft_cpx_f32* rangeFFT_res, fft_cpx_f32* fftTemp, unsigned int NFFT_range, int pool_index) {
 	// 变量定义
-	unsigned int adcLen = ctx->wave_params.adcLen;
-	unsigned int numChirps = ctx->wave_params.numChirps;
-	unsigned int numRxs = ctx->basic_params.numRxs;
+	unsigned int adcLen = ctx->waveParams.adcLen[0];
+	unsigned int numChirps = ctx->waveParams.numChirps[0];
+	unsigned int numRxs = ctx->basicParams.numRxs[0];
 	unsigned int numRngBins = NFFT_range / 2;
 	unsigned int baseIdx, outBaseIdx;
 
@@ -353,8 +380,8 @@ static void range_fft(GlbCtx* ctx, fft_cpx_f32* adcData_winDC, fft_cpx_f32* rang
 static void doppler_fft(GlbCtx* ctx, fft_cpx_f32* rangeFFT_res, const float* winDoppler, int numRngBins, int NFFT_doppler,
 	fft_cpx_f32* fftTemp, fft_cpx_f32* dopplerFFT_res, int pool_index) {
 	// 变量定义
-	unsigned int numChirps = ctx->wave_params.numChirps;
-	unsigned int numRxs = ctx->basic_params.numRxs;
+	unsigned int numChirps = ctx->waveParams.numChirps[0];
+	unsigned int numRxs = ctx->basicParams.numRxs[0];
 	unsigned int baseIdx;
 
 	// 使用全局内存池中的FFT配置结构体

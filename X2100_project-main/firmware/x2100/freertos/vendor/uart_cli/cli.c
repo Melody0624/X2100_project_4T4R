@@ -8,6 +8,7 @@
 #include "memory_pool.h"
 #include "../config_manager.h"
 #include "../eol_cal/eol_calibration.h"
+#include <soc/camera_sensor.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -21,6 +22,7 @@
 #include <sys/time.h>
 #include <dfs_posix.h>
 #include <frames_save.h>
+#include "../InitPhaseCalib/InitPhaseCalib.h"
 // #include <arpa/inet.h>
 // #include <signal.h>
 // #include <sys/time.h> 
@@ -36,13 +38,343 @@
 #include <os/freertos/include/semphr.h>
 #include "../config_manager.h"
 #include "ota_trigger_ab.h"
+#include "cheetah_calib.h"
 
 extern void restart_cheetah(void);
 extern void update_frmCnt(int input_cnt);
+extern void configure_host_frame_count(int input_cnt);
+extern int radar_capture_host_stop(void);
+extern int radar_capture_reconfig_stop(void);
+extern int radar_capture_host_start(void);
 extern void write_dump_file_name(const char* name);
+extern int enter_ps_cal_mode(void);
+extern int configure_ps_cal_memory(uint32_t num_chirps, uint32_t adc_len,
+				   uint32_t adc_frame_size);
+extern int prepare_local_ps_cal_memory(uint32_t num_chirps, uint32_t adc_len);
+extern int allocate_local_ps_cal_memory(uint32_t adc_frame_size);
+extern volatile uint8_t g_ps_cal_mode;
+extern volatile uint8_t g_ps_cal_local_mode;
+extern struct camera_device *g_camera;
+extern size_t g_total_adc_size;
+extern struct sensor_attr *cheetah_get_sensor_attr(void);
+extern void cheetah_sensor_dynamic_reconfig(int pixel_width, int chirp_num);
 extern float cheetah_get_temperature(int devidx);
 extern int uart_general_send(char *buf, int size);
+extern int usb_serial_gerenal_send(char *buf, int size);
 extern int gadget_serial_write(const uint8_t *buf, uint32_t count, uint32_t block, uint32_t timeout_ms);
+extern int usb_serial_send(char *data, int len);
+
+int host_send_config_info(int chirp_num, int sample_num)
+{
+	int ret;
+	int bytes_per_line;
+	int pixel_width;
+	struct sensor_attr *cheetah_attr;
+
+	if (chirp_num <= 0 || chirp_num > 512 ||
+	    sample_num <= 0 || sample_num > 506)
+		return -EINVAL;
+
+	bytes_per_line = sizeof(CheetahChirpHeadInfo) +
+			 sizeof(uint16_t) * 4 * sample_num +
+			 CHIRP_END_BYTES;
+	pixel_width = bytes_per_line / 2;
+	cheetah_attr = cheetah_get_sensor_attr();
+
+	ret = radar_capture_host_stop();
+	if (ret < 0)
+		return ret;
+	if (g_ps_cal_local_mode) {
+		/* VIC needs one large contiguous block (configured buffers plus one
+		 * hardware turnover buffer).  Reserve it before the three raw pools
+		 * so repeated local calibration cannot fragment that block. */
+		ret = prepare_local_ps_cal_memory(chirp_num, sample_num);
+	} else {
+		ret = configure_ps_cal_memory(chirp_num, sample_num,
+					      chirp_num * bytes_per_line);
+	}
+	if (ret < 0)
+		return ret;
+	if (!g_ps_cal_local_mode)
+		g_total_adc_size = chirp_num * bytes_per_line;
+	if (!g_camera)
+		return -ENODEV;
+
+	if (cheetah_attr->info.width == pixel_width &&
+	    cheetah_attr->info.height == chirp_num) {
+		printf("[HOST_CAPTURE] SendConfigInfo unchanged: %dx%d\n",
+		       pixel_width, chirp_num);
+		if (!g_ps_cal_local_mode)
+			return 0;
+	} else {
+		if (cheetah_attr->info.width == pixel_width &&
+		    cheetah_attr->info.height == chirp_num) {
+			printf("[HOST_CAPTURE] SendConfigInfo local camera rebuild: %dx%d\n",
+			       pixel_width, chirp_num);
+		} else {
+			printf("[HOST_CAPTURE] SendConfigInfo geometry change: %dx%d -> %dx%d\n",
+			       cheetah_attr->info.width, cheetah_attr->info.height,
+			       pixel_width, chirp_num);
+		}
+		camera_unregister_sensor(0, cheetah_attr);
+		g_camera = NULL;
+		if (g_ps_cal_local_mode) {
+			ret = camera_set_frame_count(0, 2);
+			if (ret < 0)
+				return ret;
+		}
+		cheetah_sensor_dynamic_reconfig(pixel_width, chirp_num);
+		ret = camera_register_sensor(0, cheetah_attr);
+		if (ret < 0)
+			return ret;
+		g_camera = camera_detect(0);
+		if (!g_camera)
+			return -ENODEV;
+		printf("[HOST_CAPTURE] camera re-register complete: %dx%d\n",
+		       pixel_width, chirp_num);
+	}
+
+	if (g_ps_cal_local_mode) {
+		ret = allocate_local_ps_cal_memory(chirp_num * bytes_per_line);
+		if (ret < 0)
+			return ret;
+	}
+	g_total_adc_size = chirp_num * bytes_per_line;
+	return 0;
+}
+
+static void host_command_reply(char *argv[], uint32_t argc, int ret)
+{
+	char echo_buf[2048] = {0};
+	int offset = 0;
+
+	for (uint32_t i = 0; i < argc; i++) {
+		int written = snprintf(echo_buf + offset, sizeof(echo_buf) - offset,
+				       "%s%c", argv[i], i + 1 == argc ? '\n' : ' ');
+		if (written <= 0 || written >= (int)(sizeof(echo_buf) - offset))
+			break;
+		offset += written;
+	}
+	usb_serial_send(echo_buf, strlen(echo_buf));
+	usb_serial_send(ret < 0 ? "\r\nError\r\nmmwDemo:/>" :
+			"\r\nDone\r\nmmwDemo:/>",
+			strlen(ret < 0 ? "\r\nError\r\nmmwDemo:/>" :
+			       "\r\nDone\r\nmmwDemo:/>"));
+}
+
+static const char *phase_calib_status(PhaseCalibResultStatus status)
+{
+	switch (status) {
+	case PHASE_CALIB_RESULT_CALIBRATING:
+		return "CALIBRATING";
+	case PHASE_CALIB_RESULT_SUCCESS:
+		return "SUCCESS";
+	case PHASE_CALIB_RESULT_FAILED:
+		return "FAILED";
+	default:
+		return "NOT_CALIBRATED";
+	}
+}
+
+static void phase_calib_result_cmd(char *argv[], uint32_t argc)
+{
+	PhaseCalibQueryResult result;
+	char line[640];
+	int offset;
+
+	offset = 0;
+	for (uint32_t i = 0; i < argc; i++) {
+		int written = snprintf(line + offset, sizeof(line) - offset,
+				       "%s%c", argv[i], i + 1 == argc ? '\n' : ' ');
+		if (written <= 0 || written >= (int)(sizeof(line) - offset))
+			break;
+		offset += written;
+	}
+	if (offset > 0)
+		usb_serial_send(line, offset);
+
+	if (phase_calib_get_result(&result) != 0) {
+		usb_serial_send((char *)"\r\nError\r\nmmwDemo:/>",
+				strlen("\r\nError\r\nmmwDemo:/>"));
+		return;
+	}
+
+	offset = snprintf(line, sizeof(line),
+			  "\r\nPROTOCOL_VERSION=%u\r\n"
+			  "STATUS=%s\r\nHAS_SAVED_RESULT=%d\r\n"
+			  "ACCEPTANCE_THRESHOLD_DBC=%.2f\r\n"
+			  "GOOD_THRESHOLD_DBC=%.2f\r\n",
+			  PHASE_CALIB_RESULT_PROTOCOL_VERSION,
+			  phase_calib_status(result.status),
+			  result.has_saved_result,
+			  result.acceptance_threshold_dbc,
+			  result.good_threshold_dbc);
+	if (offset > 0)
+		usb_serial_send(line, offset);
+
+	if (result.status == PHASE_CALIB_RESULT_FAILED) {
+		offset = snprintf(line, sizeof(line),
+				  "FAILURE_CODE=%u\r\nFAILURE_REASON=%s\r\n",
+				  (unsigned int)result.failure_code,
+				  result.failure_reason);
+		if (offset > 0)
+			usb_serial_send(line, offset);
+	}
+
+	if (result.has_saved_result) {
+		if (result.has_best_empty_band_dbc)
+			offset = snprintf(line, sizeof(line),
+					  "BEST_EMPTY_BAND_DBC=%.2f\r\n"
+					  "BEST_ITERATION=%u\r\n",
+					  result.best_empty_band_dbc,
+					  result.best_iteration);
+		else
+			offset = snprintf(line, sizeof(line),
+					  "BEST_EMPTY_BAND_DBC=UNKNOWN\r\n"
+					  "BEST_ITERATION=UNKNOWN\r\n");
+		if (offset > 0)
+			usb_serial_send(line, offset);
+
+		offset = snprintf(line, sizeof(line),
+				  "PHASE_CALIB_PROFILE_ADDR=0x00A0\r\n"
+				  "PHASE_CALIB_PROFILE_WORDS=%u\r\n"
+				  "PHASE_CALIB_PROFILE_DATA=",
+				  result.profile_words);
+		for (uint16_t i = 0; i < result.profile_words &&
+		     offset > 0 && offset < (int)sizeof(line); i++) {
+			offset += snprintf(line + offset, sizeof(line) - offset,
+					   "%s%08x", i == 0 ? "" : " ",
+					   result.profile[i]);
+		}
+		if (offset > 0 && offset < (int)sizeof(line) - 2) {
+			line[offset++] = '\r';
+			line[offset++] = '\n';
+			usb_serial_send(line, offset);
+		}
+
+		offset = snprintf(line, sizeof(line),
+				  "PHASE_CALIB_DDMA_ADDR=0x0304\r\n"
+				  "PHASE_CALIB_DDMA_WORDS=%u\r\n"
+				  "PHASE_CALIB_DDMA_DATA=",
+				  result.ddma_words);
+		for (uint16_t i = 0; i < result.ddma_words &&
+		     offset > 0 && offset < (int)sizeof(line); i++) {
+			offset += snprintf(line + offset, sizeof(line) - offset,
+					   "%s%08x", i == 0 ? "" : " ",
+					   result.ddma[i]);
+		}
+		if (offset > 0 && offset < (int)sizeof(line) - 2) {
+			line[offset++] = '\r';
+			line[offset++] = '\n';
+			usb_serial_send(line, offset);
+		}
+	}
+	usb_serial_send((char *)"\r\nDone\r\nmmwDemo:/>",
+			strlen("\r\nDone\r\nmmwDemo:/>"));
+}
+
+static int phase_calib_parse_u32(const char *text, uint32_t *value)
+{
+	char *end = NULL;
+	unsigned long parsed;
+
+	if (text == NULL || value == NULL || *text == '\0')
+		return -1;
+	/* Iteration is a decimal protocol field; keep hexadecimal parsing
+	 * reserved for the register words handled by phase_calib_parse_word(). */
+	parsed = strtoul(text, &end, 10);
+	if (end == text || *end != '\0' || parsed > UINT32_MAX)
+		return -1;
+	*value = (uint32_t)parsed;
+	return 0;
+}
+
+static int phase_calib_parse_word(const char *text, uint32_t *value)
+{
+	char *end = NULL;
+	unsigned long parsed;
+
+	if (text == NULL || value == NULL || *text == '\0')
+		return -1;
+	/* CalibRecord words are emitted as fixed-width hexadecimal without 0x. */
+	parsed = strtoul(text, &end, 16);
+	if (end == text || *end != '\0' || parsed > UINT32_MAX)
+		return -1;
+	*value = (uint32_t)parsed;
+	return 0;
+}
+
+static int phase_calib_parse_double(const char *text, double *value)
+{
+	char *end = NULL;
+	double parsed;
+
+	if (text == NULL || value == NULL || *text == '\0')
+		return -1;
+	parsed = strtod(text, &end);
+	/* Reject NaN and infinities without requiring a libm isfinite() call. */
+	if (end == text || *end != '\0' || parsed != parsed ||
+	    parsed > 1.0e6 || parsed < -1.0e6)
+		return -1;
+	*value = parsed;
+	return 0;
+}
+
+/*
+ * CalibResult already returns a complete backup payload.  CalibRecord SET
+ * only restores that saved payload and lets firmware rebuild
+ * magic/version/checksum before writing Flash.  This keeps the host from
+ * depending on C struct packing or checksum implementation.
+ */
+static void phase_calib_record_cmd(char *argv[], uint32_t argc)
+{
+	uint32_t profile[PHASE_CALIB_RESULT_PROFILE_WORDS];
+	uint32_t ddma[PHASE_CALIB_RESULT_DDMA_WORDS];
+	double best_empty_band_dbc;
+	uint32_t best_iteration;
+
+	/* command + SET + iteration + dBc + 32 profile + 48 DDMA words */
+	if (argc != 84 || strcmp(argv[1], "SET") != 0 ||
+		phase_calib_parse_u32(argv[2], &best_iteration) != 0 ||
+		phase_calib_parse_double(argv[3], &best_empty_band_dbc) != 0 ||
+		best_iteration == 0 || best_iteration > UINT16_MAX) {
+		usb_serial_send((char *)"STATUS=INVALID_RECORD\r\nError\r\nmmwDemo:/>",
+				strlen("STATUS=INVALID_RECORD\r\nError\r\nmmwDemo:/>"));
+		return;
+	}
+	if (phase_calib_is_running() || g_ps_cal_mode) {
+		usb_serial_send((char *)"STATUS=BUSY\r\nError\r\nmmwDemo:/>",
+				strlen("STATUS=BUSY\r\nError\r\nmmwDemo:/>"));
+		return;
+	}
+
+	for (uint16_t i = 0; i < PHASE_CALIB_RESULT_PROFILE_WORDS; i++) {
+		if (phase_calib_parse_word(argv[4 + i], &profile[i]) != 0) {
+			usb_serial_send((char *)"STATUS=INVALID_RECORD\r\nError\r\nmmwDemo:/>",
+					strlen("STATUS=INVALID_RECORD\r\nError\r\nmmwDemo:/>"));
+			return;
+		}
+	}
+	for (uint16_t i = 0; i < PHASE_CALIB_RESULT_DDMA_WORDS; i++) {
+		if (phase_calib_parse_word(argv[36 + i], &ddma[i]) != 0) {
+			usb_serial_send((char *)"STATUS=INVALID_RECORD\r\nError\r\nmmwDemo:/>",
+					strlen("STATUS=INVALID_RECORD\r\nError\r\nmmwDemo:/>"));
+			return;
+		}
+	}
+
+	if (phase_calib_restore_record(profile,
+				       PHASE_CALIB_RESULT_PROFILE_WORDS,
+				       ddma, PHASE_CALIB_RESULT_DDMA_WORDS,
+				       (uint16_t)best_iteration,
+				       best_empty_band_dbc) != 0) {
+		usb_serial_send((char *)"STATUS=RESTORE_FAILED\r\nError\r\nmmwDemo:/>",
+				strlen("STATUS=RESTORE_FAILED\r\nError\r\nmmwDemo:/>"));
+		return;
+	}
+	usb_serial_send((char *)"STATUS=RESTORED\r\nDone\r\nmmwDemo:/>",
+			strlen("STATUS=RESTORED\r\nDone\r\nmmwDemo:/>"));
+}
 
 static TaskHandle_t uart_rec_task_handle = NULL;
 static int uart_rec_task_running = 0;
@@ -83,11 +415,13 @@ uint32_t spi_data_buf[SPI_DATA_BUF_SIZE];
 * Output: Always successful (0)
 * Description: Sets the angle of the radar.
  */
-static int32_t setAngle(int32_t argc, char *argv[])
+int32_t setAngle(int32_t argc, char *argv[])
 {
     int32_t angle = strtol(argv[1], NULL, 10);
     set_save_angle(angle);
     printf("Cheetah idx %d angle: %d\r\n", 0, angle);
+
+    SetTargetAngle(angle);
 
     return 0;
 }
@@ -234,7 +568,7 @@ static int32_t getBoardVersion(int32_t argc, char *argv[])
 
     usb_serial_send((char *)"\r\nDone\r\nmmwDemo:/>\r\n", strlen("\r\nDone\r\nmmwDemo:/>\r\n"));
 
-	restart_cheetah();
+	//restart_cheetah();
 
     return 0;
 }
@@ -271,7 +605,7 @@ static int32_t uds_cmd(int32_t argc, char *argv[])
 
     if (argc < 2 || argc > 9) {
         char err_msg[] = "Error: UDS payload length must be 1-8 bytes.\r\n";
-        uart_general_send(err_msg, strlen(err_msg));
+        usb_serial_gerenal_send(err_msg, strlen(err_msg));
         return -1;
     }
 
@@ -289,7 +623,7 @@ static int32_t uds_cmd(int32_t argc, char *argv[])
             offset += snprintf(resp_str + offset, sizeof(resp_str) - offset, "%02X ", resp_data[i]);
         }
         snprintf(resp_str + offset, sizeof(resp_str) - offset, "\r\n");
-        uart_general_send(resp_str, strlen(resp_str));
+        usb_serial_gerenal_send(resp_str, strlen(resp_str));
     }
 
     return 0;
@@ -315,6 +649,34 @@ static int32_t otaUpgrade_cmd(int32_t argc, char *argv[])
     // 因为主线程可能也在发送数据，导致两者同时占用，发送失败
 
     return 0;
+}
+
+/*
+ * Function: InitPhaseCalibPara_cmd
+ * Input: argc - int - argument count
+ *        argv - char** - argument vector
+ *        channel - int - communication channel (0=UART, 1=Gadget Serial, 2=CAN)
+ * Output: Always successful (0)
+ * Description: Init phase calibration parameters command.
+ */
+static int32_t InitPhaseCalibPara_cmd(int32_t argc, char *argv[], int channel)
+{
+    /* Use unified interface */
+    return InitPhaseCalibInterface((InitPhaseCommChannel_t)channel, argc, argv);
+}
+
+/*
+ * Function: InitPhaseCalibStart_cmd
+ * Input: argc - int - argument count
+ *        argv - char** - argument vector
+ *        channel - int - communication channel (0=UART, 1=Gadget Serial, 2=CAN)
+ * Output: Always successful (0)
+ * Description: Init phase calibration start/stop command.
+ */
+static int32_t InitPhaseCalibStart_cmd(int32_t argc, char *argv[], int channel)
+{
+    /* Use unified interface */
+    return InitPhaseCalibInterface((InitPhaseCommChannel_t)channel, argc, argv);
 }
 
 static int32_t set_calib_ang_cmd(int32_t argc, char *argv[])
@@ -626,9 +988,15 @@ static int32_t write_regs_cmd(int32_t argc, char *argv[])
     addr = strtol(argv[2], NULL, 16);
     datalen = argc - 3;
 
-    char cmd_str[200] = {0};
-    // usb_serial_send((uint8_t *)"regSet ", strlen("regSet "));
-    snprintf(cmd_str, sizeof(cmd_str), "%s %s %s %s", argv[0], argv[1], argv[2], argv[3]);
+    char cmd_str[2048] = {0};
+    int offset = 0;
+    for (i = 0; i < argc; i++) {
+        int written = snprintf(cmd_str + offset, sizeof(cmd_str) - offset,
+                               "%s%c", argv[i], i + 1 == argc ? '\n' : ' ');
+        if (written <= 0 || written >= (int)(sizeof(cmd_str) - offset))
+            break;
+        offset += written;
+    }
     usb_serial_send((char *)cmd_str, strlen(cmd_str));
     // if (chip_types == CHEETAH_V1 || chip_types == CHEETAH_V2)
     // {
@@ -669,6 +1037,17 @@ static int32_t write_regs_cmd(int32_t argc, char *argv[])
         // {
             if (datalen == 1)
             {
+                if (addr == 0x1053 && pdata[0] == 0x10000000) {
+                    usb_serial_send((char *)"\n\n", strlen("\n\n"));
+                    char success_str[200];
+                    snprintf(success_str, sizeof(success_str),
+                             "idx%d, Start at %#04hx, write %zu bytes finish\r\n",
+                             idx, addr, datalen * sizeof(uint32_t));
+                    usb_serial_send(success_str, strlen(success_str));
+                    usb_serial_send((char *)"\r\nDone\r\nmmwDemo:/>\r\n",
+                                    strlen("\r\nDone\r\nmmwDemo:/>\r\n"));
+                    return 0;
+                }
                 cheetah_reg_write_single(idx, addr, pdata[0], CHEETAH_CHECK); 
             }
             else
@@ -1166,7 +1545,7 @@ static int uart_rec_task_init(void)
 //     return 0;
 }
 
-void CliSiganlProcess(uint8_t *data, uint32_t len)
+void CliSiganlProcess(uint8_t *data, uint32_t len, int channel)
 {
     for (uint32_t i = 0; i < len; i++)
     {
@@ -1208,7 +1587,21 @@ void CliSiganlProcess(uint8_t *data, uint32_t len)
                 /* 根据命令类型调用相应的函数 */
                 if (argIndex > 0)
                 {
-                    if (strcmp(tokenizedArgs[0], "readreg") == 0 || strcmp(tokenizedArgs[0], "rr") == 0 || strcmp(tokenizedArgs[0], "regGet") == 0)
+                    /* The local calibration task owns radar SPI, camera and
+                     * capture geometry until it has restored normal mode. */
+                    if (strcmp(tokenizedArgs[0], "CalibResult") == 0)
+                    {
+                        phase_calib_result_cmd(tokenizedArgs, argIndex);
+                    }
+                    else if (strcmp(tokenizedArgs[0], "CalibRecord") == 0)
+                    {
+                        phase_calib_record_cmd(tokenizedArgs, argIndex);
+                    }
+                    else if (phase_calib_is_running())
+                    {
+                        host_command_reply(tokenizedArgs, argIndex, -EBUSY);
+                    }
+                    else if (strcmp(tokenizedArgs[0], "readreg") == 0 || strcmp(tokenizedArgs[0], "rr") == 0 || strcmp(tokenizedArgs[0], "regGet") == 0)
                     {
                         /* 调用read_regs_cmd函数 */
                         // printf("Executing read_regs_cmd with %d arguments\n", argIndex);
@@ -1256,6 +1649,13 @@ void CliSiganlProcess(uint8_t *data, uint32_t len)
                     {
                         SetMaxFrameCnt(argIndex, tokenizedArgs);
                     }
+                    else if (strcmp(tokenizedArgs[0], "SetMaxFrameCount") == 0)
+                    {
+                        int cnt = argIndex > 1 ?
+                                  strtol(tokenizedArgs[1], NULL, 10) : 0;
+                        configure_host_frame_count(cnt);
+                        host_command_reply(tokenizedArgs, argIndex, 0);
+                    }
                     else if (strcmp(tokenizedArgs[0], "getTemperature") == 0 || strcmp(tokenizedArgs[0], "etTemperature") == 0)
                     {
                         getTemperature(argIndex, tokenizedArgs);
@@ -1286,15 +1686,61 @@ void CliSiganlProcess(uint8_t *data, uint32_t len)
                     {
                         setRawDataFlg_cmd(argIndex, tokenizedArgs);
                     }
+                    else if (strcmp(tokenizedArgs[0], "phaseCalib") == 0)
+                    {
+                        host_command_reply(tokenizedArgs, argIndex,
+                                           phase_calib_start());
+                    }
+                    else if (strcmp(tokenizedArgs[0], "gropstart") == 0)
+                    {
+                        int cmd_ret = radar_capture_reconfig_stop();
+                        if (cmd_ret == 0)
+                            cmd_ret = enter_ps_cal_mode();
+                        host_command_reply(tokenizedArgs, argIndex, cmd_ret);
+                    }
+                    else if (strcmp(tokenizedArgs[0], "gropend") == 0 ||
+                             strcmp(tokenizedArgs[0], "SetSubFrameAsFrame") == 0 ||
+                             strncmp(tokenizedArgs[0], "%%", 2) == 0)
+                    {
+                        host_command_reply(tokenizedArgs, argIndex, 0);
+                    }
+                    else if (strcmp(tokenizedArgs[0], "sensorStop") == 0)
+                    {
+                        host_command_reply(tokenizedArgs, argIndex,
+                                           radar_capture_host_stop());
+                    }
+                    else if (strcmp(tokenizedArgs[0], "sensorStart") == 0)
+                    {
+                        host_command_reply(tokenizedArgs, argIndex,
+                                           radar_capture_host_start());
+                    }
+                    else if (strcmp(tokenizedArgs[0], "SendConfigInfo") == 0)
+                    {
+                        int cmd_ret = -EINVAL;
+                        if (argIndex >= 5) {
+                            int chirp_num = strtol(tokenizedArgs[3], NULL, 10);
+                            int sample_num = strtol(tokenizedArgs[4], NULL, 10);
+                            cmd_ret = host_send_config_info(chirp_num, sample_num);
+                        }
+                        host_command_reply(tokenizedArgs, argIndex, cmd_ret);
+                    }
                     else if (strcmp(tokenizedArgs[0], "otaUpgrade") == 0 || strcmp(tokenizedArgs[0], "ota") == 0)
                     {
                         /* OTA 固件升级命令 */
                         otaUpgrade_cmd(argIndex, tokenizedArgs);
                     }
+                    else if (strcmp(tokenizedArgs[0], "setTargetPara") == 0)
+                    {
+                        InitPhaseCalibPara_cmd(argIndex, tokenizedArgs, channel);
+                    }
+                    else if (strcmp(tokenizedArgs[0], "startPhaseCalib") == 0)
+                    {
+                        InitPhaseCalibStart_cmd(argIndex, tokenizedArgs, channel);
+                    }
                     else
                     {
                         printf("Unknown command: %s\n", tokenizedArgs[0]);
-                        printf("Available commands: readreg/rr, writereg/wr, delay/dl, usb_serial_test, angCalibMat, angFFT, uds, setRawDataFlg, otaUpgrade/ota\n");
+                        printf("Available commands: readreg/rr, writereg/wr, delay/dl, usb_serial_test, angCalibMat, angFFT, uds, setRawDataFlg, phaseCalib, CalibResult, CalibRecord, otaUpgrade/ota\n");
                     }
                 }
                 

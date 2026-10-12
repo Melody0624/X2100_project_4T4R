@@ -103,6 +103,14 @@ struct cis_dpi_config {
 void camera_init(void);
 
 /**
+ * @brief Set the VIC/CIM circular buffer count used by the next sensor registration
+ * @param index controller index
+ * @param mem_cnt circular buffer count (the VIC driver reserves one extra buffer)
+ * @return 0 on success, negative errno on invalid input or while registered
+ */
+int camera_set_frame_count(int index, unsigned int mem_cnt);
+
+/**
  * @brief 探测第一个可用的 camera
  * @param index 选择控制器(仅X2000有效)
  * @return 非NULL : 成功    NULL: 失败, 一般是i2c 通信失败或者没有sensor注册

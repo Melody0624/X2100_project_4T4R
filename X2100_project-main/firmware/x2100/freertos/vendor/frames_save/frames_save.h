@@ -18,5 +18,10 @@ int read_frame_raw_data(const char *filename, uint32_t frameID, void *buffer, ui
 int read_Det_data(const char *filename, uint32_t frameID, void *buffer, uint32_t buffer_size);
 int read_Det_data(const char *filename, uint32_t frameID, void *buffer, uint32_t buffer_size);
 int parse_detinfo_payload(const uint8_t *payload, uint32_t payload_size, DetInfo *detInfo);
+#if ZU3_FORMAT_DATA_REPLAY == 1
+int zu3_adc_init(const char *filename);
+int read_zu3_adc_frame_data(uint32_t frameID, void *buffer, uint32_t buffer_size);
+void zu3_close_adc_file(void);
+#endif
 
 #endif // __FRAMES_SAVE_H__

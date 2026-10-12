@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file        detection_post_processing.c
  * @brief       检测后处理模块。对原始检测点进行排序、安装角坐标旋转补偿、
  *              动/静态分类、大角度异常点剔除及弹跳点(Bouncing)剔除。

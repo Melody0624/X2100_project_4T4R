@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include "../motor_cycle_demo/inc/general_functions.h"
+#include "../InitPhaseCalib/InitPhaseCalib.h"
 
 extern volatile int g_is_eol_mode;
 uint8_t g_calib_operation = 0;     // 0: Stop, 1: Start
@@ -79,8 +80,8 @@ void eol_calib_process_frame(DetInfo* detInfo) {
     for (int i = 0; i < detInfo->numDets; i++) {
         DetObj* pt = &detInfo->detObj[i];
         
-        printf("[EOL-DEBUG]   -> Pt %d: Dist: %.2f m, Ang: %.2f deg, SNR: %.2f dB, Vel: %.2f m/s\n", 
-               i, pt->x_output, pt->azm_deg, pt->snr, pt->vlc);
+        printf("[EOL-DEBUG]   -> Pt %d: Rng: %.2f m, Ang: %.2f deg, SNR: %.2f dB, Vel: %.2f m/s\n",
+               i, pt->rng, pt->azm_deg, pt->snr, pt->vlc);
         
         float diff_vel = fabsf(pt->vlc - s_target_vel);
         if (diff_vel >= EOL_CALIB_TOL_VEL) {
@@ -89,8 +90,8 @@ void eol_calib_process_frame(DetInfo* detInfo) {
         
         found_static_point_anywhere = true; // Found at least one valid static candidate
         
-        // Use x_output (longitudinal distance) instead of raw radial range (rng)
-        float diff_dist = fabsf(pt->x_output - s_target_dist);
+        // EOL target distance is radial range and must not depend on installation-angle rotation.
+        float diff_dist = fabsf(pt->rng - s_target_dist);
         float diff_ang = fabsf(pt->azm_deg - s_target_ang);
         
         if (diff_dist < EOL_CALIB_TOL_DIST) {
@@ -194,6 +195,68 @@ int eol_uds_process_request(const uint8_t *req_data, uint8_t req_len,
                     }
                 } else {
                     status = 1;
+                }
+                break;
+            /* Initial Phase Calibration (CAN protocol) */
+            case DID_PHASE_CALIB_TARGET_PARA:
+                // 设置标靶信息: minRange(1B, 0~250), minAng(1B, -90~90), maxAng(1B, -90~90)
+                InitPhaseCalibSetCommChannel(INIT_PHASE_COMM_CAN);
+                if (payload_len >= 3) {
+                    InitPhasePara_t local_para;
+                    local_para.Range   = (int8_t)payload[0]; // minRange: 0~25.0m (x10)
+                    local_para.minAng  = (int8_t)payload[1]; // minAng
+                    local_para.maxAng  = (int8_t)payload[2]; // maxAng
+                    local_para.AngStep = 1;                  // default step
+                    local_para.commChannel = INIT_PHASE_COMM_CAN;
+                    SetTargetPara(&local_para);
+                    status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                    printf("[EOL] CAN setTargetPara OK: Range=%d, minAng=%d, maxAng=%d\n",
+                           local_para.Range, local_para.minAng, local_para.maxAng);
+                } else {
+                    status = PHASE_CALIB_CAN_STATUS_FAIL;
+                    printf("[EOL] CAN setTargetPara FAIL: payload_len=%d < 3\n", payload_len);
+                }
+                break;
+            case DID_PHASE_CALIB_SET_ANGLE:
+                // 设置转台角度: 2字节 (uint16_t, 666=无效值, -90~90有效)
+                InitPhaseCalibSetCommChannel(INIT_PHASE_COMM_CAN);
+                if (payload_len >= 2) {
+                    uint16_t raw = (uint16_t)(payload[0] | (payload[1] << 8));
+                    if (raw == 666) {
+                        // 无效值: 对应 UART 通道的 SetTargetAngle(666) 语义
+                        SetTargetAngle(666);
+                        status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                        printf("[EOL] CAN setAngle OK: invalid(666)\n");
+                    } else {
+                        // 有效角度: 有符号16位, 范围 -90~90
+                        int16_t s_raw = (int16_t)raw;
+                        int32_t angle = (int32_t)s_raw;
+                        SetTargetAngle(angle);
+                        status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                        printf("[EOL] CAN setAngle OK: angle=%d\n", angle);
+                    }
+                } else {
+                    status = PHASE_CALIB_CAN_STATUS_FAIL;
+                    printf("[EOL] CAN setAngle FAIL: payload_len=%d < 2\n", payload_len);
+                }
+                break;
+            case DID_PHASE_CALIB_START:
+                // 启动校准: 0=停止, 1=启动
+                InitPhaseCalibSetCommChannel(INIT_PHASE_COMM_CAN);
+                if (payload_len >= 1) {
+                    uint8_t cmd = payload[0];
+                    InitPhaseStep_n step;
+                    if (cmd == 0) {
+                        step = INIT_PHASE_STEP_IDLE;
+                    } else {
+                        step = INIT_PHASE_STEP_START;
+                    }
+                    SetInitPhaseStepFlg(step);
+                    status = PHASE_CALIB_CAN_STATUS_SUCCESS;
+                    printf("[EOL] CAN startPhaseCalib OK: cmd=%d\n", cmd);
+                } else {
+                    status = PHASE_CALIB_CAN_STATUS_FAIL;
+                    printf("[EOL] CAN startPhaseCalib FAIL: payload empty\n");
                 }
                 break;
             default:

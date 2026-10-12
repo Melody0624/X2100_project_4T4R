@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file        cfar_detection.c
  * @brief       CFAR 检测包装函数。调用 cfar_func_v2 执行 2D CFAR 检测，
  *              并将检测结果（距离/速度索引、SNR、峰值标志）填充至 DetInfoRD 结构体。
@@ -36,7 +36,7 @@ void cfar_detection(GlbCtx* ctx, const float* RDMap, int numRngBins, int numDopp
                  isPeak_flag_mat, is_peak_mat_rng, pool_index);
 
     // 将检测结果填充到glbCtx.detInfoRD
-    unsigned int numTotalSubBands = ctx->basic_params.numTxs + ctx->wave_params.numEmptyBands;
+    unsigned int numTotalSubBands = ctx->basicParams.numTxs[0] + ctx->waveParams.numEmptyBands[0];
     int NFFT_doppler = numDoppBinsPerSubBand * numTotalSubBands;
     int detCount = 0;
     for (int rngIdx = 0; rngIdx < numRngBins; rngIdx++) {
@@ -48,7 +48,7 @@ void cfar_detection(GlbCtx* ctx, const float* RDMap, int numRngBins, int numDopp
                 // DDMA多普勒解模糊
                 int dopBinIdx_ddmaDec = dopIdx + numDoppBinsPerSubBand * (maxMetricIndices[dopIdx * numRngBins + rngIdx]);
                 // 处理速度模糊的临时方案，分配150kph给远离目标，剩下120kph给靠近目标
-                if ((float)dopBinIdx_ddmaDec * ctx->wave_params.dopRes > (160.0f / 3.6f)) { 
+                if (dopBinIdx_ddmaDec >= NFFT_doppler / 2) { 
                     dopBinIdx_ddmaDec = dopBinIdx_ddmaDec - NFFT_doppler;
                 }
 
@@ -76,6 +76,7 @@ void cfar_detection(GlbCtx* ctx, const float* RDMap, int numRngBins, int numDopp
 
                 // 记录检测点
                 if (detCount < MAX_DETECTIONS) {
+                    ctx->detInfoRD.detObjRD[detCount].sfIdx = 0;
                     ctx->detInfoRD.detObjRD[detCount].rngIdx = rngIdx;
                     ctx->detInfoRD.detObjRD[detCount].dopIdx = dopIdx;
                     ctx->detInfoRD.detObjRD[detCount].rngBinIdx = rngIdxInterp;

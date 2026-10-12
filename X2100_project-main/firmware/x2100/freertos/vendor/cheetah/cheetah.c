@@ -45,7 +45,7 @@ int cheetah_spi_init(void)
 int cheetah_reg_read_single(int devidx, uint16_t addr, uint32_t *pdata, int check)
 {
 
-    int ret;
+    int ret = 0;
     int len;
     if (pdata == NULL)
     {
@@ -346,8 +346,129 @@ int cheetah_reg_write_burst(int devidx, uint16_t addr, uint32_t *pdata, uint16_t
 
 void cheetah_start(void)
 {
-    uint32_t value = 0x10000000;
-    cheetah_reg_write_single(0, 0x1053, value, CHEETAH_CHECK);
+    cheetah_reg_write_single(0, 0x1053, 0x10000000, CHEETAH_CHECK);
+}
+
+int cheetah_start_checked(void)
+{
+    const uint32_t frame_en_mask = 0x10000000;
+    const uint32_t dd_mode_mask = 0x00000018;
+    const uint32_t system_ready_mask = 0x00000004;
+    const uint32_t runtime_error_mask = 0x00020040;
+    const uint32_t fsync_mask = 0x00000002;
+    const uint32_t status_clear_mask = runtime_error_mask | fsync_mask;
+    uint32_t value = 0;
+    uint32_t int_status = 0;
+    int fsync_seen = 0;
+    int ret;
+
+    /*
+     * 0x1053[4:3] is the read-only RO_DD_MODE state and bit 2 is
+     * RO_SYSTEM_RDY.  A healthy stage reaches 0x00000004 before FRAME_EN is
+     * armed.  A non-zero RO_DD_MODE observed here has correlated with
+     * RO_INT_STATUS bit 17/6 and no MIPI frame, so do not start capture until
+     * the stage configuration has returned to ready/idle.
+     */
+    for (int poll = 0; poll < 100; poll++) {
+        ret = cheetah_reg_read_single(0, 0x1053, &value, CHEETAH_CHECK);
+        if (ret == 0 && (value & frame_en_mask) == 0 &&
+            (value & dd_mode_mask) == 0 &&
+            (value & system_ready_mask) != 0)
+            break;
+
+        if (poll == 0) {
+            printf("[PhaseCalib] Waiting for Cheetah ready before data-flow "
+                   "start: 0x1053=0x%08x, ret=%d\n", value, ret);
+        }
+        mdelay(10);
+    }
+    if (ret != 0 || (value & frame_en_mask) != 0 ||
+        (value & dd_mode_mask) != 0 ||
+        (value & system_ready_mask) == 0) {
+        printf("[PhaseCalib] Cheetah did not become ready before data-flow "
+               "start: 0x1053=0x%08x, ret=%d\n", value, ret);
+        return ret != 0 ? ret : -1;
+    }
+
+    /*
+     * 0x10D2 is sticky.  Clear the two observed runtime errors and the FSync
+     * notification before arming FRAME_EN, then restore 0x10D1 to its
+     * documented maintain state.  A newly asserted FSync bit then proves
+     * that this start, rather than an earlier frame, reached the frame-sync
+     * event.  FSync does not prove that CSI transmitted a complete frame;
+     * camera_wait_frame() remains the authoritative completion check.
+     */
+    ret = cheetah_reg_write_single(0, 0x10D1, ~status_clear_mask,
+                                   CHEETAH_CHECK);
+    if (ret == 0)
+        ret = cheetah_reg_write_single(0, 0x10D1, 0xFFFFFFFF,
+                                       CHEETAH_CHECK);
+    if (ret == 0)
+        ret = cheetah_reg_read_single(0, 0x10D2, &int_status,
+                                      CHEETAH_CHECK);
+    if (ret != 0 || (int_status & status_clear_mask) != 0) {
+        printf("[PhaseCalib] Failed to clear Cheetah runtime status before "
+               "data-flow start: 0x10D2=0x%08x, ret=%d\n",
+               int_status, ret);
+        return ret != 0 ? ret : -1;
+    }
+
+    for (int attempt = 1; attempt <= 2; attempt++) {
+        fsync_seen = 0;
+        ret = cheetah_reg_write_single(0, 0x1053, 0x10000000,
+                                       CHEETAH_CHECK);
+        if (ret == 0) {
+            for (int poll = 0; poll < 30; poll++) {
+                ret = cheetah_reg_read_single(0, 0x1053, &value,
+                                              CHEETAH_CHECK);
+                if (ret == 0)
+                    ret = cheetah_reg_read_single(0, 0x10D2, &int_status,
+                                                  CHEETAH_CHECK);
+                if (ret != 0 || (value & frame_en_mask) == 0 ||
+                    (value & dd_mode_mask) != 0 ||
+                    (value & system_ready_mask) == 0 ||
+                    (int_status & runtime_error_mask) != 0)
+                    break;
+                if ((int_status & fsync_mask) != 0) {
+                    fsync_seen = 1;
+                    break;
+                }
+                mdelay(10);
+            }
+        }
+        if (ret == 0 && (value & frame_en_mask) != 0 &&
+            (value & dd_mode_mask) == 0 &&
+            (value & system_ready_mask) != 0 &&
+            (int_status & runtime_error_mask) == 0 && fsync_seen) {
+            printf("[PhaseCalib] Cheetah frame start verified: "
+                   "0x1053=0x%08x, 0x10D2=0x%08x\n",
+                   value, int_status);
+            return 0;
+        }
+
+        if (ret == 0 && ((value & dd_mode_mask) != 0 ||
+                         (int_status & runtime_error_mask) != 0)) {
+            printf("[PhaseCalib] Cheetah runtime state rejected after "
+                   "data-flow start: 0x1053=0x%08x, 0x10D2=0x%08x\n",
+                   value, int_status);
+            return -1;
+        }
+
+        if (ret == 0 && (value & frame_en_mask) != 0 &&
+            (value & dd_mode_mask) == 0 &&
+            (value & system_ready_mask) != 0 && !fsync_seen) {
+            printf("[PhaseCalib] No fresh FSync after data-flow start: "
+                   "0x1053=0x%08x, 0x10D2=0x%08x\n",
+                   value, int_status);
+            return -1;
+        }
+
+        printf("cheetah_start attempt %d failed: ret=%d, 0x1053=0x%08x, "
+               "0x10D2=0x%08x\n", attempt, ret, value, int_status);
+        mdelay(10);
+    }
+
+    return ret != 0 ? ret : -1;
 }
 
 void cheetah_stop(void)
@@ -359,6 +480,14 @@ void cheetah_stop(void)
 
 }
 
+void cheetah_stop_for_reconfig(void)
+{
+    //cheetah_reg_write_single(0, 0x1053, 0x00000000, CHEETAH_CHECK);
+    cheetah_stop();
+    mdelay(100);
+    cheetah_reset();
+}
+
 void cheetah_reset(void)
 {
     cheetah_reg_write_single(0, 0x2009, 0x00000000, CHEETAH_CHECK);
@@ -366,11 +495,12 @@ void cheetah_reset(void)
     cheetah_reg_write_single(0, 0x2009, 0x00000001, CHEETAH_CHECK);
 }
 
-void reset_ram(int devidx)
+static int reset_ram_impl(int devidx, int stop_on_error)
 {
     uint16_t addr = 0x0000;
     uint32_t datalen = 97;
     uint32_t i;
+    int first_error = 0;
     uint32_t pdata[16];
 
     // printf("ResetRams  %d \r\n", devidx);
@@ -378,19 +508,44 @@ void reset_ram(int devidx)
 
     for (i = 0; i < datalen; i++)
     {
-        cheetah_reg_write_burst(devidx, addr + (i * 16), pdata, 16, CHEETAH_CHECK); 
+        int ret = cheetah_reg_write_burst(devidx, addr + (i * 16), pdata,
+                                          16, CHEETAH_CHECK);
+        if (ret != 0) {
+            if (stop_on_error)
+                return ret;
+            if (first_error == 0)
+                first_error = ret;
+        }
     }
 
+    return first_error;
 }
 
-void set_regs_to_target(struct reg_line *regscfg, int count)
+void reset_ram(int devidx)
+{
+    reset_ram_impl(devidx, 0);
+}
+
+static int set_regs_to_target_impl(struct reg_line *regscfg, int count,
+                                   int stop_on_error)
 {
     int i;
     int delay;
     int chipIdx;
+    int ret = 0;
+    int first_error = 0;
+
+    /* External functions for phase-shifter calibration command support */
+    extern int radar_capture_host_start(void);
+    extern void configure_host_frame_count(int input_cnt);
+    extern int host_send_config_info(int chirp_num, int sample_num);
+
+    if (regscfg == NULL || count <= 0)
+        return -1;
 
     for(i = 0; i < count; i ++)
     {
+        ret = 0;
         if(regscfg[i].addr == CMD_DELAY)
         {
             delay = regscfg[i].value[0];
@@ -399,24 +554,53 @@ void set_regs_to_target(struct reg_line *regscfg, int count)
         else if(regscfg[i].addr == CMD_RESET_RAMS)
         {
             chipIdx = regscfg[i].chipIdx;
-            reset_ram(chipIdx);
+            ret = reset_ram_impl(chipIdx, stop_on_error);
+        }
+        else if(regscfg[i].addr == CMD_RADAR_START)
+        {
+            ret = radar_capture_host_start();
+        }
+        else if(regscfg[i].addr == CMD_SET_MAX_FRAME_CNT)
+        {
+            configure_host_frame_count(regscfg[i].value[0]);
+            ret = 0;
+        }
+        else if(regscfg[i].addr == CMD_SEND_CONFIGINFO)
+        {
+            /* value[0] = subframe_num, value[1] = chirp_num, value[2] = sample_num */
+            ret = host_send_config_info(regscfg[i].value[1],
+                                        regscfg[i].value[2]);
         }
         else
         {
-            cheetah_reg_write_burst(regscfg[i].chipIdx, regscfg[i].addr, regscfg[i].value, regscfg[i].valLen, CHEETAH_CHECK);
+            ret = cheetah_reg_write_burst(regscfg[i].chipIdx,
+                                          regscfg[i].addr,
+                                          regscfg[i].value,
+                                          regscfg[i].valLen,
+                                          CHEETAH_CHECK);
+        }
+
+        if (ret != 0) {
+            if (stop_on_error) {
+                printf("cheetah config failed: index=%d, chip=%d, addr=0x%04x, "
+                       "len=%d, ret=%d\n", i, regscfg[i].chipIdx,
+                       (uint16_t)regscfg[i].addr, regscfg[i].valLen, ret);
+                return ret;
+            }
+            if (first_error == 0)
+                first_error = ret;
         }
     }
+
+    return first_error;
 }
 
+int set_regs_to_target_checked(struct reg_line *regscfg, int count)
+{
+    return set_regs_to_target_impl(regscfg, count, 1);
+}
 
-
-
-
-
-
-
-
-
-
-
-
+void set_regs_to_target(struct reg_line *regscfg, int count)
+{
+    set_regs_to_target_impl(regscfg, count, 0);
+}

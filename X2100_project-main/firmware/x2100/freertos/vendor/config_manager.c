@@ -9,8 +9,26 @@
 
 #include "heap_malloc.h"
 
-#define CONFIG_FLASH_OFFSET 0x1DB000
-#define CONFIG_MAGIC_WORD 0x52414456 // "RADV" - updated to force recreation for layout shift (added calibResultStatus)
+#define CONFIG_MAGIC_WORD 0x52414456
+
+static uint32_t g_config_offset = 0;
+static uint32_t g_config_size = 0;
+
+static int config_partition_resolve(void)
+{
+    if (g_config_offset != 0) return 0;
+
+    uint32_t offset = 0, size = 0;
+    if (get_nor_partition_information_by_name("config", &offset, &size) != 0) {
+        printf("[CONFIG] Failed to resolve 'config' partition from MTD table!\n");
+        return -1;
+    }
+    g_config_offset = offset;
+    g_config_size = size;
+    printf("[CONFIG] Resolved 'config' partition: offset=0x%08X, size=0x%X (%u bytes)\n",
+           g_config_offset, g_config_size, g_config_size);
+    return 0;
+}
 
 /* 
  * 预留足够大的空间给雷达配置表 
@@ -89,9 +107,13 @@ int config_manager_init(const void *default_cheetah_cfg, uint32_t cheetah_cfg_le
     int needs_creation = 0;
     int32_t default_max_frame_cnt = -1;
 
+    if (config_partition_resolve() != 0) {
+        return -1;
+    }
+
     const struct storage_info *info = sfc_nor_flash_info();
     
-    sfc_nor_flash_read(CONFIG_FLASH_OFFSET, sizeof(magic), (uint8_t*)&magic);
+    sfc_nor_flash_read(g_config_offset, sizeof(magic), (uint8_t*)&magic);
     flush_dcache_all();
     
     if (magic == CONFIG_MAGIC_WORD) {
@@ -116,9 +138,14 @@ int config_manager_init(const void *default_cheetah_cfg, uint32_t cheetah_cfg_le
         uint32_t sector_size = info->erasesize;
         uint32_t config_size = sizeof(SysConfigLayout);
         uint32_t erase_size = ((config_size + sector_size - 1) / sector_size) * sector_size;
+
+        if (config_size > g_config_size) {
+            printf("[CONFIG] WARNING: config layout (%u) exceeds partition size (%u)!\n",
+                   config_size, g_config_size);
+        }
         
-        printf("[CONFIG] Erasing flash at 0x%x, size: %u bytes\n", CONFIG_FLASH_OFFSET, erase_size);
-        int ret = sfc_nor_flash_erase(CONFIG_FLASH_OFFSET, erase_size);
+        printf("[CONFIG] Erasing flash at 0x%x, size: %u bytes\n", g_config_offset, erase_size);
+        int ret = sfc_nor_flash_erase(g_config_offset, erase_size);
         if (ret != 0) {
             printf("[CONFIG] Flash erase error! ret=%d\n", ret);
             return -1;
@@ -131,7 +158,7 @@ int config_manager_init(const void *default_cheetah_cfg, uint32_t cheetah_cfg_le
         
         flush_dcache_all();
         
-        uint32_t offset = CONFIG_FLASH_OFFSET;
+        uint32_t offset = g_config_offset;
         uint32_t remain = config_size;
         
         while (remain > 0) {
@@ -147,7 +174,7 @@ int config_manager_init(const void *default_cheetah_cfg, uint32_t cheetah_cfg_le
             memset(init_buf, 0xFF, sizeof(init_buf));
         }
         
-        printf("[CONFIG] Default config (%ld bytes) created successfully at 0x%x.\n", config_size, CONFIG_FLASH_OFFSET);
+        printf("[CONFIG] Default config (%u bytes) created successfully at 0x%x.\n", config_size, g_config_offset);
         
         if (default_cheetah_cfg && cheetah_cfg_len > 0) {
             if (param_set(PARAM_CHEETAH_DEFAULT_CFG, default_cheetah_cfg, cheetah_cfg_len) == 0) {
@@ -175,9 +202,10 @@ int config_manager_init(const void *default_cheetah_cfg, uint32_t cheetah_cfg_le
 
 int param_get(ParamID id, void *buf, uint32_t len) {
     if (id >= PARAM_MAX_COUNT || !buf) return -1;
+    if (config_partition_resolve() != 0) return -1;
     if (len > g_param_table[id].length) len = g_param_table[id].length;
 
-    uint32_t offset = CONFIG_FLASH_OFFSET + g_param_table[id].offset;
+    uint32_t offset = g_config_offset + g_param_table[id].offset;
     
     int ret = sfc_nor_flash_read(offset, len, (uint8_t*)buf);
     
@@ -188,11 +216,12 @@ int param_get(ParamID id, void *buf, uint32_t len) {
 
 int param_set(ParamID id, const void *buf, uint32_t len) {
     if (id >= PARAM_MAX_COUNT || !buf) return -1;
+    if (config_partition_resolve() != 0) return -1;
     if (len > g_param_table[id].length) len = g_param_table[id].length;
 
     const struct storage_info *info = sfc_nor_flash_info();
     uint32_t sector_size = info->erasesize;
-    uint32_t param_offset = CONFIG_FLASH_OFFSET + g_param_table[id].offset;
+    uint32_t param_offset = g_config_offset + g_param_table[id].offset;
     
     uint32_t aligned_start = (param_offset / sector_size) * sector_size;
     uint32_t param_end = param_offset + len;
