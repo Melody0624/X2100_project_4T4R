@@ -1,0 +1,88 @@
+{
+  "input_file": "Record_20261013_111210.dat",
+  "sha256": "fa09ea3252feddc25a2940ad3bb5d471d3f1e273cb5ecd37cde33dee4df52901",
+  "frames": 113,
+  "total_detections": 310,
+  "selected_points": 113,
+  "frame_first": 2027,
+  "frame_last": 2139,
+  "selection": "0.5..2 m, abs(azimuth)<=15 deg, abs(velocity)<=0.5 m/s, peak=1; exactly one per frame",
+  "packet_layout": "legacy-float60, power already decoded float dB",
+  "reference_dbsm": 4.6,
+  "statistics": {
+    "range_m": {
+      "mean": 1.1899332198421513,
+      "median": 1.188770055770874,
+      "min": 1.1775003671646118,
+      "max": 1.2145847082138062,
+      "population_std": 0.008327567632530663
+    },
+    "power": {
+      "mean": 138.10584076737936,
+      "median": 138.08999633789062,
+      "min": 137.83999633789062,
+      "max": 138.58999633789062,
+      "population_std": 0.18773739811549997
+    },
+    "snr": {
+      "mean": 45.51115032634904,
+      "median": 45.470001220703125,
+      "min": 44.849998474121094,
+      "max": 46.06999969482422,
+      "population_std": 0.36980213373317616
+    },
+    "azimuth_deg": {
+      "mean": 3.951278018740426,
+      "median": 4.210030555725098,
+      "min": 1.0226510763168335,
+      "max": 5.184107780456543,
+      "population_std": 1.0200548962173615
+    },
+    "x_output_m": {
+      "mean": 1.186923453238158,
+      "median": 1.1859339475631714,
+      "min": 1.1732879877090454,
+      "max": 1.2138248682022095,
+      "population_std": 0.009333416559677954
+    },
+    "y_output_m": {
+      "mean": 0.08187890530819386,
+      "median": 0.08715428411960602,
+      "min": 0.021320227533578873,
+      "max": 0.10661172866821289,
+      "population_std": 0.02078158881877269
+    },
+    "velocity_mps": {
+      "mean": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0,
+      "population_std": 0.0
+    }
+  },
+  "relative_db": {
+    "mean": 141.12632083663163,
+    "median": 141.08059463639427,
+    "min": 140.69635915205743,
+    "max": 141.88710686661756,
+    "population_std": 0.29398814720802896
+  },
+  "provisional_offset_db": -136.52632083663164,
+  "median_offset_db": -136.48059463639427,
+  "reference_range_estimate_m": 1.1899332198421513,
+  "reference_effective_power_db": 138.1054172739676,
+  "calibrated_reference_dbsm": {
+    "mean": 4.599999999999996,
+    "median": 4.554273799762626,
+    "min": 4.170038315425785,
+    "max": 5.360786029985917,
+    "population_std": 0.29398814720802896
+  },
+  "max_xy_range_error_m": 8.728199252239222E-08,
+  "limitations": [
+    "Distance is radar-derived, not independently measured truth.",
+    "Firmware/waveform identity and slant versus projected range not recorded in this file.",
+    "This record cannot establish absence of ADC saturation, near-field effects or multipath.",
+    "Single-range provisional reference; compiled as B 2T4R boot default; no Flash parameter."
+  ]
+}

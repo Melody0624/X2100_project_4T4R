@@ -4,8 +4,8 @@
 set -euo pipefail
 project=/mnt/d/downloads/X2100_project-main
 sdk="$project/X2100_project-main/firmware/x2100/freertos"
-build=/home/melody/Manhattan_Project/freertos_rcs_internal_20261012
-output="$project/artifacts/2t4r_rcs_internal_20261012"
+build="${BUILD_DIR:-/home/melody/Manhattan_Project/freertos_rcs_internal_20261012}"
+output="${BUILD_OUTPUT:-$project/artifacts/2t4r_rcs_internal_20261012}"
 compiler="$project/MotorCycle_Ingenic/MotorCycle_Ingenic/tools/toolchains/mips-xburst2-newlib430/bin"
 mkdir -p "$output/tests"
 if [[ -e "$build" ]]; then

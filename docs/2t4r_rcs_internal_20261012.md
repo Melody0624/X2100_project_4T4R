@@ -21,7 +21,9 @@ dbsm        = relative_db + offset_db
 本工程汇总的是幅度，补偿为 40*log10(R)，不能使用 20*log10(R)。
 高空安装模式下 `rng` 已转换为地面投影距离，模块会根据 `mountingHeightSqr` 恢复斜距再计算。
 
-启动时没有 RCS 标定：有效点的 `relative_db` 可用，`dbsm=NAN`、`calibrated=false`。
+2026-10-13 起，B 版 2T4R 启动默认使用角反初步标定偏置 **−136.526320837 dB**：用户角反 4.6 dBsm，记录 `Record_20261013_111210.dat` 的 113 帧参考点，雷达估计平均距离 1.18993322 m。该距离未经独立测量，标定需在其他距离复核。仅在 `BOARD_ANTENNA_CONFIG=BOARD_ANTENNA_2T4R` 时启用，不适用于新的 4T4R 波形。
+
+调用 `rcs_clear_calibration()` 后，有效点的 `relative_db` 可用，`dbsm=NAN`、`calibrated=false`。
 相对值没有 dBsm 意义，不应显示为真实散射截面积。
 非法距离或非有限强度使 `valid=false`。不按零值判定有效性，0 dBsm 本身是合法值。
 
@@ -40,7 +42,7 @@ rcs_clear_calibration();
 ```
 
 实际标定应使用已知 RCS 的角反射器，放在远场、正对雷达，保持波形、接收增益和处理参数不变，选择其对应点的稳定回波强度（可先做多帧平均）。参考距离为斜距，单位米；参考 RCS 为 dBsm。
-标定常数当前保存在 RAM，重启失效；本次没有增加 Flash 参数、CLI 命令或协议命令。以后可由 CAN 配置处理调用此接口。
+运行中的标定常数保存在 RAM；重启恢复上述编译默认值。重新标定或清除仅在本次运行中生效；没有增加 Flash 参数、CLI 命令或协议命令。以后可由 CAN 配置处理调用此接口。
 不要把通道幅相补偿系数当作绝对 RCS 标定常数。
 
 这是通过单点参考标定得到的 RCS 估计。当前没有天线方向图补偿、噪声功率扣除、饱和识别或频率相关的幅度校正；多径、低 SNR、非正向目标和增益/波形变化会引入误差。标定后仍需实测验证，改变波形/增益/通道设置后应重新标定。
@@ -81,5 +83,5 @@ if (frame && frame->frame_id == ctx->frmInfo.frmID) {
 
 - `tools/test_rcs_estimation.sh`：实际模块的参考目标、距离翻倍、异常输入、高空斜距、256 点边界和帧清理测试，启用 ASan/UBSan。
 - `tools/build_2t4r_rcs_internal.sh`：独立 MIPS 编译，并运行真实初始化及 6 个 ADC→检测→CFAR→测角→后处理→RCS 合成用例和原有阵列校准用例。
-- 构建目录与此前 A/B 固件目录分开；本次不生成或安装烧录 cfg。
-- 尚未取得角反射器标定数据，也未进行上板 RCS 精度测试。
+- 构建目录与此前 A/B 固件目录分开；构建脚本只编译验证，`tools/package_2t4r_rcs_reference.py` 另行生成初步标定烧录包。复现命令见 `docs/2t4r_rcs_reference_20261013.md`。
+- 已取得上述单距离角反记录，完成启动默认值和接口回归；尚未进行独立距离、多距离及上板 RCS 精度验证。

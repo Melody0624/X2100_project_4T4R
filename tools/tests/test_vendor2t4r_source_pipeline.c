@@ -122,8 +122,9 @@ static void run(GlbCtx *ctx, int rng_bin, int dop_bin, float angle) {
     assert(rcs_process_frame(ctx,0)==0);
     const RcsFrame *rcs=rcs_get_frame(0);
     assert(rcs && rcs->count==ctx->detInfo.numDets && rcs->frame_id==ctx->frmInfo.frmID);
-    assert(rcs->points[0].valid && !rcs->points[0].calibrated && isnan(rcs->points[0].dbsm));
+    assert(rcs->points[0].valid && rcs->points[0].calibrated && isfinite(rcs->points[0].dbsm));
     assert(fabsf(rcs->points[0].relative_db-(target.pwr+40*log10f(target.rng)))<.001f);
+    assert(fabsf(rcs->points[0].dbsm-(rcs->points[0].relative_db-136.526320837f))<.001f);
     ctx->radarInfo.installAngComp_deg=0;
 }
 static void array_calibration(GlbCtx *ctx) {

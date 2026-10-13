@@ -9,6 +9,10 @@ static void near(float actual, float expected) {
     assert(isfinite(actual) && fabsf(actual-expected)<0.0002f);
 }
 int main(void) {
+    /* The supplied 4.6 dBsm reference must be active immediately after boot. */
+    RcsEstimate boot=rcs_calculate(138.10541727f,1.18993322f);
+    assert(boot.valid && boot.calibrated);
+    near(boot.dbsm,4.6f);
     rcs_clear_calibration();
     RcsEstimate a=rcs_calculate(100.0f,10.0f);
     assert(a.valid && !a.calibrated && isnan(a.dbsm));

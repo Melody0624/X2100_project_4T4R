@@ -4,8 +4,19 @@
 #include "memory_pool.h"
 
 static RcsFrame frames[MAXPOOLNUM];
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R
+/* Provisional B 2T4R reference: Record_20261013_111210.dat, 113 frames.
+ * User RCS=4.6 dBsm; radar-estimated range=1.18993322 m.
+ * Offset=4.6-mean(pwr+40*log10(range))=-136.526320837 dB.
+ * Distance is not independent ground truth; recheck at other distances.
+ * Runtime reference/clear APIs override this until the next reboot.
+ * Do not transfer this reference to another waveform, gain or TX count. */
+static float calibration_offset_db = -136.526320837f;
+static bool calibration_valid = true;
+#else
 static float calibration_offset_db;
 static bool calibration_valid;
+#endif
 
 RcsEstimate rcs_calculate(float pwr_db, float slant_range_m)
 {

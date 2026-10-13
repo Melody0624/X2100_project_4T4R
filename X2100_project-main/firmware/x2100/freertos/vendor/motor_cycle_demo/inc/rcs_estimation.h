@@ -10,7 +10,7 @@ extern "C" {
 /* Separate storage preserves the DetObj/GlbCtx ABI used by vendor libraries. */
 typedef struct {
     float relative_db;  /* pwr + 40*log10(slant_range/1 m), not dBsm */
-    float dbsm;         /* NAN until a reference calibration is supplied */
+    float dbsm;         /* NAN when reference calibration is unavailable/cleared */
     bool valid;
     bool calibrated;
 } RcsEstimate;
