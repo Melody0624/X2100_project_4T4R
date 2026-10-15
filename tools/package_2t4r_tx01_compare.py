@@ -68,7 +68,7 @@ def prepare(source, build, output, compiler, variant):
         addition = ('\t/* User phase-center document: TX0/RX0 are rightmost,\n'
                     '\t * TX-major virtual channels advance left by 1.96 mm. */\n'
                     '\tglbCtx->basicParams.minElemSpacing[0] = -0.00196f / glbCtx->waveParams.wavelength[0];\n\n')
-        changes[name] = (original, original.replace(anchor, addition + anchor))
+        changes[name] = (original, original if addition in original else original.replace(anchor, addition + anchor))
         name = 'vendor/motor_cycle_demo/src/memory_pool.c'
         original = (build / name).read_text()
         spacing = -0.00196 * 76.5e9 / 299792458.0

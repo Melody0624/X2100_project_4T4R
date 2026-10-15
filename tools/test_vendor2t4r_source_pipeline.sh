@@ -7,7 +7,7 @@ vendor="$sdk/vendor"
 output="${TEST_OUTPUT:-$project/artifacts/vendor2t4r_source_update_20261010/tests}"
 mkdir -p "$output"
 theory_flags=()
-if [[ ${TEST_THEORY:-0} == 1 ]]; then theory_flags=(-DEXPECT_THEORY); fi
+if [[ ${TEST_THEORY:-1} == 1 ]]; then theory_flags=(-DEXPECT_THEORY); fi
 gcc -std=gnu99 -O1 -g -msse3 -fno-pie -no-pie -fsanitize=address,undefined -DHEAP_MALLOC_H \
     "${theory_flags[@]}" \
     -ffunction-sections -fdata-sections -Wl,--gc-sections \
