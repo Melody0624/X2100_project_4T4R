@@ -23,8 +23,8 @@
 #include "memory_pool.h"
 #include "InitPhaseCalib.h"
 
-#if NUM_SUBFRAMES != 1 || BOARD_ANTENNA_CONFIG != BOARD_ANTENNA_2T4R || CHEETAH_CONFIG != cheetah_128_512_config
-#error "Source detection adaptation supports 2T4R 506x128 only"
+#if NUM_SUBFRAMES != 1 || (BOARD_ANTENNA_CONFIG != BOARD_ANTENNA_2T4R && BOARD_ANTENNA_CONFIG != BOARD_ANTENNA_4T4R) || CHEETAH_CONFIG != cheetah_128_512_config
+#error "Source detection adaptation supports 2T4R/4T4R 506x128 only"
 #endif
 extern volatile uint8_t g_ps_cal_mode;
 #if USE_BPM

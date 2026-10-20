@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
-project=/mnt/d/downloads/X2100_project-main
+project=$(cd "$(dirname "$0")/.." && pwd)
 sdk="$project/X2100_project-main/firmware/x2100/freertos"
 vendor="$sdk/vendor"
-output="$project/artifacts/2t4r_rcs_internal_20261012/tests"
+output="${TEST_OUTPUT:-$project/artifacts/2t4r_rcs_internal_20261012/tests}"
 mkdir -p "$output"
 ulimit -c 0
 gcc -std=gnu99 -Wall -Wextra -Werror -g -fno-pie -no-pie \

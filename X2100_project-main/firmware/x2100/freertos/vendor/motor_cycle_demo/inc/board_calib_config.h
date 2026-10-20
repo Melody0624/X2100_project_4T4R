@@ -85,6 +85,9 @@ extern "C" {
 #if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R
 extern fft_cpx_f32 angCalibMat[8]; // 雷达角度校准矩阵
 extern fft_cpx_f32 angCalibMat_back[8];
+#elif BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+extern fft_cpx_f32 angCalibMat[16];
+extern fft_cpx_f32 angCalibMat_back[16];
 #else
 	extern fft_cpx_f32 angCalibMat_sf1[NUM_VX_SF1];
 #if NUM_SUBFRAMES == 2

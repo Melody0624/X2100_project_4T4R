@@ -118,7 +118,7 @@ GlbCtx* set_parameters(bool isInhighAltitude, bool isFlipInstall_azm, float rada
 #endif
 #elif BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
 #if ((CHEETAH_CONFIG == cheetah_128_256_config) || (CHEETAH_CONFIG == cheetah_128_512_config))
-    glbCtx->waveParams.frame_period = 0.04984f;
+    glbCtx->waveParams.frame_period = 0.050328f;
 #elif CHEETAH_CONFIG == cheetah_256_512_config
     glbCtx->waveParams.frame_period = 0.05368f;
 #endif
@@ -153,11 +153,11 @@ GlbCtx* set_parameters(bool isInhighAltitude, bool isFlipInstall_azm, float rada
 #if ((BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R) || (BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_3T4R))
     glbCtx->waveParams.sampling_freq[0] = 26.665e6;
 #elif BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
-    glbCtx->waveParams.sampling_freq[0] = 53.33e6;
+    glbCtx->waveParams.sampling_freq[0] = 26.665e6;
 #endif
 
 	glbCtx->waveParams.central_freq[0] = 76.5e9f;
-#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R
+#if ((BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R) || (BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R))
     glbCtx->waveParams.chirp_period[0] = 26e-6f;
 #else
     glbCtx->waveParams.chirp_period[0] = 30e-6f;
@@ -212,6 +212,10 @@ GlbCtx* set_parameters(bool isInhighAltitude, bool isFlipInstall_azm, float rada
 	glbCtx->radarInfo.installAngComp_deg = radarInstallAng;
 	glbCtx->radarInfo.mountingHeightSqr = 0.64F;
 
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+    /* User phase-center geometry, rightmost TX0/RX0, TX-major ordering. */
+    glbCtx->basicParams.minElemSpacing[0] = -0.00196f / glbCtx->waveParams.wavelength[0];
+#endif
 	if (init_memory_pool(glbCtx, pool_index, 0, 0) != 0) {
 		printf("错误: init_memory_pool 失败 pool_index=%d\n", pool_index);
 		return NULL;

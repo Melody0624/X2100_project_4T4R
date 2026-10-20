@@ -181,9 +181,9 @@ int InitPhaseCalibProcess(void)
         {
             if(initPhaseStep_last != INIT_PHASE_STEP_ZERO_CALIB_DONE)
             {
-                fft_cpx_f32 candidate[8];
+                fft_cpx_f32 candidate[NUM_VX_SF1];
                 int valid = 1;
-                for (int i = 0; i < 8; ++i) {
+                for (int i = 0; i < NUM_VX_SF1; ++i) {
                     float power = l_bv[i].r*l_bv[i].r + l_bv[i].i*l_bv[i].i;
                     if (!isfinite(power) || power < 1e-12f) valid = 0;
                 }
@@ -193,7 +193,7 @@ int InitPhaseCalibProcess(void)
                     break;
                 }
                 compute_zero_phase_correction(l_bv,
-                                   8,
+                                   NUM_VX_SF1,
                                    candidate);
 #if(INIT_PHASE_DEBUG)
                 // for(uint8_t i = 0; i < 8; i++)

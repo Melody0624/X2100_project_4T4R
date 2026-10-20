@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ulimit -c 0
-project=/mnt/d/downloads/X2100_project-main
+project=$(cd "$(dirname "$0")/.." && pwd)
 sdk="${SOURCE_SDK:-$project/X2100_project-main/firmware/x2100/freertos}"
 vendor="$sdk/vendor"
 output="${TEST_OUTPUT:-$project/artifacts/vendor2t4r_source_update_20261010/tests}"
 mkdir -p "$output"
 theory_flags=()
-if [[ ${TEST_THEORY:-0} == 1 ]]; then theory_flags=(-DEXPECT_THEORY); fi
+default_four=1
+if [[ ${TEST_TWO_TX:-0} == 1 ]]; then default_four=0; fi
+if [[ ${TEST_THEORY:-$default_four} == 1 ]]; then theory_flags=(-DEXPECT_THEORY); fi
+if [[ ${TEST_FOUR_TX:-$default_four} == 1 ]]; then theory_flags+=(-DEXPECT_FOUR_TX); fi
+if [[ ${TEST_TWO_TX:-0} == 1 ]]; then theory_flags+=(-DBOARD_ANTENNA_CONFIG=BOARD_ANTENNA_2T4R); fi
 gcc -std=gnu99 -O1 -g -msse3 -fno-pie -no-pie -fsanitize=address,undefined -DHEAP_MALLOC_H \
     "${theory_flags[@]}" \
     -ffunction-sections -fdata-sections -Wl,--gc-sections \

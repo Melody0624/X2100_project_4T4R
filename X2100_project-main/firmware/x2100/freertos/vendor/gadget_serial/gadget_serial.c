@@ -230,7 +230,7 @@ static void ring_buf_process_task(void *arg)
  * @param len: 数据长度
  * @return 实际发送的字节数
  */
-int usb_serial_send(const unsigned char *data, int len)
+static int usb_serial_send_inner(const unsigned char *data, int len)
 {
     if (!data || len <= 0) {
         printf("usb serial: invalid send parameters\n");
@@ -289,6 +289,21 @@ int usb_serial_send(const unsigned char *data, int len)
     }
 
     return total_sent;
+}
+
+int usb_serial_send(const unsigned char *data, int len)
+{
+    if (!data || len <= 0)
+        return -EINVAL;
+    if (!usb_serial_mutex)
+        return -ENODEV;
+    /* The low-level write waiter accepts one task. Keep command replies and
+     * complete point-cloud messages serialized, including partial writes. */
+    if (xSemaphoreTake(usb_serial_mutex, pdMS_TO_TICKS(100)) != pdTRUE)
+        return -ETIMEDOUT;
+    int ret = usb_serial_send_inner(data, len);
+    xSemaphoreGive(usb_serial_mutex);
+    return ret;
 }
 
 /**

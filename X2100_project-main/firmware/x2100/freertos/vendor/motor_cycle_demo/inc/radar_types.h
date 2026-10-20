@@ -51,7 +51,13 @@ extern "C" {
 #define BOARD_ANTENNA_3T4R 					1       /* 用于 3T4R 雷达角度校准 */
 #define BOARD_ANTENNA_4T4R 					2       /* 用于 4T4R 雷达角度校准 */
 /* [!] 在此选择当前雷达测试板的天线配置 */
-#define BOARD_ANTENNA_CONFIG 				BOARD_ANTENNA_2T4R
+#ifndef BOARD_ANTENNA_CONFIG
+#define BOARD_ANTENNA_CONFIG 				BOARD_ANTENNA_4T4R
+#endif
+/* Supplied 4TX table is installed; enable experimental live board testing. */
+#ifndef SOURCE_4T4R_RF_READY
+#define SOURCE_4T4R_RF_READY 1
+#endif
 // #define BOARD_ANTENNA_CONFIG 				BOARD_ANTENNA_3T4R
 // #define BOARD_ANTENNA_CONFIG 				BOARD_ANTENNA_4T4R
 
@@ -86,9 +92,14 @@ typedef ne10_fft_cpx_float32_t fft_cpx_f32;
 #define VLC_DISAMB_CONFIRM_TOL				1.0F							// k≠0 确认时，本帧与上一帧候选速度的最大差值 (m/s)
 	// 硬件和波形参数
 #define NUM_SUBFRAMES						1								// 单帧子帧数量
-#define NUM_VX_SF1							8								// 总VX数量	子帧1
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+#define NUM_VX_SF1 16
+#define NUM_VX_AZM_SF1 16
+#else
+#define NUM_VX_SF1 8
+#define NUM_VX_AZM_SF1 8
+#endif
 #define NUM_VX_SF2							0								// 总VX数量	子帧2
-#define NUM_VX_AZM_SF1						8								// 方向维VX数量 子帧1
 #define NUM_VX_AZM_SF2						0								// 方向维VX数量 子帧2
 #define NUM_VX_EL_SF1						0								// 俯仰维VX数量 子帧1
 #define NUM_VX_EL_SF2						0								// 俯仰维VX数量 子帧2

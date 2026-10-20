@@ -17,9 +17,21 @@ static unsigned int g_numRxs = 0;
 extern volatile uint8_t g_ps_cal_mode;
 extern volatile uint8_t g_ps_cal_local_mode;
 
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+#define VX_SPACING_4T4R (-0.00196f / (LIGHT_SPEED / 76.5e9f))
+static unsigned int logicIdx_reorder_sf1[NUM_VX_SF1] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+static unsigned int vxBVIdx_sf1_azm[NUM_VX_AZM_SF1] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15};
+static float vxPosn_sf1_azm[NUM_VX_AZM_SF1] = {
+    0*VX_SPACING_4T4R,1*VX_SPACING_4T4R,2*VX_SPACING_4T4R,3*VX_SPACING_4T4R,
+    4*VX_SPACING_4T4R,5*VX_SPACING_4T4R,6*VX_SPACING_4T4R,7*VX_SPACING_4T4R,
+    8*VX_SPACING_4T4R,9*VX_SPACING_4T4R,10*VX_SPACING_4T4R,11*VX_SPACING_4T4R,
+    12*VX_SPACING_4T4R,13*VX_SPACING_4T4R,14*VX_SPACING_4T4R,15*VX_SPACING_4T4R
+};
+#else
 static unsigned int logicIdx_reorder_sf1[NUM_VX_SF1] = { 0, 1, 2, 3, 4, 5, 6, 7};
 static unsigned int vxBVIdx_sf1_azm[NUM_VX_AZM_SF1] = { 0, 1, 2, 3, 4, 5, 6, 7};
 static float vxPosn_sf1_azm[NUM_VX_AZM_SF1] = { 0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 3.5f };
+#endif
 #if NUM_VX_EL_SF1 != 0
 static unsigned int vxBVIdx_el_sf1[NUM_VX_EL_SF1] = { 5, 11 };
 static float vxPosn_el_sf1[NUM_VX_EL_SF1] = { 0.0f, 1.0f };
@@ -40,7 +52,30 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg,
 
     if (g_memoryPool[pool_index].initialized)
     {
-        /* 幂等: 已初始化不是错误, 路径 A/B 两次调用都能通过 */
+        /* set_parameters initializes DSP storage before the output mode is
+         * applied. Grow only the packet buffer when ADC output is requested. */
+#if (USE_USB_OUTPUT == 1) && (UART_ADC_SEND == 0) && (NET_ADC_SEND == 0)
+        if (adcOutFlg == 1) {
+            uint32_t raw_size = ctx->waveParams.numChirps[0] *
+                (sizeof(CheetahChirpHeadInfo) + sizeof(uint16_t) *
+                 ctx->basicParams.numRxs[0] * ctx->waveParams.adcLen[0] + CHIRP_END_BYTES);
+            uint32_t required = sizeof(Mmw_output_message_header) +
+                sizeof(Mmw_output_message_tl) + raw_size;
+            if (g_memoryPool[pool_index].shared_pkt_buf_size < required) {
+                char *buffer = (char *)malloc(required);
+                if (buffer == NULL) {
+                    printf("[OUTPUT] ADC buffer allocation failed pool=%d bytes=%u\n",
+                           pool_index, (unsigned int)required);
+                    return -1;
+                }
+                free(g_memoryPool[pool_index].shared_pkt_buf);
+                g_memoryPool[pool_index].shared_pkt_buf = buffer;
+                g_memoryPool[pool_index].shared_pkt_buf_size = required;
+                printf("[OUTPUT] pool=%d ADC buffer=%u bytes\n",
+                       pool_index, (unsigned int)required);
+            }
+        }
+#endif
         return 0;
     }
     

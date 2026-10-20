@@ -9,7 +9,11 @@
 
 #include "heap_malloc.h"
 
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+#define CONFIG_MAGIC_WORD 0x52414434 /* Distinct 16-complex-channel layout. */
+#else
 #define CONFIG_MAGIC_WORD 0x52414456
+#endif
 
 static uint32_t g_config_offset = 0;
 static uint32_t g_config_size = 0;
@@ -63,7 +67,7 @@ typedef struct {
     float    calibResultAngle;           // 4 Bytes: 校准结果补偿角度
     uint8_t  calibResultStatus;          // 1 Byte: 校准结果状态
     RadarStatusMsg radarStatus;          // 雷达状态配置 (使用 mmw_msg_pkt.h 中的定义)
-    float  angCalibMat[16];            // 64 Bytes: 角度补偿矩阵 (8个复数)
+    float  angCalibMat[2 * NUM_VX_SF1]; // two floats per virtual channel
     float  angFFT[128];
     int32_t  maxFrameCnt;                // 4 Bytes: 最大帧数 (SetMaxFrameCnt 配置)
     uint8_t  outRawDataFlg;              // 1 Byte: 输出Raw Data标志 (1=输出, 0=不输出)
@@ -81,7 +85,7 @@ typedef struct {
 static const ParamInfo g_param_table[PARAM_MAX_COUNT] = {
     [PARAM_SERIAL_NUMBER]        = { offsetof(SysConfigLayout, serial_number), 5 },
     [PARAM_PRODUCTION_DATE]      = { offsetof(SysConfigLayout, production_date), 4 },
-    [PARAM_ANG_CALIB_MAT]        = { offsetof(SysConfigLayout, angCalibMat), 16 * sizeof(float) },
+    [PARAM_ANG_CALIB_MAT]        = { offsetof(SysConfigLayout, angCalibMat), sizeof(((SysConfigLayout*)0)->angCalibMat) },
     [PARAM_ANG_FFT_CFG]          = { offsetof(SysConfigLayout, angFFT), 128 * sizeof(float) },
     [PARAM_CHEETAH_DEFAULT_CFG]  = { offsetof(SysConfigLayout, cheetah_default_config), MAX_CHEETAH_CFG_SIZE },
     [PARAM_CHEETAH_FFT_COMP_CFG] = { offsetof(SysConfigLayout, cheetah_fft_comp_config), MIN_CHEETAH_CFG_SIZE },
@@ -202,6 +206,9 @@ int config_manager_init(const void *default_cheetah_cfg, uint32_t cheetah_cfg_le
 
 int param_get(ParamID id, void *buf, uint32_t len) {
     if (id >= PARAM_MAX_COUNT || !buf) return -1;
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+    if (id == PARAM_ANG_CALIB_MAT && len != g_param_table[id].length) return -1;
+#endif
     if (config_partition_resolve() != 0) return -1;
     if (len > g_param_table[id].length) len = g_param_table[id].length;
 
@@ -216,6 +223,9 @@ int param_get(ParamID id, void *buf, uint32_t len) {
 
 int param_set(ParamID id, const void *buf, uint32_t len) {
     if (id >= PARAM_MAX_COUNT || !buf) return -1;
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+    if (id == PARAM_ANG_CALIB_MAT && len != g_param_table[id].length) return -1;
+#endif
     if (config_partition_resolve() != 0) return -1;
     if (len > g_param_table[id].length) len = g_param_table[id].length;
 

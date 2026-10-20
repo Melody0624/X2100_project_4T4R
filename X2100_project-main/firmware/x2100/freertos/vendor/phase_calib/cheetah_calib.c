@@ -32,10 +32,15 @@
 #define PHASE_CALIB_FLASH_VERSION      2U
 #define X2100_PROFILE_SLOTS            4
 #define X2100_CALIB_SCAN_TX            4
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+#define X2100_CALIB_TX_MASK            0x0FU
+#define X2100_CALIB_BANDS              8
+#else
 #define X2100_CALIB_TX_MASK            ((1U << 0) | (1U << 1))
+#define X2100_CALIB_BANDS              4
+#endif
 #define X2100_CALIB_REPEATS            2
 #define X2100_PHASE_SWEEP_CODES        64
-#define X2100_CALIB_BANDS              4
 #define X2100_SF1_BPM_ENABLE_MASK      (1U << 18)
 #define X2100_SF1_DDMA_ENABLE_MASK     (1U << 16)
 #define X2100_FIRST_CHIRPS             \
@@ -113,8 +118,8 @@ static void phase_calib_set_failure(PhaseCalibFailureCode code,
 /*
  * Both calibration waveforms scan TX1..TX4 sequentially and repeat every
  * phase twice: stage 1 uses 64 * N_TX * 2 chirps and stage 2 uses
- * num_bands * N_TX * 2 chirps.  The PCB only has antennas on TX1/TX2, so
- * TX3/TX4 ADC columns are captured but excluded from phase processing. N_TX
+ * num_bands * N_TX * 2 chirps.  The 2TX build excludes TX3/TX4 from phase
+ * processing; the 4TX build calibrates all four physical paths. N_TX
  * is the four-column scan stride; calib_tx_mask identifies the PCB TX channels with valid RF
  * paths; N_TX_PER_MMIC controls the four Profile RAM slots;
  * num_signal_bands is derived from calib_tx_mask for the convergence metric.
@@ -131,12 +136,23 @@ static const CalibCfg_t s_phase_calib_template = {
     .num_bands = {X2100_CALIB_BANDS},
     .MAX_NUM_BANDS = 16,
     .nominal_phase_table = {
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+        {0,   0,   0,   0,   0,   0,   0,   0},
+        {0,  45,  90, 135, 180, 225, 270, 315},
+        {0,  90, 180, 270,   0,  90, 180, 270},
+        {0, 135, 270,  45, 180, 315,  90, 225},
+#else
         {0,   0,   0,   0},
         {0,  90, 180, 270},
+#endif
     },
     /* Like the ZU3 calculation, zero-filled unused rows contain one unique
      * phase (0 deg); keep 1 here so four-slot Profile RAM generation is safe. */
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+    .NUM_PHASE_PER_TX = {1, 8, 4, 8},
+#else
     .NUM_PHASE_PER_TX = {1, 4, 1, 1},
+#endif
     .N_TX = X2100_CALIB_SCAN_TX,
     .calib_tx_mask = X2100_CALIB_TX_MASK,
     .num_calib_tx = 0,
@@ -918,6 +934,12 @@ static void prepare_work_stage(CalibCfg_t *cfg, int chirps, int ddma_chirp,
     cfg->ddma_num[0] = cfg->num_bands[0];
     cfg->ddma_chirp[0] = ddma_chirp;
     cfg->slope[0] = X2100_CHIRP_SLOPE_HZ_PER_S;
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+    /* Coarse/fine scan tables retain FSTEP=200. CHECK uses the normal
+     * four-TX table, whose FSTEP=171; match its actual quantized slope. */
+    if (sample_rate_hz == X2100_WORK_SAMPLE_RATE_HZ)
+        cfg->slope[0] = 16.69921875E12;
+#endif
     cfg->Fs = sample_rate_hz;
 }
 

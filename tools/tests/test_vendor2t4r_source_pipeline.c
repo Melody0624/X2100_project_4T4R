@@ -15,7 +15,7 @@
 #include "config_manager.h"
 #include "board_calib_config.h"
 
-static fft_cpx_f32 saved_matrix[8];
+static fft_cpx_f32 saved_matrix[NUM_VX_SF1];
 static float saved_angles[128];
 static int matrix_saved, angles_saved;
 static ParamID fail_save = PARAM_MAX_COUNT;
@@ -83,8 +83,9 @@ static void fill_adc(GlbCtx *ctx,int rng_bin,int dop_bin,float angle) {
     uint32_t noise=12345;
     for(int rx=0;rx<4;rx++) for(int chirp=0;chirp<128;chirp++) for(int sample=0;sample<506;sample++) {
         float value=0;
-        for(int tx=0;tx<2;tx++) {
-            float phase = 2*PI*rng_bin*sample/512.0f + 2*PI*(dop_bin+tx*32)*chirp/128.0f;
+        for(unsigned int tx=0;tx<ctx->basicParams.numTxs[0];tx++) {
+            unsigned int bands=ctx->basicParams.numTxs[0]+ctx->waveParams.numEmptyBands[0];
+            float phase = 2*PI*rng_bin*sample/512.0f + 2*PI*(dop_bin+tx*(128/bands))*chirp/128.0f;
             phase += 2*PI*ctx->basicParams.minElemSpacing[0]*(tx*4+rx)*sinf(angle*PI/180);
             value += 100*cosf(phase) * bpm_code[chirp];
         }
@@ -94,8 +95,8 @@ static void fill_adc(GlbCtx *ctx,int rng_bin,int dop_bin,float angle) {
 }
 static void run(GlbCtx *ctx, int rng_bin, int dop_bin, float angle) {
     fill_adc(ctx,rng_bin,dop_bin,angle);
-    fft_cpx_f32 calibration[8];
-    for(int i=0;i<8;i++) calibration[i]=(fft_cpx_f32){1,0};
+    fft_cpx_f32 calibration[NUM_VX_SF1];
+    for(int i=0;i<NUM_VX_SF1;i++) calibration[i]=(fft_cpx_f32){1,0};
     assert(detection_processing(ctx,calibration,0)==0);
     assert(detection_processing_v2(ctx,calibration,0)==0);
     float expected=LIGHT_SPEED*26.665e6f/(2*16.699e12f*512)*rng_bin;
@@ -127,7 +128,7 @@ static void run(GlbCtx *ctx, int rng_bin, int dop_bin, float angle) {
     ctx->radarInfo.installAngComp_deg=0;
 }
 static void array_calibration(GlbCtx *ctx) {
-    fft_cpx_f32 original[8];memcpy(original,angCalibMat,sizeof(original));
+    fft_cpx_f32 original[NUM_VX_SF1];memcpy(original,angCalibMat,sizeof(original));
     InitPhaseCalibInit(ctx);
     InitPhasePara_t para={50,-15,15,15,INIT_PHASE_COMM_GADGET_SERIAL};
     SetTargetPara(&para);InitPhaseCalibProcess();
@@ -138,7 +139,7 @@ static void array_calibration(GlbCtx *ctx) {
     assert(GetInitPhaseStepFlg()==INIT_PHASE_STEP_ZERO_CALIB_DONE);
     InitPhaseCalibProcess();assert(matrix_saved==1);
     assert(memcmp(original,saved_matrix,sizeof(original))!=0);
-    for(int i=0;i<8;i++)assert(isfinite(saved_matrix[i].r)&&isfinite(saved_matrix[i].i));
+    for(int i=0;i<NUM_VX_SF1;i++)assert(isfinite(saved_matrix[i].r)&&isfinite(saved_matrix[i].i));
     for(int angle=-15;angle<=15;angle+=15) {
         SetTargetAngle(angle);InitPhaseCalibProcess();
         assert(GetInitPhaseStepFlg()==INIT_PHASE_STEP_FFT_CALIB_START);
@@ -179,7 +180,31 @@ static void array_calibration(GlbCtx *ctx) {
     assert(GetInitPhaseStepFlg()==INIT_PHASE_STEP_IDLE);
     puts("PASS: source calibration hooks, zero-phase save, all angle samples including last, signed mapping save and immediate application");
 }
+static void reject_invalid_last_channel(GlbCtx *ctx) {
+    fft_cpx_f32 original[NUM_VX_SF1];memcpy(original,angCalibMat,sizeof(original));
+    int saved_before=matrix_saved;
+    InitPhaseCalibInit(ctx);
+    InitPhasePara_t para={50,-15,15,15,INIT_PHASE_COMM_GADGET_SERIAL};
+    SetTargetPara(&para);InitPhaseCalibProcess();
+    SetInitPhaseStepFlg(INIT_PHASE_STEP_START);InitPhaseCalibProcess();
+    fill_adc(ctx,10,0,0);
+    assert(detection_processing(ctx,angCalibMat,0)==0);
+    unsigned int txs=ctx->basicParams.numTxs[0],rxs=ctx->basicParams.numRxs[0];
+    unsigned int bands=txs+ctx->waveParams.numEmptyBands[0];
+    unsigned int band=(g_memoryPool[0].maxMetricIndices[10]+txs-1)%bands;
+    unsigned int index=(rxs-1)*256*128+band*(128/bands)*256+10;
+    g_memoryPool[0].dopplerFFT_res[index]=(fft_cpx_f32){0,0};
+    assert(detection_processing_v2(ctx,angCalibMat,0)==0);
+    assert(GetInitPhaseStepFlg()==INIT_PHASE_STEP_ZERO_CALIB_DONE);
+    InitPhaseCalibProcess();
+    assert(GetInitPhaseStepFlg()==INIT_PHASE_STEP_IDLE && matrix_saved==saved_before);
+    assert(memcmp(original,angCalibMat,sizeof(original))==0);
+    puts("PASS: zero-phase calibration rejects invalid LAST virtual channel without saving or replacing defaults");
+}
 int main(void) {
+#ifdef EXPECT_FOUR_TX
+    assert(BOARD_ANTENNA_CONFIG==BOARD_ANTENNA_4T4R && NUM_VX_SF1==16 && NUM_VX_AZM_SF1==16);
+#endif
     g_ps_cal_mode=1;
     assert(detection_processing(NULL,NULL,0)==0);
     g_ps_cal_mode=0;
@@ -189,7 +214,27 @@ int main(void) {
     assert(winRng_sf1 && winDop_sf1 && winAzm_sf1);
     assert(fabsf(winRng_sf1[253]-1)<.001f);
     assert(fabsf(winDop_sf1[64]-1)<.001f);
-    assert(fabsf(winAzm_sf1[3]-.9698463f)<.001f);
+    int az_center=WIN_LEN_AZIMUTH_FFT/2-1;
+    assert(winAzm_sf1[az_center]>.9f);
+    assert(winAzm_sf1[WIN_LEN_AZIMUTH_FFT-1]>0 && winAzm_sf1[WIN_LEN_AZIMUTH_FFT-1]<.2f);
+    assert(fabsf(winAzm_sf1[0]-winAzm_sf1[WIN_LEN_AZIMUTH_FFT-1])<1e-5f);
+#ifdef EXPECT_FOUR_TX
+    assert(ctx->basicParams.numTxs[0]==4 && ctx->basicParams.numRxs[0]==4);
+    assert(ctx->waveParams.numChirps[0]==128 && ctx->waveParams.adcLen[0]==506);
+    assert(ctx->waveParams.numEmptyBands[0]==4);
+    assert(fabsf(ctx->waveParams.sampling_freq[0]-26.665e6f)<1);
+    assert(fabsf(ctx->waveParams.chirp_period[0]-26e-6f)<1e-10f);
+    assert(fabsf(ctx->waveParams.frame_period-.050328f)<1e-7f);
+    assert(fabsf(ctx->waveParams.slope[0]/16.699e12f-1)<1e-6f);
+    assert(fabsf(ctx->waveParams.central_freq[0]/76.5e9f-1)<1e-6f);
+    for(int i=0;i<16;i++) {
+        assert(ctx->radarInfo.logicIdx_reorder_sf1[i]==(unsigned int)i);
+        assert(ctx->radarInfo.vxBVIdx_sf1_azm[i]==(unsigned int)i);
+        assert(fabsf(ctx->radarInfo.vxPosn_sf1_azm[i]-i*ctx->basicParams.minElemSpacing[0])<1e-6f);
+    }
+    assert(sizeof(angCalibMat)==16*sizeof(fft_cpx_f32));
+    puts("PASS: 4TX/4RX/16VX, requested waveform, complete indices/positions/calibration dimensions");
+#endif
     /* The theory build must generate the real angle table at SDK startup. */
     ctx->waveParams.isCRT=false;
 #ifdef EXPECT_THEORY
@@ -199,7 +244,7 @@ int main(void) {
         float expected=asinf((i<64?i:i-128)/(128*document_spacing))*180/PI;
         /* Float frequency/spacing rounding is amplified near asin endpoints. */
         assert(fabsf(ctx->algInfo.angFFTvec[i]-expected)<(fabsf(expected)>80?.002f:.0001f));
-        if(i<8) assert(fabsf(ctx->radarInfo.vxPosn_sf1_azm[i]-i*document_spacing)<.000001f);
+        if(i<NUM_VX_SF1) assert(fabsf(ctx->radarInfo.vxPosn_sf1_azm[i]-i*document_spacing)<.000001f);
     }
     puts("PASS: actual SDK angle mapping matches all 128 theoretical values");
 #else
@@ -207,11 +252,21 @@ int main(void) {
 #endif
     run(ctx,40,5,0);run(ctx,180,5,15);run(ctx,160,122,-30);
     run(ctx,180,42,30);run(ctx,180,86,-15);run(ctx,180,70,0);
+#ifdef EXPECT_FOUR_TX
+    const int edges[]={0,15,16,31,32,47,48,63,64,79,80,95,96,111,112,127};
+    for(unsigned int i=0;i<sizeof(edges)/sizeof(edges[0]);i++)run(ctx,160,edges[i],i%2?15:-15);
+    puts("PASS: all 8 DDMA subband boundaries, positive/negative Doppler and 16-channel AoA/RCS");
+#endif
     array_calibration(ctx);
+    reject_invalid_last_channel(ctx);
     free_memory_pool(0);free(ctx);
     ctx=set_parameters(false,false,0,0);
     assert(ctx && winRng_sf1 && winDop_sf1 && winAzm_sf1);
     free_memory_pool(0);free(ctx);
-    puts("PASS: real SDK initialization/reinitialization, 6 full ADC/RFFT/BPM/DFFT/DDMA/CFAR/AoA/post cases and calibration bypass");
+#ifdef EXPECT_FOUR_TX
+    puts("PASS: real SDK initialization/reinitialization, 22 full ADC/RFFT/BPM/DFFT/DDMA/CFAR/AoA/post/RCS cases and 16-channel calibration");
+#else
+    puts("PASS: real SDK initialization/reinitialization, 6 full ADC/RFFT/BPM/DFFT/DDMA/CFAR/AoA/post/RCS cases and 8-channel calibration");
+#endif
     return 0;
 }

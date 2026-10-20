@@ -53,8 +53,9 @@ def main():
     if os.name == "nt" and source_text.startswith("/mnt/d/"):
         source_text = source_text.replace("/mnt/d/", "D:/", 1)
     source = Path(source_text)
-    assert spl == (source / "xburst2/soc-x2000/spl" / SPL_NAME).read_bytes()
-    assert spl != (source / "xburst2/soc-x2000/spl/x2100l-spl-sfc-nor-1200M-500M.bin").read_bytes()
+    spl_source=Path(manifest.get("external_spl_source",str(source / "xburst2/soc-x2000/spl" / SPL_NAME)))
+    assert spl == spl_source.read_bytes()
+    assert spl != (spl_source.parent / "x2100l-spl-sfc-nor-1200M-500M.bin").read_bytes()
     elf = (out / "zero.elf").read_bytes()
     for name in (
         "vendor_init", "detection_processing", "detection_processing_v2",

@@ -396,6 +396,8 @@ struct camera_device *g_camera = NULL;
 int radar_capture_host_stop(void);
 int radar_capture_reconfig_stop(void);
 int radar_capture_host_start(void);
+
+
 static void radar_config_start(void);
 
 int enter_ps_cal_mode(void)
@@ -513,7 +515,12 @@ int configure_ps_cal_memory(uint32_t num_chirps, uint32_t adc_len,
 }
 
 
-#if CHEETAH_CONFIG == cheetah_128_256_config
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+#if CHEETAH_CONFIG != cheetah_128_512_config || WAVERANGE_CONFIG != 120
+#error "Source 4T4R RF table supports 128x506 at 16.699 MHz/us only"
+#endif
+#include "cheetah/source4t4r_register_config.h"
+#elif CHEETAH_CONFIG == cheetah_128_256_config
 static struct reg_line cheetah_default_config[] = {
 
 	{0, 0x2003, 1, {0x000FF000}},
@@ -1016,6 +1023,15 @@ static void radar_config_start(void)
 
 __attribute__((optimize("O3"))) void vendor_init(void *arg)
 {
+#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_4T4R
+    /* Keep the complete processing path linked for diagnostic verification. */
+    static volatile uint8_t rf_ready = SOURCE_4T4R_RF_READY;
+    if (!rf_ready) {
+        printf("[4T4R] diagnostic build: live capture disabled\n");
+        return;
+    }
+    printf("[4T4R] EXPERIMENTAL LIVE: 4TX/4RX, FSTEP=0xAB, 16-channel defaults; hardware validation pending\n");
+#endif
     // 调用 Flash 读写测试
     // test_flash_rw();
 
@@ -1098,7 +1114,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 
 	}
 	// 动态覆盖角度补偿矩阵
-	fft_cpx_f32 temp_mat[8];
+	fft_cpx_f32 temp_mat[NUM_VX_SF1];
 	if (param_get(PARAM_ANG_CALIB_MAT, temp_mat, sizeof(temp_mat)) == 0) {
 		// 防空白校验：如果所有数据的绝对值均小于0.0001，则视为无效，使用默认值
 		int invalid_mat = 1;

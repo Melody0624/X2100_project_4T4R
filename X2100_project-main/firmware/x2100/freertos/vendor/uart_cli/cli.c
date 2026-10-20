@@ -483,7 +483,7 @@ static int32_t MagAngFFT(int32_t argc, char *argv[])
 
 static int32_t MagAngCalibMat(int32_t argc, char *argv[])
 {
-    float l_angCalibMat[16] = {0.0f}; // 8个复数，每个2个float
+    float l_angCalibMat[2 * NUM_VX_SF1] = {0.0f};
     char buffer[256] = {0}; // 用于格式化字符串的缓冲区
     
     if (argc < 2) {
@@ -494,7 +494,7 @@ static int32_t MagAngCalibMat(int32_t argc, char *argv[])
     if (strcmp(argv[1], "read") == 0) {
         if (param_get(PARAM_ANG_CALIB_MAT, l_angCalibMat, sizeof(l_angCalibMat)) == 0) {
             usb_serial_send((char *)"angCalibMat:\n", strlen("angCalibMat:\n"));
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < NUM_VX_SF1; i++) {
                 // 改用 %.6f 或 %f，不要用 %.12f
                 snprintf(buffer, sizeof(buffer), "  { %.6ff, %.6ff }\n", l_angCalibMat[i*2], l_angCalibMat[i*2+1]);
                 usb_serial_send(buffer, strlen(buffer));
@@ -506,13 +506,13 @@ static int32_t MagAngCalibMat(int32_t argc, char *argv[])
         memset(l_angCalibMat, 0, sizeof(l_angCalibMat));
         
         // 简单解析：每个 argv[i] 是一个 float
-        for (int i = 2; i < argc && count < 16; i++) {
+        for (int i = 2; i < argc && count < 2 * NUM_VX_SF1; i++) {
             float val = atof(argv[i]);
             l_angCalibMat[count++] = val;
         }
         
-        if (count != 16) {
-            snprintf(buffer, sizeof(buffer), "Error: Need 16 float values, got %d\n", count);
+        if (argc != 2 + 2 * NUM_VX_SF1 || count != 2 * NUM_VX_SF1) {
+            snprintf(buffer, sizeof(buffer), "Error: Need %d float values, got %d\n", 2 * NUM_VX_SF1, argc - 2);
             usb_serial_send(buffer, strlen(buffer));
             return -1;
         }
