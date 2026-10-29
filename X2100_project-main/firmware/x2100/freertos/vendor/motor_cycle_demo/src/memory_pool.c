@@ -19,17 +19,7 @@ extern volatile uint8_t g_ps_cal_local_mode;
 
 static unsigned int logicIdx_reorder_sf1[NUM_VX_SF1] = { 0, 1, 2, 3, 4, 5, 6, 7};
 static unsigned int vxBVIdx_sf1_azm[NUM_VX_AZM_SF1] = { 0, 1, 2, 3, 4, 5, 6, 7};
-#if BOARD_ANTENNA_CONFIG == BOARD_ANTENNA_2T4R && BOARD_TYPE == BOARD_TYPE_BARRACADE
-#define SOURCE_BOARD_VX_SPACING (-0.00196f * 76.5e9f / LIGHT_SPEED)
-#else
-#define SOURCE_BOARD_VX_SPACING 0.5f
-#endif
-static float vxPosn_sf1_azm[NUM_VX_AZM_SF1] = {
-    0.0f, SOURCE_BOARD_VX_SPACING, 2.0f * SOURCE_BOARD_VX_SPACING,
-    3.0f * SOURCE_BOARD_VX_SPACING, 4.0f * SOURCE_BOARD_VX_SPACING,
-    5.0f * SOURCE_BOARD_VX_SPACING, 6.0f * SOURCE_BOARD_VX_SPACING,
-    7.0f * SOURCE_BOARD_VX_SPACING
-};
+static float vxPosn_sf1_azm[NUM_VX_AZM_SF1] = { -0.000000000f, -0.500146004f, -1.000292009f, -1.500438013f, -2.000584017f, -2.500730022f, -3.000876026f, -3.501022030f };
 #if NUM_VX_EL_SF1 != 0
 static unsigned int vxBVIdx_el_sf1[NUM_VX_EL_SF1] = { 5, 11 };
 static float vxPosn_el_sf1[NUM_VX_EL_SF1] = { 0.0f, 1.0f };

@@ -9,7 +9,7 @@
 - 本包完全对应的 Windows 源码：`D:/downloads/X2100_project-main/artifacts/b_2t4r_adc_rcs_20261029/windows_source/freertos`。
 - WSL 构建源码：`/home/melody/Manhattan_Project/freertos_b2t4r_adc_rcs_20261029`。
 - 烧录配置与镜像：`D:/downloads/X2100_project-main/artifacts/b_2t4r_adc_rcs_20261029/mips/`。
-- Windows 主 B 源码：`X2100_project-main/firmware/x2100/freertos`，同步使用厂家两张默认表，保留 RCS 与 ADC 修正。主目录还包含之前的维护改动，完整冻结源码以第一项为准。
+- Windows 主 B 源码：`X2100_project-main/firmware/x2100/freertos`，现已整体同步为第一项的相同版本。5992 项构建输入和 6678 个源码/配套文件逐字节相同，核对记录为 `b2t4r_adc_rcs_factory_main_sync_20261029.json`。生成对象、缓存及旧编译产物不纳入源码比较；烧录仍选择本包的配置文件。
 - 四发 worktree 源码与之前的 B 烧录包不变。Cloner `configs/x2100` 新增同名配置，原 `spl`、`img` 文件不覆盖。
 
 原镜像 SHA256 为 `fd3b11f43e94a7aa3e4aa8c6739a561dd3d0544afd0c35eef2f8256cca97adab`。
@@ -54,4 +54,6 @@ bash tools/build_b2t4r_adc_rcs_20261029.sh
 python3 tools/package_b2t4r_adc_rcs_20261029.py
 ```
 
-完整冻结源码与生成镜像在本机 `artifacts/`（该目录按项目规则不纳入 Git）。Git 保存 Windows 主源码更新、厂家完整默认值、回归测试、复现脚本及构建身份记录。原厂完整 SDK 与工具链仍按既有项目布局提供。
+完整冻结源码与生成镜像在本机 `artifacts/`（该目录按项目规则不纳入 Git）。Git 保存同步后的 Windows 主源码、厂家完整默认值、回归测试、复现脚本及构建身份记录。原厂完整 SDK 与工具链仍按既有项目布局提供。
+
+需要重新核对或同步 Windows 主源码时，在项目根目录运行 `python tools/sync_b2t4r_main_20261029.py`。脚本先备份差异文件，再同步并逐字节检查；备份位于 `artifacts/b_2t4r_adc_rcs_20261029/main_sync_backup`。构建使用的 `.config.in` 已另存为 Git 跟踪的 `configs/b_2t4r_adc_rcs_factory_20261029_defconfig`，可复制回 SDK 的 `.config.in`（工具链路径按实际位置设置）。原烧录包的镜像不变。

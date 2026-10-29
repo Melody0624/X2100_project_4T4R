@@ -102,7 +102,7 @@ ADC 100 帧完整数据、重复初始化/分配失败/DSP 保持及 RCS 标定/
 完整 clean MIPS 编译通过。USB 与信号处理对象不变；新增 RCS 对象，其他差异仅主流程、校准表、符号表和编译时间。
 原始 SPL、OTA 双槽、配置区边界及文件/源代码哈希通过。此新组合尚未上板测试。
 原 B 包、四发源码及 Cloner spl/img 均未覆盖；Cloner configs/x2100 只新增同名配置。
-Windows 主 B 源码也已更新厂家两张默认表，且保留 RCS 与 ADC 修正；该主目录含其他后续维护改动，不能等同本包的完整冻结源码。
+Windows 主 B 源码可通过 tools/sync_b2t4r_main_20261029.py 与本包完整源码逐字节同步；当前状态以 docs/b2t4r_adc_rcs_factory_main_sync_20261029.json 为准。
 '''
 (out / 'README_烧录说明.md').write_text(text, encoding='utf-8')
 shutil.copyfile(project / 'docs/2t4r_rcs_reference_20261013.json', out / 'RCS_REFERENCE.json')

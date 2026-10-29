@@ -1809,7 +1809,7 @@ __attribute__((optimize("O3"))) void vendor_init(void *arg)
 					detection_post_processing(glbCtx[last_pool_index]);
 				}
 
-				/* Final point order after sorting/filtering; no protocol fields added. */
+				/* Separate RCS results follow the final sorted/filtered point order. */
 				if (!g_ps_cal_mode)
 					rcs_process_frame(glbCtx[last_pool_index], last_pool_index);
 				else
