@@ -1,0 +1,25 @@
+{
+  "configuration": "B_2T4R_ADC_RCS_FACTORY_20261029.cfg",
+  "image_sha256": "10d27f96a08426fd3ede2a6d494a34ae38806f65022f871d76e75c43f775343c",
+  "image_bytes": 912292,
+  "source_export": "D:/downloads/X2100_project-main/artifacts/b_2t4r_adc_rcs_20261029/windows_source/freertos",
+  "build_sdk": "/home/melody/Manhattan_Project/freertos_b2t4r_adc_rcs_20261029",
+  "parent_image_sha256": "fd3b11f43e94a7aa3e4aa8c6739a561dd3d0544afd0c35eef2f8256cca97adab",
+  "factory_source_sha256": "f14cf2a0bfe487db294eee9e5317a45574267c03d60de1308128bf4b1d9b2d9e",
+  "rcs_offset_db": -136.52632083663164,
+  "source_inputs_checked": 5992,
+  "source_changes": [
+    "vendor/Makefile",
+    "vendor/motor_cycle_demo/inc/rcs_estimation.h",
+    "vendor/motor_cycle_demo/src/board_calib_config.c",
+    "vendor/motor_cycle_demo/src/rcs_estimation.c",
+    "vendor/vendor.c"
+  ],
+  "source_change_sha256": {
+    "vendor/Makefile": "066b40447c85077a6f37c7e083b2b08fe1974220895ba589d8d261795be7020a",
+    "vendor/motor_cycle_demo/inc/rcs_estimation.h": "4198076844e2410347f98b0e96e4f35e32d5a869220b6ae824da5161538e235b",
+    "vendor/motor_cycle_demo/src/board_calib_config.c": "19902a36977551fb2bfd3989f851d68daa5aba54a70de54063a75da5daf5ea7c",
+    "vendor/motor_cycle_demo/src/rcs_estimation.c": "cc1abd79aa2a5af051a29321720750f34a45474d51a14cc2857bf240bc76a9d8",
+    "vendor/vendor.c": "449f24a59e1ddbf659a7e550329682ac5ebcba9592552408e9bb743b8ee20a83"
+  }
+}

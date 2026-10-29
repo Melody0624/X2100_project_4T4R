@@ -50,7 +50,30 @@ int init_memory_pool(GlbCtx* ctx, int pool_index, int adcOutFlg,
 
     if (g_memoryPool[pool_index].initialized)
     {
-        /* 幂等: 已初始化不是错误, 路径 A/B 两次调用都能通过 */
+        /* set_parameters initializes DSP storage before the output mode is
+         * applied. Grow only the packet buffer when ADC output is requested. */
+#if (USE_USB_OUTPUT == 1) && (UART_ADC_SEND == 0) && (NET_ADC_SEND == 0)
+        if (adcOutFlg == 1) {
+            uint32_t raw_size = ctx->waveParams.numChirps[0] *
+                (sizeof(CheetahChirpHeadInfo) + sizeof(uint16_t) *
+                 ctx->basicParams.numRxs[0] * ctx->waveParams.adcLen[0] + CHIRP_END_BYTES);
+            uint32_t required = sizeof(Mmw_output_message_header) +
+                sizeof(Mmw_output_message_tl) + raw_size;
+            if (g_memoryPool[pool_index].shared_pkt_buf_size < required) {
+                char *buffer = (char *)malloc(required);
+                if (buffer == NULL) {
+                    printf("[OUTPUT] ADC buffer allocation failed pool=%d bytes=%u\n",
+                           pool_index, (unsigned int)required);
+                    return -1;
+                }
+                free(g_memoryPool[pool_index].shared_pkt_buf);
+                g_memoryPool[pool_index].shared_pkt_buf = buffer;
+                g_memoryPool[pool_index].shared_pkt_buf_size = required;
+                printf("[OUTPUT] pool=%d ADC buffer=%u bytes\n",
+                       pool_index, (unsigned int)required);
+            }
+        }
+#endif
         return 0;
     }
     

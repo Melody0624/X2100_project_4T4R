@@ -60,7 +60,7 @@ def main():
         "vendor_init", "detection_processing", "detection_processing_v2",
         "tracking_processing", "handle_warnings", "compute_ego_motion",
         "ota_trigger_ab_init", "rtos_ota_init", "phase_calib_task",
-        ("mappingGen_processing_with_spacing" if manifest.get("angle_mapping") == "theory_defaults_with_saved_calibration" else "mappingGen_processing"), "gadget_serial_init", "mmw_packetize_results",
+        ("mappingGen_processing_with_spacing" if manifest.get("angle_mapping") in ("theory_defaults_with_saved_calibration", "factory_defaults_with_saved_calibration") else "mappingGen_processing"), "gadget_serial_init", "mmw_packetize_results",
     ):
         assert symbol_bytes(elf, name), f"Missing linked function: {name}"
     assert symbol_bytes(elf, "angCalibMat").hex() == manifest["linked_calibration_hex"]
